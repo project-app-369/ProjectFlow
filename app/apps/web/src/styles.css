@@ -436,6 +436,7 @@ body.dark .avatar.teal{background:#1f3b38;color:#8fe0d0}
   .schedule{padding-inline:var(--sp-4)}
   .tabs{gap:var(--sp-5)}
   .board,.board-4,.form-grid,.detail-grid{grid-template-columns:1fr}
+  .board-column{min-height:0}
   .field.full{grid-column:auto}
   /* 16px form fields stop iOS Safari zooming in on focus */
   input,select,textarea,.field input,.field select,.field textarea,.search input,select.filter{font-size:1rem}
