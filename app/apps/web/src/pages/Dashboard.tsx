@@ -5,7 +5,7 @@ import { request, type Dashboard as DashboardData } from '../api';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useApp } from '../state';
-import { Badge, ErrorBox, Loading, PageHead, Stat } from '../ui';
+import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat } from '../ui';
 
 const SCurveChart = lazy(() => import('../SCurveChart'));
 
@@ -67,10 +67,7 @@ export default function Dashboard() {
             <div style={{ padding: '5px 24px 22px' }}>
               {wp.items.map(w => (
                 <div style={{ margin: '14px 0' }} key={w.code}>
-                  <div className="progress-numbers"><strong>{w.name}</strong><span>{w.thisWeekActual ?? 0}% actual / {w.thisWeekPlan ?? 0}% plan</span></div>
-                  <div className="progress-line" style={{ height: 7, marginBottom: 4 }}>
-                    <div className={`progress-fill ${(w.thisWeekActual ?? 0) < (w.thisWeekPlan ?? 0) ? 'behind' : ''}`} style={{ width: `${Math.min(100, w.thisWeekActual ?? 0)}%` }} />
-                  </div>
+                  <ActualPlanBar label={w.name} actual={w.thisWeekActual} plan={w.thisWeekPlan} />
                 </div>
               ))}
             </div>

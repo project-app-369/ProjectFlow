@@ -1,5 +1,6 @@
 import type { Api } from './api';
 import { requireConfigure, requireMember, requireWrite, resolveActor, type Actor } from './auth';
+import type { Resource } from './crud';
 import { HttpError } from './http';
 
 export interface ApiRequest { method: string; path: string; body?: unknown; /** Id of the acting user (demo identity, see auth.ts). */ user?: string }
@@ -21,6 +22,16 @@ const route = (method: string, pattern: string, handler: Handler, opts: { access
   return { method, pattern: new RegExp(`^/${pattern}$`), hasProject, access: opts.access ?? (hasProject ? 'member' : 'user'), handler, module: opts.module, status: opts.status };
 };
 
+/** The six routes of a register: list, CSV, one record, create, update, delete. */
+const crud = (path: string, res: (c: Ctx) => Resource, module: string): Route[] => [
+  route('GET', `${PID}/${path}[.]csv`, c => res(c).csv(c.p.pid, c.q), { module }),
+  route('GET', `${PID}/${path}`, c => res(c).list(c.p.pid, c.q), { module }),
+  route('GET', `${PID}/${path}/(?<id>[^/]+)`, c => res(c).get(c.p.pid, c.p.id), { module }),
+  route('POST', `${PID}/${path}`, c => res(c).create(c.p.pid, c.body, c.actor), { module, status: 201 }),
+  route('PATCH', `${PID}/${path}/(?<id>[^/]+)`, c => res(c).update(c.p.pid, c.p.id, c.body, c.actor), { module }),
+  route('DELETE', `${PID}/${path}/(?<id>[^/]+)`, c => { res(c).remove(c.p.pid, c.p.id, c.actor); return null; }, { module, status: 204 }),
+];
+
 const OVERALL = 'planning.overall-progress';
 const WORK_PACKAGES = 'planning.work-packages';
 const MILESTONES = 'planning.milestones';
@@ -30,6 +41,12 @@ const RISKS = 'management.risks';
 const IF_REGISTER = 'interface.register';
 const IF_MATRIX = 'interface.matrix';
 const IF_POINTS = 'interface.points';
+const BUDGET = 'construction.budget';
+const KNOWLEDGE = 'knowledge';
+const PROC_DASH = 'procurement.dashboard';
+const LOGISTICS = 'procurement.logistics';
+const MATERIALS = 'procurement.materials';
+const CONCERNS = 'procurement.concerns';
 
 /** Same URLs, methods and module guards as the NestJS controllers, plus the pre-build's project, user and register routes. */
 const ROUTES: Route[] = [
@@ -73,6 +90,19 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/procurement/packages[.]csv`, c => c.api.svc.procurementCsv(c.p.pid, c.q), { module: PROCUREMENT }),
   route('GET', `${PID}/procurement/packages`, c => c.api.svc.procurementList(c.p.pid, c.q), { module: PROCUREMENT }),
   route('GET', `${PID}/procurement/packages/(?<id>[^/]+)`, c => c.api.svc.procurementGet(c.p.pid, c.p.id), { module: PROCUREMENT }),
+  route('POST', `${PID}/procurement/packages`, c => c.api.proc.packages.create(c.p.pid, c.body, c.actor), { module: PROCUREMENT, status: 201 }),
+  route('PATCH', `${PID}/procurement/packages/(?<id>[^/]+)`, c => c.api.proc.packages.update(c.p.pid, c.p.id, c.body, c.actor), { module: PROCUREMENT }),
+  route('DELETE', `${PID}/procurement/packages/(?<id>[^/]+)`, c => { c.api.proc.packages.remove(c.p.pid, c.p.id, c.actor); return null; }, { module: PROCUREMENT, status: 204 }),
+  route('POST', `${PID}/expediting/packages`, c => c.api.proc.expediting.create(c.p.pid, c.body, c.actor), { module: EXPEDITING, status: 201 }),
+  route('PATCH', `${PID}/expediting/packages/(?<id>[^/]+)`, c => c.api.proc.expediting.update(c.p.pid, c.p.id, c.body, c.actor), { module: EXPEDITING }),
+  route('DELETE', `${PID}/expediting/packages/(?<id>[^/]+)`, c => { c.api.proc.expediting.remove(c.p.pid, c.p.id, c.actor); return null; }, { module: EXPEDITING, status: 204 }),
+  route('GET', `${PID}/procurement/dashboard`, c => c.api.proc.dashboard(c.p.pid), { module: PROC_DASH }),
+  route('GET', `${PID}/procurement/s-curve`, c => c.api.proc.curves(c.p.pid, c.q.facility, c.q.scope), { module: PROC_DASH }),
+  route('GET', `${PID}/procurement/concerns/summary`, c => c.api.proc.concernSummary(c.p.pid), { module: CONCERNS }),
+  ...crud('procurement/concerns', c => c.api.proc.concerns, CONCERNS),
+  ...crud('logistics/shipments', c => c.api.proc.logistics, LOGISTICS),
+  ...crud('materials/balance', c => c.api.proc.balance, MATERIALS),
+  ...crud('materials/summary', c => c.api.proc.summary, MATERIALS),
   route('GET', `${PID}/expediting/summary`, c => c.api.svc.expeditingSummary(c.p.pid), { module: EXPEDITING }),
   route('GET', `${PID}/expediting/packages[.]csv`, c => c.api.svc.expeditingCsv(c.p.pid, c.q), { module: EXPEDITING }),
   route('GET', `${PID}/expediting/packages`, c => c.api.svc.expeditingList(c.p.pid, c.q), { module: EXPEDITING }),
@@ -101,6 +131,23 @@ const ROUTES: Route[] = [
   route('POST', `${PID}/interface-points`, c => c.api.reg.pointCreate(c.p.pid, c.body, c.actor), { module: IF_POINTS, status: 201 }),
   route('PATCH', `${PID}/interface-points/(?<id>[^/]+)`, c => c.api.reg.pointUpdate(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
   route('DELETE', `${PID}/interface-points/(?<id>[^/]+)`, c => { c.api.reg.pointDelete(c.p.pid, c.p.id, c.actor); return null; }, { module: IF_POINTS, status: 204 }),
+
+  // construction budget (manhours by WBS activity)
+  route('GET', `${PID}/construction/budget`, c => c.api.budget.list(c.p.pid), { module: BUDGET }),
+  route('GET', `${PID}/construction/budget/histogram`, c => c.api.budget.histogram(c.p.pid, c.q), { module: BUDGET }),
+  route('GET', `${PID}/construction/budget[.]csv`, c => c.api.budget.csv(c.p.pid), { module: BUDGET }),
+  route('POST', `${PID}/construction/budget/import`, c => c.api.budget.import(c.p.pid, c.body, c.actor), { module: BUDGET }),
+  route('POST', `${PID}/construction/budget`, c => c.api.budget.create(c.p.pid, c.body, c.actor), { module: BUDGET, status: 201 }),
+  route('PATCH', `${PID}/construction/budget/(?<wbs>[^/]+)`, c => c.api.budget.update(c.p.pid, c.p.wbs, c.body, c.actor), { module: BUDGET }),
+  route('DELETE', `${PID}/construction/budget/(?<wbs>[^/]+)`, c => { c.api.budget.remove(c.p.pid, c.p.wbs, c.actor); return null; }, { module: BUDGET, status: 204 }),
+
+  // general knowledge
+  route('GET', `${PID}/knowledge`, c => c.api.knowledge.list(c.p.pid, c.q), { module: KNOWLEDGE }),
+  route('GET', `${PID}/knowledge/summary`, c => c.api.knowledge.summary(c.p.pid), { module: KNOWLEDGE }),
+  route('GET', `${PID}/knowledge/(?<id>[^/]+)`, c => c.api.knowledge.get(c.p.pid, c.p.id), { module: KNOWLEDGE }),
+  route('POST', `${PID}/knowledge`, c => c.api.knowledge.create(c.p.pid, c.body, c.actor), { module: KNOWLEDGE, status: 201 }),
+  route('PATCH', `${PID}/knowledge/(?<id>[^/]+)`, c => c.api.knowledge.update(c.p.pid, c.p.id, c.body, c.actor), { module: KNOWLEDGE }),
+  route('DELETE', `${PID}/knowledge/(?<id>[^/]+)`, c => { c.api.knowledge.remove(c.p.pid, c.p.id, c.actor); return null; }, { module: KNOWLEDGE, status: 204 }),
 
   // cut-off snapshots (the saved report of the data at a reporting date)
   route('GET', `${PID}/snapshots`, c => c.api.snapshots.list(c.p.pid)),

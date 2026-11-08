@@ -1,12 +1,14 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import { downloadCsv, request, type Page, type ProcurementPackage, type ProcurementSummary } from '../api';
+import { apiMode, downloadCsv, request, type Page, type ProcurementPackage, type ProcurementSummary } from '../api';
+import { RecordDrawer, suggest } from '../crud';
+import { packageFields } from './procFields';
 import { DataTable } from '../DataTable';
 import { fmtDate, initials } from '../format';
 import { Icon } from '../icons';
 import { Toolbar, useListState } from '../Register';
-import { useApp, useToast } from '../state';
+import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
 
 const PAGE_SIZE = 50;
@@ -14,8 +16,11 @@ const PAGE_SIZE = 50;
 export default function Procurement() {
   const { project } = useApp();
   const toast = useToast();
+  const access = useAccess();
+  const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
   const [selected, setSelected] = useState<ProcurementPackage | null>(null);
+  const [editing, setEditing] = useState<ProcurementPackage | 'new' | null>(null);
   const base = `/projects/${project.id}/procurement`;
 
   const summary = useQuery({ queryKey: ['procurement-summary', project.id], queryFn: () => request<ProcurementSummary>(`${base}/summary`) });
@@ -48,12 +53,15 @@ export default function Procurement() {
   return (
     <>
       <PageHead title="Procurement Plan" desc={`LOA and PO award register with buyer and expeditor ownership${s ? ` · ${s.total} packages` : ''}.`}
-        actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'procurement-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
+        actions={<>
+          <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'procurement-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
+          {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
+        </>} />
       <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot={`Across ${s ? Object.keys(s.byDiscipline).length : '—'} disciplines`} icon="box" />
         <Stat label="PO placed" value={poPlaced} foot={s ? `${Math.round((poPlaced / s.total) * 100)}% of register` : ''} icon="check" />
         <Stat label="LOA issued" value={s?.byStatus['LOA issued'] ?? 0} foot="Letter of award, PO pending" icon="clock" />
-        <Stat label="In tendering" value={s?.byStatus['In tendering'] ?? 0} foot="No LOA recorded yet" icon="risk" />
+        <Stat label="Not yet awarded" value={(s?.byStatus['In tendering'] ?? 0) + (s?.byStatus['Planned'] ?? 0)} foot={`${s?.byStatus['Planned'] ?? 0} planned · ${s?.byStatus['In tendering'] ?? 0} in tendering`} icon="risk" />
       </div>
       <div className="panel">
         <div className="panel-head"><div><h2>Procurement packages</h2><p>Select a package to review full award detail</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
@@ -66,7 +74,7 @@ export default function Procurement() {
         )}
       </div>
       {selected && (
-        <Modal title={`${selected.code} · Procurement package`} onClose={() => setSelected(null)} actions={<Btn onClick={() => setSelected(null)}>Close</Btn>}>
+        <Modal title={`${selected.code} · Procurement package`} onClose={() => setSelected(null)} actions={<>{canEdit && <Btn onClick={() => { setEditing(selected); setSelected(null); }}>Edit</Btn>}<Btn onClick={() => setSelected(null)}>Close</Btn></>}>
           <div className="dialog-body">
             <div className="drawer-intro">
               <div className="eyebrow">{selected.discipline}</div>
@@ -80,11 +88,21 @@ export default function Procurement() {
                 ['PO number', selected.poNo ?? 'Not placed'], ['PO date', selected.poDate ? fmtDate(selected.poDate) : selected.poNo ? 'TBA' : '—'],
                 ['Buyer', selected.buyer], ['Expeditor', selected.expeditor],
                 ['Project engineer (PE)', selected.pe], ['VQC', selected.vqc],
+                ['Work package', selected.workPackage], ['Contract type', selected.packageType], ['Weight in progress', selected.weightPct != null ? `${selected.weightPct.toFixed(2)}%` : null],
               ] as const).map(([k, v]) => <div key={k}><small>{k}</small><strong>{v || '—'}</strong></div>)}
             </div>
           </div>
         </Modal>
       )}
+      {editing && (() => {
+        const rows = (page.data?.items ?? []) as unknown as Record<string, unknown>[];
+        return (
+          <RecordDrawer title={editing === 'new' ? 'New procurement package' : `${editing.code} · Edit package`} size="lg" base={base + '/packages'} id={editing === 'new' ? undefined : editing.id}
+            record={editing === 'new' ? null : editing as never} canDelete={access.canManage} invalidate={['procurement-packages', 'procurement-summary', 'procurement-dashboard', 'dashboard']}
+            fields={packageFields({ discipline: page.data?.facets.disciplines ?? [], vendor: suggest(rows, 'vendor'), buyer: suggest(rows, 'buyer'), expeditor: suggest(rows, 'expeditor'), workPackage: suggest(rows, 'workPackage') })}
+            deleteNote="The package leaves the register. Concerns and shipments that name its code are kept." onClose={() => setEditing(null)} />
+        );
+      })()}
     </>
   );
 }

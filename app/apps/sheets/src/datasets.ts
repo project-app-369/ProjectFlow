@@ -21,6 +21,25 @@ export const COLUMNS = {
     ...text('status'), ...num('effort'), ...text('remarks'), ...stamp('createdAt', 'updatedAt'), ...text('owner'),
   ],
   subtasks: [...text('taskId', 'id', 'title', 'done'), ...num('position')],
+  logistics: [
+    ...text('projectId', 'id', 'source', 'packageNo', 'packageDescription', 'poNo', 'shipmentNo', 'shipmentDescription'), ...date('etdPol', 'etaPod', 'forecastOnSite', 'actualOnSite'),
+    ...text('status'), ...num('grossWeightKg'), ...text('qty', 'packingList', 'vessel', 'blNo', 'portLoading', 'portDischarge', 'transport', 'deliveryYard', 'issue'), ...stamp('updatedAt'),
+  ],
+  materialBalance: [
+    ...text('projectId', 'id', 'facility', 'supply', 'discipline', 'serialNo', 'category', 'materialCode', 'description', 'grade', 'poNo', 'shipmentNo', 'supplier', 'mrirNo', 'heatNo', 'unit'),
+    ...num('balance'), ...text('yard', 'location', 'status', 'remark'), ...stamp('updatedAt'),
+  ],
+  materialSummary: [...text('projectId', 'id', 'supply', 'facility'), ...num('mtoKg', 'arrivedKg', 'vspYardKg', 'mcYardKg'), ...stamp('updatedAt')],
+  procConcerns: [
+    ...text('projectId', 'id', 'packageCode', 'type', 'title', 'description', 'severity', 'area', 'owner'), ...date('raisedDate', 'dueDate'),
+    ...text('status', 'action', 'source', 'sourceRef'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
+  ],
+  procCurves: [...text('projectId', 'id', 'facility', 'scope'), ...date('start'), ...text('plan', 'forecast', 'actual'), ...stamp('updatedAt')],
+  budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt')],
+  knowledge: [
+    ...text('projectId', 'id', 'domain', 'category', 'title', 'summary', 'body', 'tags', 'sources', 'status'),
+    ...stamp('createdAt', 'updatedAt'), ...text('createdBy', 'updatedBy'),
+  ],
   snapshots: [...text('projectId'), ...date('cutoff'), ...stamp('createdAt'), ...text('createdBy', 'note'), ...num('rowCount')],
   snapshotData: [...text('projectId'), ...date('cutoff'), ...text('dataset'), ...num('part'), ...text('json')],
   scurve: [...text('projectId'), ...date('date'), ...num('plan', 'forecast', 'actual')],
@@ -28,7 +47,7 @@ export const COLUMNS = {
   milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment')],
   procurement: [
     ...text('projectId', 'id', 'code', 'discipline', 'description', 'vendorCode', 'vendor', 'origins', 'loaNo'), ...date('loaDate'),
-    ...text('poNo'), ...date('poDate'), ...text('buyer', 'expeditor', 'pe', 'vqc', 'status'),
+    ...text('poNo'), ...date('poDate'), ...text('buyer', 'expeditor', 'pe', 'vqc', 'status', 'workPackage', 'packageType'), ...num('weightPct'),
   ],
   expediting: [
     ...text('projectId', 'id', 'discipline', 'code', 'name', 'vendor', 'status'), ...num('planPct', 'actualPct', 'variance'), ...date('rosDate'),
@@ -65,9 +84,16 @@ export const SHEET = {
   milestones: 'EPCIC - Milestones',
   procurement: 'EPCIC - Procurement packages',
   expediting: 'EPCIC - Expediting packages',
+  budget: 'EPCIC - Construction budget',
+  logistics: 'EPCIC - Logistics shipments',
+  materialBalance: 'EPCIC - Material balance',
+  materialSummary: 'EPCIC - Material summary',
+  procConcerns: 'EPCIC - Procurement concerns',
+  procCurves: 'EPCIC - Procurement S-curves',
   risks: 'Governance - Risks',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
+  knowledge: 'Reports - Knowledge',
   snapshots: 'Reports - Cut-off snapshots',
   snapshotData: 'Reports - Snapshot data',
 } as const;
@@ -89,10 +115,10 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
-export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
+export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
 export type SnapshotDataset = (typeof SNAPSHOT_DATASETS)[number];
 export const SNAPSHOT_KEY_OF_SHEET: Record<string, SnapshotDataset> = Object.fromEntries(SNAPSHOT_DATASETS.map(k => [SHEET[k], k]));
 
@@ -104,6 +130,11 @@ export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[
   'procurement.procurement-plan': { sheet: SHEET.procurement, columns: COLUMNS.procurement },
   'procurement.expediting.vendor-overview': { sheet: SHEET.expediting, columns: COLUMNS.expediting },
   'task-management.board': { sheet: SHEET.tasks, columns: COLUMNS.tasks },
+  'construction.budget': { sheet: SHEET.budget, columns: COLUMNS.budget },
+  'procurement.logistics': { sheet: SHEET.logistics, columns: COLUMNS.logistics },
+  'procurement.materials': { sheet: SHEET.materialBalance, columns: COLUMNS.materialBalance },
+  'procurement.concerns': { sheet: SHEET.procConcerns, columns: COLUMNS.procConcerns },
+  ...Object.fromEntries(['overview', 'engineering', 'procurement', 'services', 'quality', 'hse', 'construction', 'precom', 'ti', 'huc'].map(d => [`knowledge.${d}`, { sheet: SHEET.knowledge, columns: COLUMNS.knowledge }])),
   'management.risks': { sheet: SHEET.risks, columns: COLUMNS.risks },
   'interface.register': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
   'interface.matrix': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
@@ -111,7 +142,7 @@ export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[
 };
 
 /** Modules that show derived data only and have no register of their own. */
-const WITHOUT_SHEET = new Set(['dashboard', 'task-management.calendar', 'task-management.workload']);
+const WITHOUT_SHEET = new Set(['dashboard', 'procurement.dashboard', 'task-management.calendar', 'task-management.workload']);
 
 export const isLeaf = (key: string, manifests: ModuleManifest[]) => !manifests.some(m => m.parent === key);
 

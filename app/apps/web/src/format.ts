@@ -8,9 +8,9 @@ export type Tone = 'green' | 'amber' | 'red' | 'indigo';
 
 export function statusTone(status?: string | null): Tone {
   const s = String(status ?? '');
-  if (/^(Normal|PO placed|Arrived|On track)$/i.test(s)) return 'green';
-  if (/^(Delay|At High Risk|Blocked)$/i.test(s)) return 'red';
-  if (/^(At Risk|LOA issued|FAT|On sailing|Final inspection)$/i.test(s)) return 'amber';
+  if (/^(Normal|PO placed|Arrived|On track|Received|Resolved|Closed|Published)$/i.test(s)) return 'green';
+  if (/^(Delay|At High Risk|Blocked|Critical)$/i.test(s)) return 'red';
+  if (/^(At Risk|LOA issued|FAT|On sailing|Final inspection|Under Customs|Inland transportation|Open|Mitigating|High)$/i.test(s)) return 'amber';
   return 'indigo';
 }
 

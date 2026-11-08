@@ -1,7 +1,7 @@
 # ProjectFlow_spec_final
 
 **Product:** Project Flow — EPCIC project management application  
-**Version:** 1.4 — project and user settings, milestones as reference data  
+**Version:** 1.6 — procurement dashboard, risks and concerns, logistics, materials; right-side drawers  
 **Date:** 8 November 2026  
 **Status:** Final consolidated specification for design, estimation, and implementation. Project-specific operating rules and production acceptance remain subject to the release gates below.  
 **Audience:** Product owner, project management, discipline leads, design, engineering, QA, and operations.
@@ -15,6 +15,10 @@ This document is the governing specification for the app. It consolidates the fo
 **Revision 1.2:** Adds Production Schedule Monitoring as a P1 subsection of Expediting, covering vendor production, baseline/forecast schedules, manufacturing progress, risks, highlights, concerns, vendor-management reviews, and accountable follow-up. Re-estimate P1 effort during discovery; the 68-week envelope is not a confirmed schedule for this added scope.
 
 **Revision 1.3:** Organizes navigation into four workspaces — Personal, EPCIC, Governance, and Reports — with display groups inside EPCIC (Yard Execution, Installation, Commissioning), keeping T&I apart from HUC and grouping HUC with Onshore Precom-Commissioning. Settings become separate pages by setting type, with a dedicated Modules page that lists every module and submodule as a breadcrumb-titled hierarchy with an enable/disable control. Release allocation and the effort estimate do not change; the module registry ships in P0 and Settings in P1 as before.
+
+**Revision 1.5:** Adds the Construction → Budget submodule (manhours per WBS activity with a histogram, CON-05 to CON-07) and the General Knowledge module in Reports, with one submodule per knowledge area (KNW-01 to KNW-04). Release allocation and the effort estimate do not change; Budget is delivered ahead of the P2 Construction module it belongs to, as a stand-alone screen.
+
+**Revision 1.6:** Detail and edit modals slide in from the right edge as drawers on every screen size (NAV-09; this replaces the centred overlay of 1.5). Procurement is built out from the project's procurement files: a monitoring dashboard, a register of risks, concerns and issues per package, shipment logistics, and material weights and stock, with create, edit and delete on each register and a live Google Sheets store (PROC-04 to PROC-08). Release allocation and the effort estimate do not change; Logistics and Materials, planned for P2, are delivered early as stand-alone registers.
 
 **Revision 1.4:** Adds the Settings pages for Projects (list, select, create, edit, lifecycle, delete rules, members) and Users (administrator mode), restates milestones as reference data loaded from the project workbook, and records how the first Risk and Interface Management screens meet MGT-01 and INT-01 to INT-03. Defines the personal Task Management screens (TASK-13 to TASK-15): one task set shown as list, card, kanban and gantt, a separate calendar, and a per-project workload. A non-normative note (§11.4) records how the Google Sheets pre-build organizes worksheets by area. Release allocation and the effort estimate do not change.
 
@@ -165,7 +169,7 @@ Project Flow
     Planning & Progress — Overall Progress, Work Packages, Milestones
     Yard Execution (display group)
       Construction — Yard Layout, Facility Layout, Workfront,
-                     Construction Sequence, Progress & KPI, Productivity
+                     Construction Sequence, Progress & KPI, Productivity, Budget
       Fabrication Subcontracting — Progress, Concerns & Highlights
       QAQC
       HSE
@@ -182,6 +186,8 @@ Project Flow
                        Transmittals, Reviews, CRS, Correspondence, Dossiers
     Event Management
   Reports
+    General Knowledge — Overview, Detailed Engineering, Procurement, Services, Quality,
+                        HSE, Construction, Pre-com / Commissioning, T&I, HUC
     Minutes of Meetings
     Documents
     Analytics
@@ -203,6 +209,10 @@ Project Flow
 **NAV-06:** Every module and submodule is identified by a breadcrumb path — workspace, display group where one applies, module, submodule, and any deeper level — for example EPCIC / Procurement / Expediting / Vendor Overview. The same path titles the screen header and the module's entry on the Modules settings page. Selecting a module that has enabled submodules opens its first enabled submodule that has a delivered screen.
 
 **NAV-07:** The header shows the project by its short name (the code when none is set; the full title is available on hover and in Settings) and a cut-off dropdown. The dropdown lists the current data with its reporting cut-off and every saved cut-off report, normally dated the Friday the data was imported. Choosing a saved report opens that date's data read-only (NAV-03), with a visible banner and a way back to the current data; derived statuses such as overdue and due soon are evaluated against the report's date. An icon-only snapshot button, available to roles that may manage records, saves the current data as a cut-off report for a chosen date (default the project's cut-off, with a shortcut to the latest Friday); saving over an existing date requires confirmation. A report copies the report datasets (schedule, milestones, procurement, expediting, risks, interfaces) and never changes after it is saved. The sidebar carries no project or cut-off card, and page content uses the full width of the window.
+
+**NAV-08:** A navigation entry that has submenus shows an arrow: pointing right when its submenu is closed and down when it is open. Choosing such an entry opens its submenu and shows its first page; choosing it again closes the submenu without leaving the page, and arriving at a page opens the menus above it. A button in the header collapses the sidebar to an icon rail on desktop and expands it again (the choice is remembered in the browser); on tablet and phone the same button opens and closes the sidebar as a drawer. In the rail, workspaces and top-level modules are icons with their names as tooltips and a click goes to the module's first page. Workspaces are shown with an icon as well as a name.
+
+**NAV-09:** Interface conventions: detail, edit and create modals slide in from the right edge of the window as a drawer on every screen size (full width on a phone, a fixed width of small, medium or large on larger screens, with the page dimmed behind), trap focus, close on Escape or a click outside, and stop the page behind them from scrolling. Short confirmations may be a small drawer too. Actions that repeat in rows and toolbars (edit, delete, add, export, import, refresh, previous, next, open, members, status, clear) are icon-only buttons with a colour for the action, the same wherever it appears, and a tooltip and accessible name that spell it out; primary actions, Save, Cancel and Close keep a word next to their icon. Colour never carries meaning alone.
 
 ### 3.2 Brand and design system
 
@@ -423,6 +433,14 @@ P1 provides these registers and manual impact assessment. P2 enriches impact lin
 
 **REP-04:** Formal reports shall be immutable, versioned snapshots with filters, reporting basis, commentary, approval, audience, and supersession. Recheck access at generation and delivery; use controlled links by default. Explicit attachment distribution shall disclose that already-downloaded copies cannot be revoked.
 
+**KNW-01:** General Knowledge shall give project members one place to learn what the project documents say. It is a module in the Reports workspace with an Overview and one submodule per knowledge area, each with these topics: Detailed Engineering (Process, Safety, Structure, Piping, Mechanical, Electrical, Instrument, Telecom, Materials, Pipeline), Procurement (Workflow, Policy), Services (Facility, External yards, Services), Quality (Standard, Special requirement), HSE (Campaign, Event), Construction (Sequence, Plan, Layout, Methods), Pre-com / Commissioning (Sequence, System description), T&I (Sequence, Simulation) and HUC (Campaign, Simulation). Every area also accepts the topic Other. Areas are switched on and off as modules (SET-06); an area that is off hides its articles and refuses writes to it.
+
+**KNW-02:** Knowledge is kept as short articles: title, area, topic, summary, text, tags, status (Draft or Published) and a list of source documents (title, document number or revision, optional link). An article summarizes and points back to documents; it does not replace Document Control and does not store the documents. The Overview searches all areas and shows each area with its article count and the most recently updated articles; an area page filters by topic, status and search text. Text supports headings, bullets, numbered items, bold and links, and never renders typed markup.
+
+**KNW-03:** Members with write access create and edit articles; Project Manager and Manager delete them; Client is read-only. Each article shows who last updated it and when. Articles are project data and appear in saved cut-off reports only through the project's own datasets, not through other projects.
+
+**KNW-04:** The first articles are generalized from the project's own loaded data (procurement status rules; fabrication, installation and commissioning sequence from the Key Milestones workbook) and carry that data as their source. Writing the content for the other areas, and any automatic summarizing of uploaded documents, are not part of this revision.
+
 **Acceptance:** Issued documents and reports remain reproducible; hidden columns are absent from exports; rescheduled/cancelled events do not produce obsolete reminders.
 
 ### 6.7 Tasks Management and PIC coordination
@@ -511,6 +529,18 @@ Document Control is a dedicated P1 business module over core files, revisions, t
 
 **Acceptance:** Duplicate package codes are rejected; a late PO line identifies consuming scope; operational exports exclude unauthorized commercial values.
 
+**PROC-04:** Procurement is organised as Dashboard, Procurement Plan, Expediting, Logistics, Materials and Risks & Concerns. Each register lists records with search, filters, sort, paging and CSV export, opens a record in a right-hand drawer (NAV-09), and lets roles that may write create and edit records and roles that manage delete them. Every change is checked on the server, stamped with who and when, and respected by the cut-off reports (NAV-07).
+
+**PROC-05:** The Procurement dashboard monitors activity and concentrates on where packages are at risk. It opens with six summary cards: overall procurement progress, packages placed, expediting flags, shipments, open risks and concerns, and material arrived. Below them are a weekly procurement S-curve (plan, forecast and actual, with the cut-off marked) that can be shown for all facilities or one facility and for all contracts, lump sum only or reimbursable only, and progress by work package. Wherever progress is shown as a bar, the fill is the actual figure and a tick marks the plan, with both figures and the gap in percentage points written beside it. The dashboard also shows packages by status (Planned, In tendering, LOA issued, PO placed), the weighted progress of the plan, expediting health (Delay, At High Risk, At Risk), shipments overdue or held, open risks, concerns and issues by severity, and a ranked list of packages needing attention. A package's attention score is the sum of weighted signals that point at it: an expediting status of Delay, At High Risk or At Risk, being five or more points behind plan, a required date already passed without arrival, a long wait from LOA to PO, each late shipment, each held shipment, and its open concerns weighted by the worst severity and their number, plus an extra amount when a concern's action is overdue. A score of 9 or more is Critical, 5 or more High, otherwise Medium. Each row states its reasons and opens the package's concerns. Totals reconcile to the registers.
+
+**PROC-05a:** The S-curve is read from weekly cumulative series per facility and contract scope (lump sum, reimbursable, both) held in the procurement plan workbook. The actual series stops at the cut-off; plan and forecast run to the end of the plan. A facility that has no lump sum or no reimbursable scope offers only the scopes it has. These curves are reference data and are not copied into cut-off reports.
+
+**PROC-06:** A concern is a Risk (may happen), Concern (building) or Issue (happening), each with a package code, area (Schedule, Cost, Quality, Delivery, Documentation, Contractual, Other), severity (Low, Medium, High, Critical), owner, raised and due dates, status (Open, Mitigating, Resolved, Closed) and an action. A concern is open until it is Resolved or Closed, and overdue when it is open and its due date is before the cut-off. Concerns can be raised by hand or seeded from the expediting register and logistics notes; the source is recorded.
+
+**PROC-07:** Logistics records each shipment from vendor to yard: package and PO, shipment number and description, ETD and ETA at port, forecast and actual on-site dates, status (Planned, On Sailing, Under Customs, Inland transportation, Received), weight, quantity, packing list, vessel, bill of lading, ports, transport, delivery yard and an issue note. A shipment is overdue when its forecast date is before the cut-off and it has not been received. Materials records the weight of material needed for purchase, arrived and on the VSP and MC yards by facility and supply (PTSC MC or Client), and the stock lines still on hand with code, heat number, MRIR, quantity, yard and status.
+
+**PROC-08:** The procurement files under `data/EPCIC/Procurement` (procurement plan workbook and expediting report) are the reference data for these registers. A repeatable extractor reads them into the seed file; the Google Sheets pre-build holds one worksheet per register, matched by header name, so a column may be added or moved without code changes. Rows the files do not carry, such as concerns raised by people, are entered in the app.
+
 ### 7.2 Expediting
 
 **EXP-01:** Track vendor engineering, material readiness, manufacture, inspection/FAT, release, packing, and dispatch milestones with baseline/forecast/actual dates, evidence, expeditor, and next follow-up.
@@ -574,6 +604,12 @@ Document Control is a dedicated P1 business module over core files, revisions, t
 **CON-03:** Readiness shall evaluate at least engineering approval/holds, material acceptance and availability, predecessor acceptance, resources/access, QAQC holds, and HSE constraints. Each gate has source revision, evaluator, evidence, validity/expiry, and waiver policy. Re-evaluate at release and after relevant source changes. Missing sources remain unresolved, not implicitly passed.
 
 **CON-04:** Non-waivable gates cannot be bypassed. Permitted exceptions require designated authority, rationale, scope, expiry, and evidence. A status dropdown alone cannot release work. An upstream invalidation shall notify owners and suspend affected release where the project policy requires it.
+
+**CON-05:** Construction → Budget shall hold the manhour budget of the construction scope as a work breakdown structure (WBS): each row has a project-unique WBS code, an optional parent WBS, an activity name, an optional discipline, budget manhours, an optional plan start and plan finish, and notes. Hours are entered on the activities at the bottom of the WBS; every row above them shows the sum of what lies below it, and a figure typed on a row that has activities below it is ignored. A WBS cannot be placed under itself or one of its own children, and a row with activities below it cannot be deleted.
+
+**CON-06:** The Budget screen shall show a manhour histogram: each activity's hours are spread evenly over the calendar days from its plan start to its plan finish and added up per week (Monday to Sunday) or per month, stacked by top-level WBS area or by discipline, with the cumulative total as a line. Hours of activities without both dates are reported separately, never silently dropped, and hours outside a chosen range are counted. A WBS can be entered row by row or pasted from a spreadsheet; an import is checked as a whole (codes, parents, dates, hours) and applies nothing unless every row is valid. Replacing an existing budget needs a Project Manager or Manager.
+
+**CON-07:** The Budget carries budget hours only. Earned and actual hours, productivity (the Productivity table in §7), and the link from a WBS activity to a workfront or schedule activity are separate requirements that depend on P2 Construction Progress.
 
 **CON-05:** Progress shall track discipline quantities and approved steps against packages/work items, with installed/submitted/verified/accepted values and evidence. P2 includes quantity/KPI tracking, look-ahead, and basic productivity using accepted quantities and direct hours. P3 adds linked sequence/dependency visualization and bottleneck analysis.
 
@@ -959,6 +995,11 @@ The selection preserves capability intent without treating every proposed implem
 | Separate worksheets per workspace and general settings | §11.4 | Non-normative pre-build note; the full application is unaffected |
 | Build Risk Management and Interface Management | MGT-06, INT-04 | First screens over MGT-01 and INT-01 to INT-03 |
 | Milestones as reference data | PLAN-03 | Read-only register loaded from the Key Milestones workbook |
+| Construction budget: manhours per WBS activity with histogram | CON-05 to CON-07 | Added as a Construction submodule; entry by row or pasted WBS; hours spread evenly over plan dates |
+| General Knowledge with the nine knowledge areas | KNW-01 to KNW-04 | One Reports module, a submodule per area; starter articles come from loaded data |
+| Edit modal pushed from the right; submenu arrows; collapsible navbar; icon buttons | NAV-08, NAV-09 | Modals are a right-hand drawer overlay rather than a native dialog (an earlier centred version misread the request); icon vocabulary lives in one place (`Btn`) |
+| Procurement data from `data/EPCIC/Procurement`, linked to Google Sheets, with CRUD | PROC-04, PROC-07, PROC-08 | Procurement plan, expediting, logistics, material balance and weights are loaded by `extract_procurement.py` and stored on the sheets; each register has create, edit and delete |
+| Procurement dashboard: six cards, S-curve by facility and LS/PS, progress by work package, actual-against-plan bars; risks and concerns per package | PROC-05, PROC-05a, PROC-06 | One dashboard with attention score per package; the S-curve comes from the plan workbook's weekly series; the attached picture for the bar style could not be viewed, so the bar shows actual as the fill, plan as a tick, and both figures; concerns are typed Risk, Concern or Issue with severity, owner and action |
 | Header: short project name, cut-off dropdown, snapshot button, full-width content, no sidebar project card | NAV-07 | Saved cut-off reports opened read-only from the dropdown; the Friday default is a shortcut, not a rule |
 | Task Management: list/card/kanban/gantt, task fields, calendar, workload | TASK-13 to TASK-15 | Personal tasks with derived Overdue; Planned added as a stored status so the four kanban columns map to the status field |
 

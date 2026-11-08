@@ -22,13 +22,29 @@ const paths: Record<string, string> = {
   flag: 'M5 22V3 M5 4h13l-3 4.5L18 13H5',
   doc: 'M14 2H5v20h14V7z M14 2v5h5 M8 12h8 M8 16h8',
   people: 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 7 M19 14a5 5 0 0 1 3 4v3',
+  book: 'M4 4h6a3 3 0 0 1 2 1 3 3 0 0 1 2-1h6v15h-6a3 3 0 0 0-2 1 3 3 0 0 0-2-1H4z M12 5v15',
   camera: 'M4 8h3l2-3h6l2 3h3v12H4z M12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7',
+  edit: 'M4 20h4L19 9l-4-4L4 16z M13 7l4 4',
+  trash: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6',
+  upload: 'M12 15V3 M7 8l5-5 5 5 M4 17v4h16v-4',
+  refresh: 'M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5',
+  'chevron-left': 'M15 6l-6 6 6 6',
+  'chevron-right': 'M9 6l6 6-6 6',
+  'chevron-down': 'M6 9l6 6 6-6',
+  fold: 'M8 4l4 4 4-4 M8 20l4-4 4 4',
+  unfold: 'M8 8l4-4 4 4 M8 16l4 4 4-4',
+  panel: 'M3 4h18v16H3z M9 4v16',
+  switch: 'M10 4H4v16h6 M15 8l4 4-4 4 M19 12H9',
+  tick: 'M5 12l5 5 9-10',
+  sheet: 'M3 4h18v16H3z M3 10h18 M3 15h18 M9 4v16',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M4 21a8 8 0 0 1 16 0',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
 };
 
+/** The icon's name is a class (`i-edit`, `i-trash`, …), so the stylesheet gives each one its colour. */
 export function Icon({ name }: { name?: string }) {
   return (
-    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={`icon i-${name ?? 'grid'}`} viewBox="0 0 24 24" aria-hidden="true">
       <path d={paths[name ?? ''] ?? paths.grid} />
     </svg>
   );

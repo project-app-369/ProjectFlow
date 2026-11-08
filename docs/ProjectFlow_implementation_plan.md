@@ -21,9 +21,16 @@ This plan separates what exists today (a *pre-build* on Google Sheets plus a fir
 | Module sheet generation and links | ADR 0003 | Done | n/a |
 | Dashboard, Overall Progress, Work Packages | PLAN-01 | Done | Done |
 | Procurement Plan, Expediting Vendor Overview | PROC, EXP | Done | Done |
+| Procurement CRUD (plan, expediting) with drawer forms | PROC-04 | Done | **Open** (read-only) |
+| Procurement dashboard, attention ranking | PROC-05 | Done | **Open** |
+| Risks & Concerns register and summary | PROC-06 | Done (22 seeded) | **Open** |
+| Logistics shipments, Materials weights and stock | PROC-07, PROC-08 | Done (193 shipments, 190 stock lines, 10 weight lines) | **Open** |
+| Right-hand drawer modals | NAV-09 | Done | Done (web) |
 | Personal tasks: list, card, kanban (drag and drop), gantt, sub-tasks, projects | TASK-13, TASK-14 | Done (owner-scoped) | Old board only (To do / In progress / Done) |
 | Task Calendar (day/week/month) and Workload by project | TASK-15 | Done | **Open** |
 | Cut-off reports (snapshots) and read-only historical view | NAV-03, NAV-07 | Done (stored as chunked JSON in two sheets) | **Open** |
+| Construction budget (WBS manhours, histogram, WBS import) | CON-05 to CON-07 | Done; no budget data loaded yet | **Open** |
+| General Knowledge (nine areas, articles, sources) | KNW-01 to KNW-04 | Done; 4 starter articles | **Open** |
 | Projects: list, select, create, edit, lifecycle, delete rules | PRJ-01, 03, 07, SET-07 | Done | **Open** |
 | Project members and project roles | §2.1, PRJ-07 | Done (5 roles) | **Open** |
 | Users and account states (admin mode) | SET-08, AUTH-02 | Done (no passwords) | **Open** |
@@ -53,9 +60,10 @@ Work in this order; each item ships with the same test cases as `apps/sheets/tes
 4. **Registers**: tables for milestones, risks, interfaces, interface points; move scoring (`risk-matrix.ts`) and the interface state machine (`interface-flow.ts`) into a shared package so the two backends cannot drift. The catalog and progress maths are already shared by relative import.
 5. **Personal tasks**: new task schema (task number, urgency, assigner, projects, plan dates, effort, remarks), sub-tasks table, derived overdue and the `/tasks/workload` route; move the workload and date helpers (`tasks-service.ts`) into a shared package with the sheets backend.
 6. **Cut-off snapshots**: a `snapshots` table with one row per report and the datasets copied as JSONB (or a versioned copy of the report tables), the `?asOf=` read parameter and the read-only guard; replaces the 40,000-character cell chunks used in the sheets.
-7. **Loader for milestones** from the Key Milestones workbook (currently a one-off extract in `sttp2b.json`).
-8. **Web client**: in `rest` mode, enable sign-in, Projects and Users once steps 1–2 land; remove the sheets-only gating in `nav.ts` and `App.tsx`.
-9. **Cutover**: load the spreadsheet into PostgreSQL (column names equal API field names), switch `VITE_API_MODE=rest`, retire `apps/sheets` or keep it as an export format.
+7. **Budget and knowledge tables**: `wbs_budget` (project, code, parent, hours, dates), `knowledge_articles` with sources as JSONB, and full-text search in PostgreSQL instead of the in-memory search used on sheets; the histogram arithmetic moves with `budget-service.ts`.
+8. **Loader for milestones** from the Key Milestones workbook (currently a one-off extract in `sttp2b.json`).
+9. **Web client**: in `rest` mode, enable sign-in, Projects and Users once steps 1–2 land; remove the sheets-only gating in `nav.ts` and `App.tsx`.
+10. **Cutover**: load the spreadsheet into PostgreSQL (column names equal API field names), switch `VITE_API_MODE=rest`, retire `apps/sheets` or keep it as an export format.
 
 ## 4. Roadmap against the spec
 
@@ -69,6 +77,9 @@ Work in this order; each item ships with the same test cases as `apps/sheets/tes
 The 68-week envelope is not re-estimated here (spec revision 1.2 note).
 
 ## 5. Next steps, in priority order
+
+0. **Load real content.** No construction manhour budget and no knowledge source documents exist in `data/` yet. Supply the budget WBS (a spreadsheet with WBS, activity, parent, discipline, manhours, start and finish pastes straight into Import WBS) and decide who writes the knowledge articles for the areas that are still empty.
+
 
 1. Confirm the role names and the two Governance screens with the project team using the pre-build (demo identities: administrator, manager, team member, client).
 2. Decide whether separate spreadsheet files per workspace are still wanted (ADR 0004 reads the request as sheet grouping inside one file).

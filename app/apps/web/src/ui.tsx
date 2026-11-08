@@ -1,6 +1,7 @@
-import { Component, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './icons';
-import { statusTone, type Tone } from './format';
+import { signed, statusTone, type Tone } from './format';
 import { CrumbContext, SheetContext, useApp } from './state';
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
@@ -13,6 +14,28 @@ export function Stat({ label, value, unit, foot, icon }: { label: string; value:
       <div className="stat-label">{label}<Icon name={icon} /></div>
       <div className="stat-value mono">{value}{unit && <small>{unit}</small>}</div>
       <div className="stat-foot">{foot}</div>
+    </div>
+  );
+}
+
+/** A progress bar that shows the actual figure as the fill and the plan as a tick, with both numbers written out. */
+export function ActualPlanBar({ actual, plan, label, compact }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean }) {
+  const a = actual ?? 0;
+  const gap = plan == null ? null : a - plan;
+  const at = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
+  const text = `${a.toFixed(1)}% actual${plan != null ? `, ${plan.toFixed(1)}% plan` : ''}`;
+  return (
+    <div className={`apbar ${compact ? 'compact' : ''}`}>
+      <div className="apbar-figures">
+        {label && <span className="apbar-label">{label}</span>}
+        <span><strong>{a.toFixed(1)}%</strong> <span className="muted">actual</span></span>
+        {plan != null && <span className="muted">{plan.toFixed(1)}% plan</span>}
+        {gap != null && <span className={gap < 0 ? 'negative' : 'positive'}>{signed(gap)} pp</span>}
+      </div>
+      <div className="apbar-track" role="img" aria-label={text} title={text}>
+        <div className={`apbar-fill ${gap != null && gap < 0 ? 'behind' : ''}`} style={{ width: at(a) }} />
+        {plan != null && <div className="apbar-plan" style={{ left: at(plan) }} />}
+      </div>
     </div>
   );
 }
@@ -44,7 +67,7 @@ export function PageHead({ title, desc, actions }: { title: string; desc: ReactN
           <p className="page-sub">{desc}</p>
         </div>
         <div className="actions">
-          {sheet && <a className="btn small" href={sheet.url} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`}><Icon name="doc" />Open sheet</a>}
+          {sheet && <a className="btn small icon-only" href={sheet.url} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`} aria-label={`Open the "${sheet.name}" sheet`}><Icon name="sheet" /></a>}
           {actions}
         </div>
       </div>
@@ -52,37 +75,98 @@ export function PageHead({ title, desc, actions }: { title: string; desc: ReactN
   );
 }
 
-export function Btn({ children, icon, kind = '', ...rest }: { icon?: string; kind?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+/**
+ * Verbs that read faster as a coloured icon alone (the label stays as tooltip and accessible name). Anything not listed
+ * keeps its text; `iconOnly` on a button overrides this either way. Save, Cancel and Close keep their words next to the icon.
+ */
+const VERBS: Record<string, { icon: string; only: boolean }> = {
+  Edit: { icon: 'edit', only: true }, Delete: { icon: 'trash', only: true }, Remove: { icon: 'trash', only: true },
+  'Export CSV': { icon: 'down', only: true }, 'Import WBS': { icon: 'upload', only: true }, Refresh: { icon: 'refresh', only: true },
+  Previous: { icon: 'chevron-left', only: true }, Next: { icon: 'chevron-right', only: true }, '‹': { icon: 'chevron-left', only: true }, '›': { icon: 'chevron-right', only: true },
+  Members: { icon: 'people', only: true }, Status: { icon: 'flag', only: true }, Open: { icon: 'arrow', only: true }, Selected: { icon: 'tick', only: true },
+  Clear: { icon: 'close', only: true }, Today: { icon: 'calendar', only: true }, Add: { icon: 'plus', only: true },
+  'Collapse all': { icon: 'fold', only: true }, 'Expand all': { icon: 'unfold', only: true },
+  Cancel: { icon: 'close', only: false }, Close: { icon: 'close', only: false }, Save: { icon: 'tick', only: false },
+};
+const LEADING: [RegExp, string][] = [[/^(Save|Create|Replace|Import \d)/, 'tick'], [/^Add /, 'plus']];
+
+export function Btn({ children, icon, iconOnly, kind = '', ...rest }: { icon?: string; iconOnly?: boolean; kind?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const text = typeof children === 'string' ? children : undefined;
+  const verb = text ? VERBS[text] : undefined;
+  const glyph = icon ?? verb?.icon ?? (text ? LEADING.find(([re]) => re.test(text))?.[1] : undefined);
+  const only = !!glyph && (iconOnly ?? verb?.only ?? false);
+  const label = rest['aria-label'] ?? text;
+  if (only) {
+    return <button type="button" className={`btn ${kind} icon-only`} {...rest} aria-label={label} title={rest.title ?? label}><Icon name={glyph} /></button>;
+  }
   return (
     <button type="button" className={`btn ${kind}`} {...rest}>
-      {icon && <Icon name={icon} />}{children}
+      {glyph && <Icon name={glyph} />}{children}
     </button>
   );
 }
 
-export function Modal({ title, onClose, children, actions }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode }) {
-  const ref = useRef<HTMLDialogElement>(null);
+let modalLocks = 0;
+const modalStack: symbol[] = [];
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+/**
+ * A panel that slides in from the right edge, full height (full width on a phone). It is a plain overlay, not a native
+ * <dialog>, so its position cannot depend on a browser's default dialog styles. It traps focus, closes on Escape or a
+ * click on the dimmed page, locks page scrolling while open, and gives focus back when it closes.
+ */
+export function Modal({ title, onClose, children, actions, size = 'md' }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  const id = useId();
+
   useEffect(() => {
-    const d = ref.current;
-    if (d && !d.open) d.showModal();
+    const el = panel.current!;
+    const token = Symbol('modal');
+    modalStack.push(token);
+    const before = document.activeElement as HTMLElement | null;
+    const { body, documentElement: root } = document;
+    const saved = { overflow: body.style.overflow, padding: body.style.paddingRight };
+    if (modalLocks++ === 0) {
+      const gap = window.innerWidth - root.clientWidth;
+      body.style.overflow = 'hidden';
+      if (gap > 0) body.style.paddingRight = `${gap}px`;
+    }
+    if (!el.contains(document.activeElement)) (el.querySelector<HTMLElement>('input:not([type=hidden]),textarea,select') ?? el.querySelector<HTMLElement>(FOCUSABLE) ?? el).focus({ preventScroll: true });
+
+    const onKey = (e: KeyboardEvent) => {
+      if (modalStack[modalStack.length - 1] !== token) return; // only the top-most modal reacts
+      if (e.key === 'Escape') { e.preventDefault(); close.current(); return; }
+      if (e.key !== 'Tab') return;
+      const items = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (!items.length) { e.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !el.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !el.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      modalStack.splice(modalStack.indexOf(token), 1);
+      if (--modalLocks === 0) { body.style.overflow = saved.overflow; body.style.paddingRight = saved.padding; }
+      before?.focus?.({ preventScroll: true });
+    };
   }, []);
-  return (
-    <dialog
-      ref={ref}
-      aria-labelledby="dialog-title"
-      onClose={onClose}
-      onClick={e => {
-        const r = e.currentTarget.getBoundingClientRect();
-        if (e.target === e.currentTarget && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) onClose();
-      }}
-    >
-      <div className="dialog-head">
-        <h2 id="dialog-title">{title}</h2>
-        <button className="icon-btn" type="button" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></button>
+
+  return createPortal(
+    <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close.current(); }}>
+      <div className={`modal size-${size}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={panel} tabIndex={-1}>
+        <div className="dialog-head">
+          <h2 id={id}>{title}</h2>
+          <button className="icon-btn" type="button" aria-label="Close dialog" title="Close" onClick={onClose}><Icon name="close" /></button>
+        </div>
+        {children}
+        {actions && <div className="dialog-actions">{actions}</div>}
       </div>
-      {children}
-      {actions && <div className="dialog-actions">{actions}</div>}
-    </dialog>
+    </div>,
+    document.body,
   );
 }
 
@@ -133,7 +217,7 @@ export function Field({ label, full, hint, children }: { label: string; full?: b
 /** Asks before something that cannot be undone. */
 export function Confirm({ title, children, confirmLabel = 'Delete', busy, onConfirm, onClose }: { title: string; children: ReactNode; confirmLabel?: string; busy?: boolean; onConfirm: () => void; onClose: () => void }) {
   return (
-    <Modal title={title} onClose={onClose} actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={busy} onClick={onConfirm}>{confirmLabel}</Btn></>}>
+    <Modal title={title} size="sm" onClose={onClose} actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" icon={confirmLabel === 'Delete' ? 'trash' : 'tick'} iconOnly={false} disabled={busy} onClick={onConfirm}>{confirmLabel}</Btn></>}>
       <div className="dialog-body">{children}</div>
     </Modal>
   );

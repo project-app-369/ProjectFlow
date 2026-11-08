@@ -25,11 +25,18 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `EPCIC - S-curve` | EPCIC (indigo) | Monthly plan / forecast / actual | Overall Progress |
 | `EPCIC - Work packages` | EPCIC | WP2 – WP6 weights and weekly progress | Work Packages |
 | `EPCIC - Milestones` | EPCIC | Key milestones (reference data, 48 rows for STTP2B) | Milestones |
-| `EPCIC - Procurement packages` | EPCIC | LOA/PO register | Procurement Plan |
+| `EPCIC - Procurement packages` | EPCIC | LOA/PO register (plus work package, contract type, weight in progress) | Procurement Plan |
 | `EPCIC - Expediting packages` | EPCIC | Expediting status and details | Vendor Overview |
+| `EPCIC - Logistics shipments` | EPCIC | Shipments from vendor to yard: dates, status, weight, vessel, B/L, yard, issue note (193 rows for STTP2B) | Logistics |
+| `EPCIC - Material balance` | EPCIC | Stock lines on hand: code, heat no., MRIR, balance, yard, status (190 rows) | Materials |
+| `EPCIC - Material summary` | EPCIC | Needed / arrived / on-yard weight per facility and supply (10 rows) | Materials, Procurement dashboard |
+| `EPCIC - Procurement S-curves` | EPCIC | Weekly cumulative plan, forecast and actual per facility and LS / PS / overall, as comma-separated percentages from a start date (17 rows) | Procurement dashboard |
+| `EPCIC - Procurement concerns` | EPCIC | Risks, concerns and issues per package with severity, owner, action (22 seeded from expediting and logistics) | Risks & Concerns, Procurement dashboard |
+| `EPCIC - Construction budget` | EPCIC | WBS rows with parent, discipline, manhours, plan start and finish | Construction → Budget |
 | `Governance - Risks` | Governance (amber) | Risk register (inherent and residual likelihood/impact) | Risk register |
 | `Governance - Interfaces` | Governance | Interface register | Interface register and matrix |
 | `Governance - Interface points` | Governance | Points under each interface | Interface points |
+| `Reports - Knowledge` | Reports (red) | General Knowledge articles, all areas | General Knowledge |
 | `Reports - Cut-off snapshots` | Reports (red) | One row per saved cut-off report | cut-off dropdown |
 | `Reports - Snapshot data` | Reports | The report's datasets as JSON parts (40,000 characters per cell) | cut-off dropdown |
 | `<Workspace> - <Module> - <Submodule>` | the module's workspace | Generated when a module is established (see below) | the module's page |
@@ -107,7 +114,7 @@ Routes, module guards and error codes match `apps/api` where it has them. The pr
 ## Commands
 
 ```bash
-pnpm --filter @projectflow/sheets test        # 76 tests
+pnpm --filter @projectflow/sheets test        # 101 tests
 pnpm --filter @projectflow/sheets typecheck
 pnpm --filter @projectflow/sheets build       # dist/Code.js (about 600 kB minified, mostly zod and the seed data)
 ```

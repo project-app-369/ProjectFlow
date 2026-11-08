@@ -147,12 +147,13 @@ export interface SheetInfo { name: string; gid: number; url: string }
 export interface ModuleRecords { sheet: SheetInfo | null; columns: string[]; items: Record<string, string | number | null>[] }
 export interface ModulesResponse { workspaces: { id: WorkspaceId; label: string }[]; modules: ModuleInfo[] }
 
-export interface Page<T> { items: T[]; total: number; page: number; pageSize: number; facets: { disciplines: string[]; statuses: string[]; parties?: string[] } }
+export interface Page<T> { items: T[]; total: number; page: number; pageSize: number; facets: { disciplines: string[]; statuses: string[]; parties?: string[]; [filter: string]: string[] | undefined } }
 
 export interface ProcurementPackage {
   id: string; code: string; discipline: string | null; description: string | null; vendorCode: string | null; vendor: string | null;
   origins: string | null; loaNo: string | null; loaDate: string | null; poNo: string | null; poDate: string | null;
   buyer: string | null; expeditor: string | null; pe: string | null; vqc: string | null; status: string;
+  workPackage?: string | null; packageType?: string | null; weightPct?: number | null;
 }
 export interface ProcurementSummary { total: number; byStatus: Record<string, number>; byDiscipline: Record<string, number> }
 
@@ -229,6 +230,107 @@ export interface Dashboard {
   milestones?: MilestoneSummary | null;
   risks?: RiskSummary | null;
   interfaces?: InterfaceSummary | null;
+}
+
+/* ---------- procurement registers and dashboard (sheets backend) ---------- */
+export type Severity = 'Low' | 'Medium' | 'High' | 'Critical';
+export const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
+export const CONCERN_TYPES = ['Risk', 'Concern', 'Issue'];
+export const CONCERN_AREAS = ['Schedule', 'Cost', 'Quality', 'Delivery', 'Documentation', 'Contractual', 'Other'];
+export const CONCERN_STATUSES = ['Open', 'Mitigating', 'Resolved', 'Closed'];
+export interface Concern {
+  id: string; packageCode: string | null; type: string; title: string; description: string | null; severity: Severity; area: string; owner: string | null;
+  raisedDate: string | null; dueDate: string | null; status: string; action: string | null; source: string; sourceRef: string | null; overdue: boolean; ageDays: number | null;
+  createdAt?: string; updatedAt?: string;
+}
+export interface ConcernSummary {
+  total: number; open: number; closed: number; overdue: number; bySeverity: Record<Severity, number>; byType: Record<string, number>; byArea: Record<string, number>;
+  top: Concern[]; byPackage: { code: string; open: number; score: number; worst: Severity }[];
+}
+export interface Shipment {
+  id: string; source: 'PTSC' | 'Client'; packageNo: string; packageDescription: string | null; poNo: string | null; shipmentNo: string | null; shipmentDescription: string | null;
+  etdPol: string | null; etaPod: string | null; forecastOnSite: string | null; actualOnSite: string | null; status: string; grossWeightKg: number | null; qty: string | null; packingList: string | null;
+  vessel: string | null; blNo: string | null; portLoading: string | null; portDischarge: string | null; transport: string | null; deliveryYard: string | null; issue: string | null;
+  overdue: boolean; daysLate: number | null;
+}
+export interface StockLine {
+  id: string; facility: string | null; supply: string | null; discipline: string | null; serialNo: string | null; category: string | null; materialCode: string | null; description: string;
+  grade: string | null; poNo: string | null; shipmentNo: string | null; supplier: string | null; mrirNo: string | null; heatNo: string | null; unit: string | null; balance: number | null;
+  yard: string | null; location: string | null; status: string | null; remark: string | null;
+}
+export interface MaterialWeight { id: string; supply: 'PTSC MC' | 'Client'; facility: string; mtoKg: number | null; arrivedKg: number | null; vspYardKg: number | null; mcYardKg: number | null; arrivedPct: number | null }
+export interface AttentionItem { code: string; name: string | null; vendor: string | null; discipline: string | null; score: number; level: 'Critical' | 'High' | 'Medium'; reasons: string[] }
+export interface ExpeditingBrief { id: string; code: string; name: string | null; vendor: string | null; discipline: string | null; status: string; planPct: number | null; actualPct: number | null; variance: number | null; rosDate: string | null }
+export interface ProcurementDashboard {
+  cutoff: string;
+  pipeline: null | {
+    total: number; byStatus: Record<string, number>; placedPct: number | null; byType: Record<string, number>;
+    byDiscipline: ({ discipline: string; total: number } & Record<string, number | string>)[];
+    slowAward: { code: string; description: string | null; vendor: string | null; loaDate: string; days: number }[]; slowAwardCount: number;
+  };
+  expediting: null | {
+    total: number; byStatus: Record<string, number>; health: { delay: number; highRisk: number; atRisk: number; ok: number }; avgPlanPct: number | null; avgActualPct: number | null;
+    behind: ExpeditingBrief[]; rosSoon: (ExpeditingBrief & { daysToRos: number })[]; rosSoonCount: number; rosPassed: (ExpeditingBrief & { daysPast: number })[]; rosPassedCount: number;
+    byDiscipline: { discipline: string; total: number; delay: number; highRisk: number; atRisk: number; avgVariance: number | null }[];
+  };
+  logistics: null | {
+    total: number; byStatus: Record<string, number>; bySource: Record<string, number>; weightKg: number; receivedKg: number; inTransit: number;
+    overdueCount: number; overdue: Shipment[]; soonCount: number; soon: Shipment[]; heldCount: number; held: Shipment[];
+  };
+  materials: null | { rows: MaterialWeight[]; totals: { supply: string; mtoKg: number; arrivedKg: number; arrivedPct: number | null }[]; stockLines: number };
+  concerns: null | ConcernSummary;
+  workPackages: null | WorkPackagesResponse;
+  attention: AttentionItem[]; attentionCount: number;
+}
+
+/** Weekly cumulative procurement progress for one facility and scope (OVR = lump sum and reimbursable together). */
+export interface ProcurementCurve {
+  cutoff: string; facilities: string[]; facility: string | null; scopes: ('OVR' | 'LS' | 'PS')[]; scope: 'OVR' | 'LS' | 'PS' | null;
+  dates: string[]; plan: (number | null)[]; forecast: (number | null)[]; actual: (number | null)[];
+  latest: null | { date: string; plan: number | null; forecast: number | null; actual: number | null };
+}
+
+/* ---------- construction budget (sheets backend) ---------- */
+export interface WbsNode {
+  wbs: string; name: string; parentWbs: string | null; discipline: string | null; planStart: string | null; planFinish: string | null; notes: string | null;
+  level: number; children: number; leaf: boolean;
+  /** Hours typed on the row; ignored when the row has children. */
+  ownHours: number;
+  /** Leaf: its own hours. Parent: the sum below it. */
+  hours: number;
+  start: string | null; finish: string | null; top: string;
+}
+export interface BudgetSummary {
+  totalHours: number; activities: number; nodes: number; scheduledHours: number; unscheduledHours: number;
+  byDiscipline: Record<string, number>; start: string | null; finish: string | null; topLevel: { wbs: string; name: string; hours: number }[];
+}
+export interface BudgetResponse { items: WbsNode[]; summary: BudgetSummary }
+export interface BudgetInput {
+  wbs?: string; name?: string; parentWbs?: string | null; discipline?: string | null; manhours?: number | null; planStart?: string | null; planFinish?: string | null; notes?: string | null;
+}
+export interface BudgetHistogram {
+  by: 'week' | 'month'; group: 'wbs' | 'discipline'; from: string | null; to: string | null;
+  groups: { key: string; label: string }[];
+  periods: { start: string; end: string; total: number; byGroup: Record<string, number> }[];
+  cumulative: number[]; peak: { start: string; hours: number } | null;
+  totalHours: number; scheduledHours: number; unscheduledHours: number; outsideHours: number; truncated: boolean;
+}
+
+/* ---------- general knowledge (sheets backend) ---------- */
+export type KnowledgeDomain = 'engineering' | 'procurement' | 'services' | 'quality' | 'hse' | 'construction' | 'precom' | 'ti' | 'huc';
+export interface KnowledgeSource { title: string; ref: string | null; url: string | null }
+export interface KnowledgeArticle {
+  id: string; domain: KnowledgeDomain; domainLabel: string; category: string; title: string; summary: string; body?: string;
+  tags: string[]; sources: KnowledgeSource[]; status: 'Draft' | 'Published';
+  createdAt: string; updatedAt: string; createdBy: string; updatedBy: string;
+}
+export interface KnowledgeTaxonomy { domain: KnowledgeDomain; label: string; moduleKey: string; categories: string[]; enabled: boolean }
+export interface KnowledgeSummary {
+  total: number; drafts: number; byDomain: Record<string, { total: number; byCategory: Record<string, number> }>; recent: KnowledgeArticle[]; taxonomy: KnowledgeTaxonomy[];
+}
+export interface KnowledgePage { items: KnowledgeArticle[]; total: number; page: number; pageSize: number; facets: { categories: Record<string, number>; tags: string[] } }
+export interface KnowledgeInput {
+  domain?: KnowledgeDomain; category?: string; title?: string; summary?: string; body?: string; tags?: string[]; sources?: KnowledgeSource[]; status?: 'Draft' | 'Published';
 }
 
 /* ---------- personal task management (sheets backend) ---------- */

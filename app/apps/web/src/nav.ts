@@ -10,7 +10,7 @@ export const WIRED_KEYS = [
   'procurement.expediting.vendor-overview',
 ] as const;
 /** Screens that only the sheets backend serves so far (NestJS parity is on the implementation plan). */
-export const SHEETS_KEYS = ['task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;
+export const SHEETS_KEYS = ['procurement.dashboard', 'procurement.concerns', 'procurement.logistics', 'procurement.materials', 'construction.budget', 'knowledge.overview', 'knowledge.engineering', 'knowledge.procurement', 'knowledge.services', 'knowledge.quality', 'knowledge.hse', 'knowledge.construction', 'knowledge.precom', 'knowledge.ti', 'knowledge.huc', 'task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;
 const wired = new Set<string>(apiMode === 'sheets' ? [...WIRED_KEYS, ...SHEETS_KEYS] : WIRED_KEYS);
 
 export const kidsOf = (mods: ModuleInfo[], key: string) => mods.filter(m => m.parent === key && m.effective);

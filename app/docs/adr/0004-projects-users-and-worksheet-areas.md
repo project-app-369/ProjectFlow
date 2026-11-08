@@ -34,6 +34,24 @@ The pre-build served one hard-wired project to one anonymous user. The team now 
 - **Cost.** Opening a report reads the whole snapshot sheet, so it slows as weeks accumulate (about 110 KB per report today). Acceptable for the pre-build; the full application stores reports in the database.
 - **Friday** is a default and a shortcut, not a rule: any date up to tomorrow can be used.
 
+## Addendum: construction budget and General Knowledge (8 November 2026)
+
+- **Budget** is `EPCIC - Construction budget`: one row per WBS code with a parent code, so the WBS is a tree and parents roll up their children. Only rows at the bottom carry hours, which keeps totals from counting the same hours twice. The histogram is computed at read time by spreading each activity evenly over its calendar days, so changing dates or hours needs no recomputation or migration. The budget is included in cut-off reports.
+- **No invented numbers.** There is no construction budget in `data/`, so the sheet starts empty. A pasted-WBS import (header row, then rows; checked as a whole) is the way to load it.
+- **General Knowledge** lives in the Reports workspace as `knowledge`, with one submodule per area (`knowledge.engineering`, `.procurement`, `.services`, `.quality`, `.hse`, `.construction`, `.precom`, `.ti`, `.huc`) and an Overview. All share one sheet, `Reports - Knowledge`; the area is a column. Topics per area are fixed in code and returned by the API, so the web client carries no second copy.
+- **Seed articles are derived, not written.** Four starter articles are generated from the loaded milestone dates and the documented status rules of the procurement registers, each listing that workbook as its source. They can be edited or deleted.
+- **Why Reports.** Knowledge is read-mostly reference, closest to Documents and Periodic Reports. The workspace can change without touching the data.
+
+## Addendum: procurement registers and right-hand drawers (8 November 2026)
+
+- **Four new sheets** hold the procurement data from `data/EPCIC/Procurement`: `EPCIC - Logistics shipments`, `EPCIC - Material balance`, `EPCIC - Material summary` and `EPCIC - Procurement concerns`. The procurement packages sheet gains work package, contract type and weight columns. They are project datasets, so they carry `projectId`, appear in cut-off reports and are covered by the module guards of Procurement.
+- **CRUD is generic.** `apps/sheets/src/crud.ts` defines `Resource`: list with filters and a text search, CSV, get, create (ids `PREFIX-NNN`), update that merges onto the stored row, and delete for roles that manage. Each register is a few lines of definition (`procurement-ops.ts`) with a zod schema; writes need the write role and are refused while a cut-off report is open.
+- **Derived, not stored.** Shipment overdue, concern overdue and age, package status and the dashboard's attention score are computed at read time against the project's cut-off, so they follow a report's date like every other derived status.
+- **Concerns are seeded, then owned by people.** 22 rows are generated from the expediting highlights and logistics notes (source and reference recorded); everything after that is entered in the app.
+- **Loading a live spreadsheet is a data step.** The new sheets are created by *Set up sheets* with their headers. Their rows come from `sttp2b.json`; for a deployed script that is the seed, and for the live file used in development they were written once with the Sheets API from the same extraction. Re-running `extract_procurement.py` changes the seed only, not a sheet that already has rows.
+- **S-curves are compact on purpose.** `EPCIC - Procurement S-curves` has one row per facility and scope; plan, forecast and actual are each one cell of comma-separated percentages (about 900 characters) and `start` is the first Friday. That keeps 17 curves of 144 weeks in 17 rows instead of 7,000, and stays under the 50,000-character cell limit. The actual series is shorter than plan because it stops at the cut-off. The sheet is not part of cut-off reports.
+- **Drawers.** Detail and edit modals are a right-hand drawer on all screen sizes (the earlier centred overlay was a misreading of the request). One `Modal` component supplies it, with small, medium and large widths.
+
 ## Consequences
 
 - The web client has two modes. Projects and Users settings, project switching, sign-in and the new registers exist only in `sheets` mode; in `rest` mode (NestJS) the new screens fall back to a placeholder and the Settings pages are hidden until the API catches up.

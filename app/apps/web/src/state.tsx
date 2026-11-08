@@ -3,8 +3,8 @@ import type { Me, ModulesResponse, Project, Role, SheetInfo, WorkspaceId } from 
 
 /* ---------------- personal UI preferences (browser-local) ---------------- */
 const PREFS_KEY = 'projectflow.prefs';
-interface Prefs { dark: boolean; workspace: WorkspaceId }
-const defaults: Prefs = { dark: false, workspace: 'epcic' };
+interface Prefs { dark: boolean; workspace: WorkspaceId; /** Sidebar shown as an icon rail (desktop). */ navCollapsed: boolean }
+const defaults: Prefs = { dark: false, workspace: 'epcic', navCollapsed: false };
 
 function loadPrefs(): Prefs {
   try {
@@ -14,7 +14,7 @@ function loadPrefs(): Prefs {
   }
 }
 
-interface PrefsCtx extends Prefs { setDark: (v: boolean) => void; setWorkspace: (w: WorkspaceId) => void; reset: () => void }
+interface PrefsCtx extends Prefs { setDark: (v: boolean) => void; setWorkspace: (w: WorkspaceId) => void; setNavCollapsed: (v: boolean) => void; reset: () => void }
 const PrefsContext = createContext<PrefsCtx>(null as never);
 export const usePrefs = () => useContext(PrefsContext);
 
@@ -23,11 +23,13 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ }
     document.body.classList.toggle('dark', prefs.dark);
+    document.documentElement.dataset.nav = prefs.navCollapsed ? 'collapsed' : 'expanded';
   }, [prefs]);
   const value = useMemo<PrefsCtx>(() => ({
     ...prefs,
     setDark: dark => setPrefs(p => ({ ...p, dark })),
     setWorkspace: workspace => setPrefs(p => (p.workspace === workspace ? p : { ...p, workspace })),
+    setNavCollapsed: navCollapsed => setPrefs(p => ({ ...p, navCollapsed })),
     reset: () => setPrefs(defaults),
   }), [prefs]);
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;

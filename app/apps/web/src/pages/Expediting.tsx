@@ -1,13 +1,15 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import { downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Page } from '../api';
+import { apiMode, downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Page } from '../api';
+import { RecordDrawer, suggest } from '../crud';
+import { expeditingFields } from './procFields';
 import { DataTable } from '../DataTable';
 import { fmtDate, initials, signed } from '../format';
 import { Icon } from '../icons';
 import { Toolbar, useListState } from '../Register';
-import { useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+import { useAccess, useApp, useToast } from '../state';
+import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
 
 const PAGE_SIZE = 50;
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,8 +20,7 @@ function Progress({ p }: { p: ExpeditingPackage }) {
   if (p.actualPct == null) return <span className="tiny muted">No data</span>;
   return (
     <div className="progress-stack">
-      <div className="progress-numbers"><strong>{p.actualPct}%</strong><span className="muted">Plan {p.planPct ?? 0}%</span></div>
-      <div className="progress-line"><div className={`progress-fill ${p.actualPct < (p.planPct ?? 0) ? 'behind' : ''}`} style={{ width: `${Math.min(100, p.actualPct)}%` }} /></div>
+      <ActualPlanBar actual={p.actualPct} plan={p.planPct ?? 0} compact />
     </div>
   );
 }
@@ -68,8 +69,11 @@ function Detail({ p }: { p: ExpeditingPackage }) {
 export default function Expediting() {
   const { project } = useApp();
   const toast = useToast();
+  const access = useAccess();
+  const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
   const [selected, setSelected] = useState<ExpeditingPackage | null>(null);
+  const [editing, setEditing] = useState<ExpeditingPackage | 'new' | null>(null);
   const base = `/projects/${project.id}/expediting`;
 
   const summary = useQuery({ queryKey: ['expediting-summary', project.id], queryFn: () => request<ExpeditingSummary>(`${base}/summary`) });
@@ -100,7 +104,10 @@ export default function Expediting() {
   return (
     <>
       <PageHead title="Vendor Overview" desc={`Equipment, Structural, Piping, Valves & Misc expediting status${s ? ` · ${s.total} packages` : ''}.`}
-        actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'expediting-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
+        actions={<>
+          <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'expediting-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
+          {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
+        </>} />
       <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot="Across 5 disciplines" icon="chart" />
         <Stat label="Delayed" value={s?.delayed ?? '—'} foot="ETA at site slipping past ROS" icon="clock" />
@@ -118,7 +125,7 @@ export default function Expediting() {
         )}
       </div>
       {selected && (
-        <Modal title={`${selected.code} · Expediting status`} onClose={() => setSelected(null)} actions={<Btn onClick={() => setSelected(null)}>Close</Btn>}>
+        <Modal title={`${selected.code} · Expediting status`} onClose={() => setSelected(null)} actions={<>{canEdit && <Btn onClick={() => { setEditing(selected); setSelected(null); }}>Edit</Btn>}<Btn onClick={() => setSelected(null)}>Close</Btn></>}>
           <div className="dialog-body">
             <div className="drawer-intro">
               <div className="eyebrow">{selected.discipline}{selected.vendor ? ` · ${selected.vendor}` : ''}</div>
@@ -129,6 +136,15 @@ export default function Expediting() {
           </div>
         </Modal>
       )}
+      {editing && (() => {
+        const rows = (page.data?.items ?? []) as unknown as Record<string, unknown>[];
+        return (
+          <RecordDrawer title={editing === 'new' ? 'New expediting package' : `${editing.code} · Edit expediting status`} size="lg" base={base + '/packages'} id={editing === 'new' ? undefined : editing.id}
+            record={editing === 'new' ? null : editing as never} defaults={editing === 'new' ? { status: 'Normal' } : undefined} canDelete={access.canManage}
+            invalidate={['expediting-packages', 'expediting-summary', 'procurement-dashboard', 'dashboard']}
+            fields={expeditingFields({ discipline: page.data?.facets.disciplines ?? [], vendor: suggest(rows, 'vendor') })} onClose={() => setEditing(null)} />
+        );
+      })()}
     </>
   );
 }

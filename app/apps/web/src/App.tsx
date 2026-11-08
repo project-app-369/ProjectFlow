@@ -7,9 +7,15 @@ import { defaultKey, landing, pathOf, SHEETS_KEYS } from './nav';
 import Dashboard from './pages/Dashboard';
 import Expediting from './pages/Expediting';
 import { InterfaceMatrixPage, InterfacePointsPage, InterfaceRegister } from './pages/Interfaces';
+import ConstructionBudget from './pages/ConstructionBudget';
+import Knowledge from './pages/Knowledge';
 import Milestones from './pages/Milestones';
 import Placeholder from './pages/Placeholder';
+import Concerns from './pages/Concerns';
+import Logistics from './pages/Logistics';
+import Materials from './pages/Materials';
 import Procurement from './pages/Procurement';
+import ProcurementDashboard from './pages/ProcurementDashboard';
 import Risks from './pages/Risks';
 import { ProgressOverall, WorkPackages } from './pages/Schedule';
 import Settings from './pages/Settings';
@@ -28,8 +34,23 @@ const PAGES: Record<string, () => ReactNode> = {
   'planning.overall-progress': () => <ProgressOverall />,
   'planning.work-packages': () => <WorkPackages />,
   'planning.milestones': () => <Milestones />,
+  'procurement.dashboard': () => <ProcurementDashboard />,
+  'procurement.concerns': () => <Concerns />,
+  'procurement.logistics': () => <Logistics />,
+  'procurement.materials': () => <Materials />,
   'procurement.procurement-plan': () => <Procurement />,
   'procurement.expediting.vendor-overview': () => <Expediting />,
+  'construction.budget': () => <ConstructionBudget />,
+  'knowledge.overview': () => <Knowledge />,
+  'knowledge.engineering': () => <Knowledge domain="engineering" />,
+  'knowledge.procurement': () => <Knowledge domain="procurement" />,
+  'knowledge.services': () => <Knowledge domain="services" />,
+  'knowledge.quality': () => <Knowledge domain="quality" />,
+  'knowledge.hse': () => <Knowledge domain="hse" />,
+  'knowledge.construction': () => <Knowledge domain="construction" />,
+  'knowledge.precom': () => <Knowledge domain="precom" />,
+  'knowledge.ti': () => <Knowledge domain="ti" />,
+  'knowledge.huc': () => <Knowledge domain="huc" />,
   'management.risks': () => <Risks />,
   'interface.register': () => <InterfaceRegister />,
   'interface.matrix': () => <InterfaceMatrixPage />,

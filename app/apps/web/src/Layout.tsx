@@ -9,17 +9,32 @@ import { defaultKey, kidsOf, landing, within } from './nav';
 import { useAccess, useApp, usePrefs } from './state';
 import { Btn, ErrorBoundary, Modal } from './ui';
 
-function NavNode({ m, depth, current, go }: { m: ModuleInfo; depth: number; current?: string; go: (key: string) => void }) {
+const WS_ICON: Record<WorkspaceId, string> = { personal: 'user', epcic: 'building', governance: 'shield', reports: 'book' };
+const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+interface NavCtl { isOpen: (m: ModuleInfo, active: boolean) => boolean; toggle: (key: string, open: boolean) => void; rail: boolean }
+
+/** One menu entry. An entry with submenus shows an arrow: right when closed, down when open. */
+function NavNode({ m, depth, current, go, ctl }: { m: ModuleInfo; depth: number; current?: string; go: (key: string) => void; ctl: NavCtl }) {
   const { modules } = useApp();
   const active = within(modules.modules, current, m);
   const kids = kidsOf(modules.modules, m.key);
+  const open = kids.length > 0 && ctl.isOpen(m, active);
   const cls = depth === 0 ? '' : depth === 1 ? 'sub' : 'sub sub2';
+  const click = () => {
+    // in the icon rail there is no submenu to open, so the entry just goes to its first page
+    if (!kids.length || ctl.rail) return go(m.key);
+    ctl.toggle(m.key, !open);
+    if (!open && !active) go(m.key);
+  };
   return (
     <>
-      <button className={`nav-item ${cls} ${active ? 'active' : ''}`} aria-current={current === m.key ? 'page' : undefined} onClick={() => go(m.key)}>
-        {depth === 0 && <Icon name={m.icon} />}{m.label}
+      <button className={`nav-item ${cls} ${active ? 'active' : ''}`} aria-current={current === m.key ? 'page' : undefined} aria-expanded={kids.length ? open : undefined} title={m.label} onClick={click}>
+        {depth === 0 && <Icon name={m.icon} />}
+        <span className="nav-label">{m.label}</span>
+        {kids.length > 0 && <span className={`nav-chev ${open ? 'open' : ''}`} aria-hidden="true"><Icon name="chevron-right" /></span>}
       </button>
-      {active && kids.map(k => <NavNode key={k.key} m={k} depth={depth + 1} current={current} go={go} />)}
+      {open && kids.map(k => <NavNode key={k.key} m={k} depth={depth + 1} current={current} go={go} ctl={ctl} />)}
     </>
   );
 }
@@ -30,6 +45,20 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const mods = modules.modules;
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  // arriving at a page opens the menus above it, even if they were closed by hand
+  useEffect(() => {
+    setOpenMap(map => {
+      const next = { ...map };
+      for (const m of mods) if (within(mods, current, m)) delete next[m.key];
+      return next;
+    });
+  }, [current, mods]);
+  const ctl: NavCtl = {
+    isOpen: (m, active) => openMap[m.key] ?? active,
+    toggle: (key, open) => setOpenMap(map => ({ ...map, [key]: open })),
+    rail: prefs.navCollapsed,
+  };
 
   const goModule = (key: string) => { navigate(`/m/${landing(mods, key)}`); close(); };
   const goWorkspace = (id: WorkspaceId) => {
@@ -44,17 +73,17 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
   const items = tops.map(m => {
     const header = m.group && m.group !== lastGroup ? <div key={`g-${m.group}`} className="side-label">{m.group}</div> : null;
     lastGroup = m.group;
-    return [header, <NavNode key={m.key} m={m} depth={0} current={current} go={goModule} />];
+    return [header, <NavNode key={m.key} m={m} depth={0} current={current} go={goModule} ctl={ctl} />];
   });
   const wsLabel = modules.workspaces.find(w => w.id === prefs.workspace)?.label;
   const noProject = !project.id;
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} id="sidebar" aria-label="Main navigation">
-      <div className="brand"><span className="brandmark" />Project Flow</div>
+      <div className="brand"><span className="brandmark" /><span className="brand-text">Project Flow</span></div>
       {!noProject && <div className="workspace-switch" role="tablist">
         {modules.workspaces.map(w => (
-          <button key={w.id} className={`ws-tab ${prefs.workspace === w.id ? 'active' : ''}`} role="tab" aria-selected={prefs.workspace === w.id} onClick={() => goWorkspace(w.id)}>{w.label}</button>
+          <button key={w.id} className={`ws-tab ${prefs.workspace === w.id ? 'active' : ''}`} role="tab" aria-selected={prefs.workspace === w.id} title={w.label} aria-label={w.label} onClick={() => goWorkspace(w.id)}><Icon name={WS_ICON[w.id]} /><span className="ws-label">{w.label}</span></button>
         ))}
       </div>}
       <nav className="side-nav" aria-label={`${wsLabel} modules`}>
@@ -65,7 +94,7 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
         )}
       </nav>
       <div className="side-bottom">
-        <button className={`nav-item ${pathname.startsWith('/settings') ? 'active' : ''}`} onClick={() => { navigate(noProject && apiMode === 'sheets' ? '/settings/projects' : '/settings/modules'); close(); }}><Icon name="gear" />Settings</button>
+        <button className={`nav-item ${pathname.startsWith('/settings') ? 'active' : ''}`} title="Settings" onClick={() => { navigate(noProject && apiMode === 'sheets' ? '/settings/projects' : '/settings/modules'); close(); }}><Icon name="gear" /><span className="nav-label">Settings</span></button>
       </div>
     </aside>
   );
@@ -73,6 +102,7 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
 
 function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: boolean }) {
   const { project, modules, me, projects, selectProject, signOut } = useApp();
+  const prefs = usePrefs();
   const access = useAccess();
   const [open, setOpen] = useState(false);
   const expediting = modules.modules.find(m => m.key === 'procurement.expediting.vendor-overview')?.effective;
@@ -82,7 +112,8 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
   return (
     <header id="header" className="topbar">
       <div className="project-switch">
-        <button className="icon-btn mobile-menu" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded={menuOpen} onClick={toggleMenu}><Icon name="menu" /></button>
+        <button className="icon-btn nav-toggle" aria-controls="sidebar" aria-expanded={isDesktop() ? !prefs.navCollapsed : menuOpen}
+          aria-label={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} title={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} onClick={toggleMenu}><Icon name="panel" /></button>
         <span className="mini-icon"><Icon name="brief" /></span>
         <div>
           <div className="tiny muted" style={{ paddingLeft: 4 }}>PROJECT{project.lifecycle && project.lifecycle !== 'Active' ? ` · ${project.lifecycle.toUpperCase()}` : ''}</div>
@@ -104,7 +135,7 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
             <strong>{me?.name ?? 'Project team'}</strong>
             <span className="muted">{me ? `${me.isAdmin ? 'Administrator · ' : ''}${access.role ?? 'No project role'}` : expediting ? `${flags} open flags` : 'Demo user'}</span>
           </div>
-          {me && <button className="btn text" onClick={signOut} title="Choose another user">Switch</button>}
+          {me && <button className="icon-btn" onClick={signOut} aria-label="Switch user" title="Switch user (sign out)"><Icon name="switch" /></button>}
         </div>
       </div>
       {open && (
@@ -144,6 +175,7 @@ function NotMember() {
 
 export function Layout() {
   const [menu, setMenu] = useState(false);
+  const prefs = usePrefs();
   useEffect(() => {
     if (!menu) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
@@ -157,7 +189,7 @@ export function Layout() {
       <Sidebar current={current} open={menu} close={() => setMenu(false)} />
       {menu && <div className="scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
       <div className="workspace">
-        <Header toggleMenu={() => setMenu(m => !m)} menuOpen={menu} />
+        <Header toggleMenu={() => (isDesktop() ? prefs.setNavCollapsed(!prefs.navCollapsed) : setMenu(m => !m))} menuOpen={menu} />
         <main id="main" tabIndex={-1}><div className="fade" key={pathname}><NotMember /><SnapshotBanner /><ErrorBoundary><Outlet /></ErrorBoundary></div></main>
         <footer>Project Flow <span>{apiMode === 'sheets' ? 'v0.2 · Google Sheets pre-build · STTP2B reference data' : 'v0.1 · NestJS API · PostgreSQL · STTP2B reference data'}</span></footer>
       </div>
