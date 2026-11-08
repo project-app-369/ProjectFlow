@@ -102,6 +102,11 @@ const ROUTES: Route[] = [
   route('PATCH', `${PID}/interface-points/(?<id>[^/]+)`, c => c.api.reg.pointUpdate(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
   route('DELETE', `${PID}/interface-points/(?<id>[^/]+)`, c => { c.api.reg.pointDelete(c.p.pid, c.p.id, c.actor); return null; }, { module: IF_POINTS, status: 204 }),
 
+  // cut-off snapshots (the saved report of the data at a reporting date)
+  route('GET', `${PID}/snapshots`, c => c.api.snapshots.list(c.p.pid)),
+  route('POST', `${PID}/snapshots`, c => c.api.snapshots.create(c.p.pid, c.body, c.actor), { status: 201 }),
+  route('DELETE', `${PID}/snapshots/(?<cutoff>\\d{4}-\\d{2}-\\d{2})`, c => { c.api.snapshots.remove(c.p.pid, c.p.cutoff, c.actor); return null; }, { status: 204 }),
+
   // personal tasks (owner-scoped)
   route('GET', 'tasks', c => c.api.tasks.list(c.actor, c.q)),
   route('GET', 'tasks/workload', c => c.api.tasks.workload(c.actor, c.q)),
@@ -136,7 +141,16 @@ export function handle(api: Api, req: ApiRequest): Envelope {
       if (r.access === 'projectAny' && !actor.isAdmin) requireMember(actor, params.pid);
       const key = typeof r.module === 'function' ? r.module(params) : r.module;
       if (key) api.svc.assertAccess(params.pid, key, method !== 'GET');
-      return { ok: true, status: r.status ?? 200, data: r.handler({ api, actor, p: params, q: query, body: req.body }) };
+      const ctx = { api, actor, p: params, q: query, body: req.body };
+      if (r.hasProject && query.asOf) {
+        // ?asOf=<cut-off date> reads the saved snapshot of that date; snapshots are read-only
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(query.asOf)) throw new HttpError(400, { code: 'VALIDATION_ERROR', message: 'asOf must be a cut-off date (YYYY-MM-DD).' });
+        if (method !== 'GET') throw new HttpError(409, { code: 'READ_ONLY_SNAPSHOT', message: 'A cut-off snapshot is read-only. Switch to the current data to make changes.' });
+        const data = api.snapshots.load(params.pid, query.asOf);
+        if (!data) throw new HttpError(404, { code: 'SNAPSHOT_NOT_FOUND', message: `No snapshot was saved for the cut-off ${query.asOf}.` });
+        return { ok: true, status: r.status ?? 200, data: api.svc.atSnapshot(params.pid, query.asOf, data, () => r.handler(ctx)) };
+      }
+      return { ok: true, status: r.status ?? 200, data: r.handler(ctx) };
     }
     return { ok: false, status: 404, error: { code: 'ROUTE_NOT_FOUND', message: `No route for ${method} ${pathname}.` } };
   } catch (e) {

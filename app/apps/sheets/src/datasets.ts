@@ -21,6 +21,8 @@ export const COLUMNS = {
     ...text('status'), ...num('effort'), ...text('remarks'), ...stamp('createdAt', 'updatedAt'), ...text('owner'),
   ],
   subtasks: [...text('taskId', 'id', 'title', 'done'), ...num('position')],
+  snapshots: [...text('projectId'), ...date('cutoff'), ...stamp('createdAt'), ...text('createdBy', 'note'), ...num('rowCount')],
+  snapshotData: [...text('projectId'), ...date('cutoff'), ...text('dataset'), ...num('part'), ...text('json')],
   scurve: [...text('projectId'), ...date('date'), ...num('plan', 'forecast', 'actual')],
   workPackages: [...text('projectId', 'code', 'name'), ...num('weight', 'lastWeekPlan', 'lastWeekActual', 'achievedPlan', 'achievedActual', 'thisWeekPlan', 'thisWeekActual')],
   milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment')],
@@ -66,6 +68,8 @@ export const SHEET = {
   risks: 'Governance - Risks',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
+  snapshots: 'Reports - Cut-off snapshots',
+  snapshotData: 'Reports - Snapshot data',
 } as const;
 
 export type SheetKey = keyof typeof SHEET;
@@ -85,7 +89,12 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'snapshots', 'snapshotData'];
+
+/** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
+export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
+export type SnapshotDataset = (typeof SNAPSHOT_DATASETS)[number];
+export const SNAPSHOT_KEY_OF_SHEET: Record<string, SnapshotDataset> = Object.fromEntries(SNAPSHOT_DATASETS.map(k => [SHEET[k], k]));
 
 /** Modules whose data lives in a dedicated dataset sheet. */
 export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[] }> = {

@@ -26,6 +26,14 @@ The pre-build served one hard-wired project to one anonymous user. The team now 
 - **Workload** attributes a task to the period of its deadline (else plan finish, else plan start) and counts a multi-project task in each project but once in the period total. Effort is not split across projects; that rule can change without a data migration.
 - **Gantt** shows only tasks with plan start, plan finish and a deadline, as requested, and reports how many are hidden.
 
+## Addendum: cut-off reports (8 November 2026)
+
+- **A report is a stored copy.** `Reports - Cut-off snapshots` has one row per project and cut-off date (who saved it, a note, the row count). `Reports - Snapshot data` holds the copied datasets as JSON, cut into parts of at most 40,000 characters because a spreadsheet cell holds 50,000. Saving over a date needs `replace: true`.
+- **Reading a report** is `?asOf=<date>` on any project data route. The router loads the snapshot once and `Service.atSnapshot` makes `rows()` and `project()` answer from it for the duration of that synchronous request, so every existing view, summary and CSV works unchanged, and derived statuses use the report's date as the cut-off. Writes with `asOf` are refused (`READ_ONLY_SNAPSHOT`); the web client also blocks them and turns off every create/edit control while a report is open.
+- **Not in a report:** modules and their states, members, personal tasks and Settings. A report therefore shows the data of that date under today's module switches.
+- **Cost.** Opening a report reads the whole snapshot sheet, so it slows as weeks accumulate (about 110 KB per report today). Acceptable for the pre-build; the full application stores reports in the database.
+- **Friday** is a default and a shortcut, not a rule: any date up to tomorrow can be used.
+
 ## Consequences
 
 - The web client has two modes. Projects and Users settings, project switching, sign-in and the new registers exist only in `sheets` mode; in `rest` mode (NestJS) the new screens fall back to a placeholder and the Settings pages are hidden until the API catches up.

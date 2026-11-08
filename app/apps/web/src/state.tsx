@@ -43,6 +43,9 @@ export interface AppData {
   projects: Project[];
   selectProject: (id: string) => void;
   signOut: () => void;
+  /** Cut-off date of the snapshot being viewed, or null for the current data. */
+  asOf: string | null;
+  setAsOf: (cutoff: string | null) => void;
 }
 const AppContext = createContext<AppData>(null as never);
 export const AppDataProvider = AppContext.Provider;
@@ -52,14 +55,15 @@ export const NO_PROJECT: Project = { id: '', code: '—', name: 'No project sele
 
 /** What the current user may do in the selected project; mirrors the backend rules (spec 2.1). Without users, everything is allowed. */
 export function useAccess() {
-  const { me, project } = useApp();
+  const { me, project, asOf } = useApp();
   const role: Role | null = me ? me.memberships.find(m => m.projectId === project.id)?.role ?? null : 'Project Manager';
   const isAdmin = !me || me.isAdmin;
+  const live = !asOf; // a snapshot is read-only for everyone
   return {
-    isAdmin, role, hasUsers: !!me,
-    canWrite: !!role && role !== 'Client',
-    canManage: role === 'Project Manager' || role === 'Manager',
-    canConfigure: isAdmin || role === 'Project Manager',
+    isAdmin, role, hasUsers: !!me, readOnly: !live,
+    canWrite: live && !!role && role !== 'Client',
+    canManage: live && (role === 'Project Manager' || role === 'Manager'),
+    canConfigure: live && (isAdmin || role === 'Project Manager'),
   };
 }
 

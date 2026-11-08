@@ -5,7 +5,7 @@ import {
 } from '../../api/src/registry/catalog';
 import { overallProgress } from '../../api/src/schedule/progress';
 import type { Actor } from './auth';
-import { COLUMNS, SHEET, moduleSheet, pathOf, tabColorOf } from './datasets';
+import { COLUMNS, SHEET, SNAPSHOT_KEY_OF_SHEET, moduleSheet, pathOf, tabColorOf } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
 import type { Row, SheetInfo, Store } from './store';
 
@@ -30,8 +30,23 @@ const drop = (row: Row) => Object.fromEntries(Object.entries(row).filter(([, v])
 export class Service {
   constructor(readonly store: Store, readonly clock: () => Date = () => new Date()) {}
 
+  /** Set while a request reads a stored cut-off snapshot instead of the live sheets (see atSnapshot). */
+  private snap: { projectId: string; cutoff: string; data: Map<string, Row[]> } | null = null;
+
+  /**
+   * Runs `fn` with the project's report datasets (and its reporting cut-off) answered from a snapshot.
+   * Everything built on rows() and project() then reads the stored data unchanged. Synchronous on purpose:
+   * the router handles one request at a time, so the flag cannot leak into another request.
+   */
+  atSnapshot<T>(projectId: string, cutoff: string, data: Map<string, Row[]>, fn: () => T): T {
+    this.snap = { projectId, cutoff, data };
+    try { return fn(); } finally { this.snap = null; }
+  }
+
   /** Rows of a project-scoped sheet for one project. */
   rows(sheet: string, columns: Parameters<Store['readRows']>[1], projectId: string): Row[] {
+    const dataset = SNAPSHOT_KEY_OF_SHEET[sheet];
+    if (this.snap && this.snap.projectId === projectId && dataset) return this.snap.data.get(dataset) ?? [];
     return this.store.readRows(sheet, columns).filter(r => r.projectId === projectId);
   }
 
@@ -43,7 +58,7 @@ export class Service {
   project(id: string) {
     const p = this.projectRows().find(x => x.id === id);
     if (!p) throw notFound('PROJECT_NOT_FOUND', `Project "${id}" was not found.`);
-    return p;
+    return this.snap && this.snap.projectId === id ? { ...p, cutoff: this.snap.cutoff } : p;
   }
 
   /* ---------- module registry ---------- */

@@ -22,6 +22,7 @@ const paths: Record<string, string> = {
   flag: 'M5 22V3 M5 4h13l-3 4.5L18 13H5',
   doc: 'M14 2H5v20h14V7z M14 2v5h5 M8 12h8 M8 16h8',
   people: 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 7 M19 14a5 5 0 0 1 3 4v3',
+  camera: 'M4 8h3l2-3h6l2 3h3v12H4z M12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
 };
 

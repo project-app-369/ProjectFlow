@@ -54,6 +54,7 @@ export function ensureAllSheets(store: Store) {
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
     [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting],
     [SHEET.risks, COLUMNS.risks], [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints],
+    [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
 }

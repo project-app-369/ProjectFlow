@@ -30,6 +30,8 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `Governance - Risks` | Governance (amber) | Risk register (inherent and residual likelihood/impact) | Risk register |
 | `Governance - Interfaces` | Governance | Interface register | Interface register and matrix |
 | `Governance - Interface points` | Governance | Points under each interface | Interface points |
+| `Reports - Cut-off snapshots` | Reports (red) | One row per saved cut-off report | cut-off dropdown |
+| `Reports - Snapshot data` | Reports | The report's datasets as JSON parts (40,000 characters per cell) | cut-off dropdown |
 | `<Workspace> - <Module> - <Submodule>` | the module's workspace | Generated when a module is established (see below) | the module's page |
 
 Row 1 of every sheet is the header; columns are matched **by header name**, so you may reorder columns or add your own. Text and date columns are formatted as plain text so Sheets never reinterprets a value (dates stay `YYYY-MM-DD`, a leading `=` is never evaluated).
@@ -105,7 +107,7 @@ Routes, module guards and error codes match `apps/api` where it has them. The pr
 ## Commands
 
 ```bash
-pnpm --filter @projectflow/sheets test        # 69 tests
+pnpm --filter @projectflow/sheets test        # 76 tests
 pnpm --filter @projectflow/sheets typecheck
 pnpm --filter @projectflow/sheets build       # dist/Code.js (about 600 kB minified, mostly zod and the seed data)
 ```

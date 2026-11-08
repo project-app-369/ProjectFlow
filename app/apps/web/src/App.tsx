@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { apiMode, getUserId, request, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
+import { apiMode, getUserId, request, setCurrentAsOf, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
 import { Layout } from './Layout';
 import { defaultKey, landing, pathOf, SHEETS_KEYS } from './nav';
 import Dashboard from './pages/Dashboard';
@@ -104,19 +104,28 @@ const saveProject = (id: string | null) => { try { if (id) localStorage.setItem(
 /** Signed-in session: resolves the user, the visible projects and the selected project, then its module registry. */
 function Session({ userId, signOut }: { userId: string | null; signOut: () => void }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(loadProject);
+  const [asOf, setAsOfState] = useState<string | null>(null);
   const me = useQuery({ queryKey: ['me', userId], queryFn: () => request<Me>('/me'), enabled: apiMode === 'sheets' });
   const projects = useQuery({ queryKey: ['projects', userId], queryFn: () => request<Project[]>('/projects') });
   const list = projects.data;
   const project = list?.find(p => p.id === selected) ?? list?.find(p => p.myRole) ?? list?.[0] ?? null;
   const modules = useQuery({ queryKey: ['modules', project?.id], queryFn: () => request<ModulesResponse>(`/projects/${project!.id}/modules`), enabled: !!project });
 
-  const selectProject = useCallback((id: string) => { saveProject(id); setSelected(id); navigate('/'); }, [navigate]);
+  /** Switches between the current data and a saved cut-off snapshot; every project data query is refetched. */
+  const setAsOf = useCallback((cutoff: string | null) => {
+    setCurrentAsOf(cutoff);
+    setAsOfState(cutoff);
+    const keep = new Set(['me', 'projects', 'directory', 'modules', 'users', 'members', 'snapshots', 'ptasks', 'ptask-workload', 'health']);
+    qc.invalidateQueries({ predicate: q => !keep.has(String(q.queryKey[0])) });
+  }, [qc]);
+  const selectProject = useCallback((id: string) => { setAsOf(null); saveProject(id); setSelected(id); navigate('/'); }, [navigate, setAsOf]);
   const value = useMemo(() => ({
     project: project ?? NO_PROJECT,
     modules: modules.data ?? { workspaces: [], modules: [] },
-    me: me.data ?? null, projects: list ?? [], selectProject, signOut,
-  }), [project, modules.data, me.data, list, selectProject, signOut]);
+    me: me.data ?? null, projects: list ?? [], selectProject, signOut, asOf, setAsOf,
+  }), [project, modules.data, me.data, list, selectProject, signOut, asOf, setAsOf]);
 
   if (projects.error || me.error) return <div style={{ padding: 40 }}><ErrorBox error={projects.error ?? me.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
   if (!list || (apiMode === 'sheets' && !me.data)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
@@ -142,8 +151,8 @@ function Session({ userId, signOut }: { userId: string | null; signOut: () => vo
 export function App() {
   const qc = useQueryClient();
   const [userId, setUser] = useState<string | null>(getUserId);
-  const signOut = useCallback(() => { setUserId(null); setUser(null); qc.clear(); }, [qc]);
-  const signIn = (id: string) => { qc.clear(); setUserId(id); setUser(id); };
+  const signOut = useCallback(() => { setCurrentAsOf(null); setUserId(null); setUser(null); qc.clear(); }, [qc]);
+  const signIn = (id: string) => { qc.clear(); setCurrentAsOf(null); setUserId(id); setUser(id); };
   useEffect(() => {
     window.addEventListener('projectflow:signed-out', signOut);
     return () => window.removeEventListener('projectflow:signed-out', signOut);

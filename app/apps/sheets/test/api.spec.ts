@@ -26,6 +26,7 @@ describe('setup', () => {
       'Personal - Tasks', 'Personal - Subtasks',
       'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages',
       'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points',
+      'Reports - Cut-off snapshots', 'Reports - Snapshot data',
     ]);
   });
 
@@ -553,6 +554,84 @@ describe('personal tasks', () => {
     expect(err(call('GET', '/tasks/workload?from=2026-12-01&to=2026-11-01')).status).toBe(400);
     expect(err(call('GET', '/tasks/workload?by=year')).status).toBe(400);
     expect(ok(call('GET', '/tasks/workload', undefined, MEMBER)).totals.total.tasks).toBe(0);
+  });
+});
+
+describe('cut-off snapshots', () => {
+  const save = (body: object = { cutoff: '2026-10-30' }, user = MANAGER) => call('POST', `${P}/snapshots`, body, user);
+
+  it('saves the current data as a report dated by its cut-off and lists it newest first', () => {
+    const s = ok(save());
+    expect(s).toMatchObject({ cutoff: '2026-10-30', createdBy: 'Manager (demo)', replaced: false });
+    expect(s.rowCount).toBeGreaterThan(300);
+    ok(save({ cutoff: '2026-11-06', note: 'Weekly report' }));
+    const list = ok(call('GET', `${P}/snapshots`, undefined, CLIENT));
+    expect(list.map((x: any) => x.cutoff)).toEqual(['2026-11-06', '2026-10-30']);
+    expect(list[0]).toMatchObject({ note: 'Weekly report', createdBy: 'Manager (demo)' });
+  });
+
+  it('defaults to the project cut-off and refuses a duplicate unless it is replaced', () => {
+    expect(ok(save({})).cutoff).toBe('2026-11-06');
+    expect(err(save({})).error.code).toBe('SNAPSHOT_EXISTS');
+    expect(ok(save({ replace: true })).replaced).toBe(true);
+    expect(ok(call('GET', `${P}/snapshots`)).filter((x: any) => x.cutoff === '2026-11-06')).toHaveLength(1);
+  });
+
+  it('keeps who may save, delete and read snapshots', () => {
+    expect(err(save({}, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
+    expect(err(save({}, CLIENT)).status).toBe(403);
+    expect(err(save({ cutoff: '2030-01-01' })).error.issues).toMatchObject([{ path: 'cutoff' }]);
+    ok(save());
+    expect(err(call('DELETE', `${P}/snapshots/2026-10-30`, undefined, MANAGER)).error.code).toBe('PROJECT_MANAGER_REQUIRED');
+    expect(call('DELETE', `${P}/snapshots/2026-10-30`)).toMatchObject({ ok: true, status: 204 });
+    expect(err(call('DELETE', `${P}/snapshots/2026-10-30`)).error.code).toBe('SNAPSHOT_NOT_FOUND');
+    expect(ok(call('GET', `${P}/snapshots`)).length).toBe(0);
+  });
+
+  it('reads the saved data, not the live data, with ?asOf and reports the snapshot cut-off', () => {
+    ok(call('POST', `${P}/risks`, { title: 'Before', category: 'Cost', owner: 'Me', likelihood: 3, impact: 3 }));
+    ok(save({ cutoff: '2026-10-30' }));
+    ok(call('POST', `${P}/risks`, { title: 'After', category: 'Cost', owner: 'Me', likelihood: 3, impact: 3 }));
+    store.updateRow(SHEET.procurement, COLUMNS.procurement, 'id', 'PR-001', { status: 'Changed live' }, { projectId: 'sttp2b' });
+
+    expect(ok(call('GET', `${P}/risks`)).total).toBe(2);
+    expect(ok(call('GET', `${P}/risks?asOf=2026-10-30`)).items.map((r: any) => r.title)).toEqual(['Before']);
+    expect(ok(call('GET', `${P}/risks/summary?asOf=2026-10-30`)).total).toBe(1);
+    expect(ok(call('GET', `${P}/procurement/packages?pageSize=200&asOf=2026-10-30`)).items.find((p: any) => p.id === 'PR-001').status).not.toBe('Changed live');
+    expect(ok(call('GET', `${P}/procurement/packages?pageSize=200`)).items.find((p: any) => p.id === 'PR-001').status).toBe('Changed live');
+
+    const live = ok(call('GET', `${P}/milestones/summary`));
+    const old = ok(call('GET', `${P}/milestones/summary?asOf=2026-10-30`));
+    expect(live.cutoff).toBe('2026-11-06');
+    expect(old.cutoff).toBe('2026-10-30');
+    expect(old.dueSoon).toBeLessThan(live.dueSoon);
+    expect(ok(call('GET', `${P}/dashboard?asOf=2026-10-30`)).project.cutoff).toBe('2026-10-30');
+    expect(ok(call('GET', `${P}/dashboard`)).project.cutoff).toBe('2026-11-06');
+  });
+
+  it('round-trips a large dataset split across several cells', () => {
+    ok(save());
+    const p = ok(call('GET', `${P}/procurement/packages?pageSize=200&asOf=2026-10-30`));
+    expect(p.total).toBe(137);
+    expect(ok(call('GET', `${P}/expediting/packages?pageSize=200&asOf=2026-10-30`)).total).toBe(153);
+    const chunks = store.readRows(SHEET.snapshotData, COLUMNS.snapshotData).filter(r => r.dataset === 'expediting');
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.every(c => String(c.json).length <= 40_000)).toBe(true);
+  });
+
+  it('is read-only and strict about the date', () => {
+    ok(save());
+    expect(err(call('POST', `${P}/risks?asOf=2026-10-30`, { title: 'x', category: 'Cost', owner: 'o', likelihood: 1, impact: 1 })).error.code).toBe('READ_ONLY_SNAPSHOT');
+    expect(err(call('GET', `${P}/risks?asOf=2026-01-01`)).error.code).toBe('SNAPSHOT_NOT_FOUND');
+    expect(err(call('GET', `${P}/risks?asOf=yesterday`)).status).toBe(400);
+    expect(err(call('GET', `${P}/risks?asOf=2026-10-30`, undefined, 'u-nobody')).status).toBe(401);
+  });
+
+  it('keeps snapshots of one project away from another', () => {
+    ok(save());
+    const other = ok(call('POST', '/projects', { code: 'OTHER-S', name: 'Other' }));
+    expect(ok(call('GET', `/projects/${other.id}/snapshots`)).length).toBe(0);
+    expect(err(call('GET', `/projects/${other.id}/risks?asOf=2026-10-30`)).error.code).toBe('SNAPSHOT_NOT_FOUND');
   });
 });
 

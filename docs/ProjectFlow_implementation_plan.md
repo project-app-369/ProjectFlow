@@ -23,6 +23,7 @@ This plan separates what exists today (a *pre-build* on Google Sheets plus a fir
 | Procurement Plan, Expediting Vendor Overview | PROC, EXP | Done | Done |
 | Personal tasks: list, card, kanban (drag and drop), gantt, sub-tasks, projects | TASK-13, TASK-14 | Done (owner-scoped) | Old board only (To do / In progress / Done) |
 | Task Calendar (day/week/month) and Workload by project | TASK-15 | Done | **Open** |
+| Cut-off reports (snapshots) and read-only historical view | NAV-03, NAV-07 | Done (stored as chunked JSON in two sheets) | **Open** |
 | Projects: list, select, create, edit, lifecycle, delete rules | PRJ-01, 03, 07, SET-07 | Done | **Open** |
 | Project members and project roles | §2.1, PRJ-07 | Done (5 roles) | **Open** |
 | Users and account states (admin mode) | SET-08, AUTH-02 | Done (no passwords) | **Open** |
@@ -51,9 +52,10 @@ Work in this order; each item ships with the same test cases as `apps/sheets/tes
 3. **Project scoping**: add `project_id` to schedule, procurement, expediting, tasks (owner) and enforce membership in a Nest guard instead of the per-route access levels used in `router.ts`.
 4. **Registers**: tables for milestones, risks, interfaces, interface points; move scoring (`risk-matrix.ts`) and the interface state machine (`interface-flow.ts`) into a shared package so the two backends cannot drift. The catalog and progress maths are already shared by relative import.
 5. **Personal tasks**: new task schema (task number, urgency, assigner, projects, plan dates, effort, remarks), sub-tasks table, derived overdue and the `/tasks/workload` route; move the workload and date helpers (`tasks-service.ts`) into a shared package with the sheets backend.
-6. **Loader for milestones** from the Key Milestones workbook (currently a one-off extract in `sttp2b.json`).
-7. **Web client**: in `rest` mode, enable sign-in, Projects and Users once steps 1–2 land; remove the sheets-only gating in `nav.ts` and `App.tsx`.
-8. **Cutover**: load the spreadsheet into PostgreSQL (column names equal API field names), switch `VITE_API_MODE=rest`, retire `apps/sheets` or keep it as an export format.
+6. **Cut-off snapshots**: a `snapshots` table with one row per report and the datasets copied as JSONB (or a versioned copy of the report tables), the `?asOf=` read parameter and the read-only guard; replaces the 40,000-character cell chunks used in the sheets.
+7. **Loader for milestones** from the Key Milestones workbook (currently a one-off extract in `sttp2b.json`).
+8. **Web client**: in `rest` mode, enable sign-in, Projects and Users once steps 1–2 land; remove the sheets-only gating in `nav.ts` and `App.tsx`.
+9. **Cutover**: load the spreadsheet into PostgreSQL (column names equal API field names), switch `VITE_API_MODE=rest`, retire `apps/sheets` or keep it as an export format.
 
 ## 4. Roadmap against the spec
 

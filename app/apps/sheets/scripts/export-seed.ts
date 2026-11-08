@@ -20,7 +20,7 @@ const sheets: [string, string, typeof COLUMNS[keyof typeof COLUMNS]][] = [
   ['modules', SHEET.modules, COLUMNS.modules], ['moduleChanges', SHEET.moduleChanges, COLUMNS.moduleChanges], ['tasks', SHEET.tasks, COLUMNS.tasks], ['subtasks', SHEET.subtasks, COLUMNS.subtasks],
   ['scurve', SHEET.scurve, COLUMNS.scurve], ['workPackages', SHEET.workPackages, COLUMNS.workPackages], ['milestones', SHEET.milestones, COLUMNS.milestones],
   ['procurement', SHEET.procurement, COLUMNS.procurement], ['expediting', SHEET.expediting, COLUMNS.expediting],
-  ['risks', SHEET.risks, COLUMNS.risks], ['interfaces', SHEET.interfaces, COLUMNS.interfaces], ['interfacePoints', SHEET.interfacePoints, COLUMNS.interfacePoints],
+  ['risks', SHEET.risks, COLUMNS.risks], ['snapshots', SHEET.snapshots, COLUMNS.snapshots], ['snapshotData', SHEET.snapshotData, COLUMNS.snapshotData], ['interfaces', SHEET.interfaces, COLUMNS.interfaces], ['interfacePoints', SHEET.interfacePoints, COLUMNS.interfacePoints],
 ];
 
 for (const [file, name, columns] of sheets) {

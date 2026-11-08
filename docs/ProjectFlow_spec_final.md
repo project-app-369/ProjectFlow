@@ -202,6 +202,8 @@ Project Flow
 
 **NAV-06:** Every module and submodule is identified by a breadcrumb path — workspace, display group where one applies, module, submodule, and any deeper level — for example EPCIC / Procurement / Expediting / Vendor Overview. The same path titles the screen header and the module's entry on the Modules settings page. Selecting a module that has enabled submodules opens its first enabled submodule that has a delivered screen.
 
+**NAV-07:** The header shows the project by its short name (the code when none is set; the full title is available on hover and in Settings) and a cut-off dropdown. The dropdown lists the current data with its reporting cut-off and every saved cut-off report, normally dated the Friday the data was imported. Choosing a saved report opens that date's data read-only (NAV-03), with a visible banner and a way back to the current data; derived statuses such as overdue and due soon are evaluated against the report's date. An icon-only snapshot button, available to roles that may manage records, saves the current data as a cut-off report for a chosen date (default the project's cut-off, with a shortcut to the latest Friday); saving over an existing date requires confirmation. A report copies the report datasets (schedule, milestones, procurement, expediting, risks, interfaces) and never changes after it is saved. The sidebar carries no project or cut-off card, and page content uses the full width of the window.
+
 ### 3.2 Brand and design system
 
 The product name is **Project Flow**. Adopt the updated Codex draft's selected **StageLink** direction: linked segments/modular blocks, clear connections, rounded panels, and generous spacing around dense operational content. Tagline: **Connected modules. Coordinated delivery.** Landing headline: **Start focused. Build connected.** Use Manrope headings and Inter body/interface text with system fallbacks, tabular numerals, and one outline icon family. Monospace may be used for identifiers, not all body text. Deliver monochrome and light/dark wordmarks, compact icon, favicon, login lockup, and report header as SVG/PNG; a finished logo remains a design deliverable.
@@ -957,6 +959,7 @@ The selection preserves capability intent without treating every proposed implem
 | Separate worksheets per workspace and general settings | §11.4 | Non-normative pre-build note; the full application is unaffected |
 | Build Risk Management and Interface Management | MGT-06, INT-04 | First screens over MGT-01 and INT-01 to INT-03 |
 | Milestones as reference data | PLAN-03 | Read-only register loaded from the Key Milestones workbook |
+| Header: short project name, cut-off dropdown, snapshot button, full-width content, no sidebar project card | NAV-07 | Saved cut-off reports opened read-only from the dropdown; the Friday default is a shortcut, not a rule |
 | Task Management: list/card/kanban/gantt, task fields, calendar, workload | TASK-13 to TASK-15 | Personal tasks with derived Overdue; Planned added as a stored status so the four kanban columns map to the status field |
 
 ### Revision 1.3 coverage map

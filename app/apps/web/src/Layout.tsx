@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiMode, request, type ExpeditingSummary, type ModuleInfo, type WorkspaceId } from './api';
+import { CutoffControl } from './CutoffControl';
 import { fmtDate, initials } from './format';
 import { Icon } from './icons';
 import { defaultKey, kidsOf, landing, within } from './nav';
@@ -65,10 +66,6 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
       </nav>
       <div className="side-bottom">
         <button className={`nav-item ${pathname.startsWith('/settings') ? 'active' : ''}`} onClick={() => { navigate(noProject && apiMode === 'sheets' ? '/settings/projects' : '/settings/modules'); close(); }}><Icon name="gear" />Settings</button>
-        <div className="project-mini">
-          <span className="mini-icon"><Icon name="brief" /></span>
-          <div><strong className="tiny">{project.code}</strong><div className="tiny muted">{noProject ? 'Select a project' : <><span className="live-dot" />Cut-off {fmtDate(project.cutoff)}</>}</div></div>
-        </div>
       </div>
     </aside>
   );
@@ -92,13 +89,13 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
           {projects.length > 1 || (projects.length === 1 && !project.id) ? (
             <select aria-label="Select project" value={project.id} onChange={e => selectProject(e.target.value)}>
               {!project.id && <option value="">Select a project…</option>}
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map(p => <option key={p.id} value={p.id} title={p.name}>{p.shortName || p.code}</option>)}
             </select>
-          ) : <strong style={{ paddingLeft: 4 }}>{project.name}</strong>}
+          ) : <strong style={{ paddingLeft: 4 }} title={project.name}>{project.shortName || project.code}</strong>}
         </div>
       </div>
+      <CutoffControl />
       <div className="top-actions">
-        {project.id && <span className="date-label"><Icon name="calendar" /> Cut-off {fmtDate(project.cutoff)}</span>}
         <span className="tag">{apiMode === 'sheets' ? 'PRE-BUILD · SHEETS' : 'DEMO WORKSPACE'}</span>
         <button className="icon-btn bell" aria-label="Notifications" onClick={() => setOpen(true)}><Icon name="bell" /></button>
         <div className="identity">
@@ -124,6 +121,20 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
 }
 
 /** An administrator can configure any project but sees its business data only as a member (spec 2.1). */
+/** Shown over project data while a saved cut-off report is open instead of the current data. */
+function SnapshotBanner() {
+  const { asOf, setAsOf } = useApp();
+  const { pathname } = useLocation();
+  const personal = pathname.startsWith('/m/task-management') || pathname.startsWith('/m/my-workspace');
+  if (!asOf || !pathname.startsWith('/m/') || personal) return null;
+  return (
+    <div className="banner snapshot-banner" role="status">
+      Viewing the saved cut-off report of <strong>{fmtDate(asOf)}</strong>. It is read-only.{' '}
+      <button className="btn text" onClick={() => setAsOf(null)}>Back to current data</button>
+    </div>
+  );
+}
+
 function NotMember() {
   const { project, me } = useApp();
   const { pathname } = useLocation();
@@ -147,7 +158,7 @@ export function Layout() {
       {menu && <div className="scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
       <div className="workspace">
         <Header toggleMenu={() => setMenu(m => !m)} menuOpen={menu} />
-        <main id="main" tabIndex={-1}><div className="fade" key={pathname}><NotMember /><ErrorBoundary><Outlet /></ErrorBoundary></div></main>
+        <main id="main" tabIndex={-1}><div className="fade" key={pathname}><NotMember /><SnapshotBanner /><ErrorBoundary><Outlet /></ErrorBoundary></div></main>
         <footer>Project Flow <span>{apiMode === 'sheets' ? 'v0.2 · Google Sheets pre-build · STTP2B reference data' : 'v0.1 · NestJS API · PostgreSQL · STTP2B reference data'}</span></footer>
       </div>
     </>

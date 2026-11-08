@@ -2,6 +2,7 @@ import { isEffective } from '../../api/src/registry/catalog';
 import { AdminService } from './admin-service';
 import { RegistersService } from './registers-service';
 import { Service } from './service';
+import { SnapshotsService } from './snapshots-service';
 import { TasksService } from './tasks-service';
 import type { Store } from './store';
 
@@ -11,12 +12,14 @@ export class Api {
   readonly admin: AdminService;
   readonly reg: RegistersService;
   readonly tasks: TasksService;
+  readonly snapshots: SnapshotsService;
 
   constructor(store: Store, clock: () => Date = () => new Date()) {
     this.svc = new Service(store, clock);
     this.admin = new AdminService(this.svc);
     this.reg = new RegistersService(this.svc);
     this.tasks = new TasksService(this.svc);
+    this.snapshots = new SnapshotsService(this.svc);
   }
 
   /**

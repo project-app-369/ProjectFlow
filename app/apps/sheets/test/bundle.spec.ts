@@ -48,7 +48,7 @@ describe('built Apps Script bundle', () => {
     const b = loadBundle();
     expect(b.get('/health')).toMatchObject({ ok: false, status: 503, error: { code: 'NOT_SET_UP' } });
     b.call('setup');
-    expect(b.ss.getSheets().map(s => s.getName())).toEqual(['Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes', 'Personal - Tasks', 'Personal - Subtasks', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points']);
+    expect(b.ss.getSheets().map(s => s.getName())).toEqual(['Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes', 'Personal - Tasks', 'Personal - Subtasks', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points', 'Reports - Cut-off snapshots', 'Reports - Snapshot data']);
     expect(b.alerts[0]).toContain('Sheets created');
     const health = b.get('/health', b.props.get('API_TOKEN'));
     expect(health).toMatchObject({ ok: true, data: { status: 'ok', database: 'sheets' } });

@@ -25,9 +25,22 @@ const USER_KEY = 'projectflow.user';
 export const getUserId = (): string | null => { try { return localStorage.getItem(USER_KEY); } catch { return null; } };
 export const setUserId = (id: string | null) => { try { if (id) localStorage.setItem(USER_KEY, id); else localStorage.removeItem(USER_KEY); } catch { /* storage unavailable */ } };
 
+/**
+ * Cut-off snapshot being viewed (a saved report date), or null for the current data. While set, reads of the
+ * project's report data carry `?asOf=` and writes are refused here, since a snapshot is read-only.
+ */
+let currentAsOf: string | null = null;
+export const setCurrentAsOf = (cutoff: string | null) => { currentAsOf = cutoff; };
+const SNAPSHOT_PATH = /^\/projects\/[^/]+\/(dashboard|schedule|milestones|procurement|expediting|risks|interfaces|interface-points)/;
+
 interface Envelope { ok: boolean; status: number; data?: unknown; error?: { code?: string; message?: string; issues?: { path: string; message: string }[] } }
 
 async function requestSheets<T>(path: string, init?: RequestInit): Promise<T> {
+  const asOfPath = currentAsOf && SNAPSHOT_PATH.test(path);
+  if (asOfPath && (init?.method ?? 'GET').toUpperCase() !== 'GET') {
+    throw new ApiError('A cut-off snapshot is read-only. Switch to the current data to make changes.', 'READ_ONLY_SNAPSHOT', 409);
+  }
+  if (asOfPath) path += `${path.includes('?') ? '&' : '?'}asOf=${currentAsOf}`;
   if (!sheetsUrl) throw new ApiError('VITE_SHEETS_URL is not set. Copy .env.sheets.example to .env.sheets.local and fill it in.', 'NOT_CONFIGURED');
   const method = (init?.method ?? 'GET').toUpperCase();
   const user = getUserId() ?? undefined;
@@ -97,6 +110,8 @@ export interface Project {
   shortName?: string | null; client?: string | null; location?: string | null; lifecycle?: Lifecycle;
   myRole?: Role | null; memberCount?: number; createdAt?: string; updatedAt?: string;
 }
+/** A saved cut-off report: the project's data as it stood at a reporting date. */
+export interface Snapshot { cutoff: string; createdAt: string; createdBy: string; note: string | null; rowCount: number }
 export interface Me { id: string; name: string; email: string | null; isAdmin: boolean; memberships: { projectId: string; role: Role }[] }
 export interface DirectoryUser { id: string; name: string }
 export type AccountState = 'Invited' | 'Active' | 'Suspended' | 'Deactivated';
