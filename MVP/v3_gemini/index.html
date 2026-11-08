@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Flow — EPCIC Project Controls & Coordination (v3_gemini)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Top Read-Only Preview / Impersonation Banner (§2.3 ACL-04, ACCESS-04) -->
+  <div id="preview-banner">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <span>READ-ONLY POLICY PREVIEW MODE: Viewing effective access as <strong id="preview-target-name">—</strong></span>
+    </div>
+    <button onclick="ProjectFlowApp.exitPreview()">Exit Preview ✕</button>
+  </div>
+
+  <!-- Client Mode Banner (§2.4 PUB-01..04) -->
+  <div id="client-banner">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>CLIENT AUDITED ACCESS: Equinor / Petrobras JV. Commercial values, internal comments, and unreleased revisions are masked (PUB-03).</span>
+    </div>
+    <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">Audit Active</span>
+  </div>
+
+  <div id="app">
+    
+    <!-- Sidebar Navigation (§3.1) -->
+    <aside class="sidebar">
+      <!-- Brand Header (§3.2 StageLink Direction) -->
+      <div class="brand-header">
+        <div class="brand-logo">PF</div>
+        <div class="brand-meta">
+          <div class="brand-name">
+            Project Flow
+            <span class="badge-stagelink">StageLink</span>
+          </div>
+          <span class="brand-tagline">Connected modules. Coordinated delivery.</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tree (§3.1) -->
+      <nav class="sidebar-nav">
+        
+        <!-- My Workspace (§6.7 TASK-01) -->
+        <div class="nav-group">
+          <div class="nav-group-title">Personal & Actions</div>
+          <a class="nav-link" data-view="tasks" onclick="ProjectFlowApp.navigate('tasks')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="nav-text">My Workspace</span>
+            <span class="badge-count">6</span>
+          </a>
+        </div>
+
+        <!-- Project Controls Overview -->
+        <div class="nav-group">
+          <div class="nav-group-title">Project Controls</div>
+          <a class="nav-link active" data-view="dashboard" onclick="ProjectFlowApp.navigate('dashboard')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            <span class="nav-text">Dashboard</span>
+          </a>
+          <a class="nav-link" data-view="planning" onclick="ProjectFlowApp.navigate('planning')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <span class="nav-text">Planning & Progress</span>
+          </a>
+          <a class="nav-link" data-view="documents" onclick="ProjectFlowApp.navigate('documents')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span class="nav-text">Document Control</span>
+            <span class="badge-count">5</span>
+          </a>
+          <a class="nav-link" data-view="procurement" onclick="ProjectFlowApp.navigate('procurement')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            <span class="nav-text">Expediting & Production</span>
+            <span class="badge-count critical">1 Late</span>
+          </a>
+        </div>
+
+        <!-- Yard Execution & Quality (P2 Foundation) -->
+        <div class="nav-group">
+          <div class="nav-group-title">Execution & QAQC</div>
+          <a class="nav-link" data-view="execution" onclick="ProjectFlowApp.navigate('execution')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+            <span class="nav-text">Yard 2D & Readiness</span>
+            <span class="badge-count">P2</span>
+          </a>
+        </div>
+
+        <!-- Governance & Risk Management -->
+        <div class="nav-group">
+          <div class="nav-group-title">Governance</div>
+          <a class="nav-link" data-view="governance" onclick="ProjectFlowApp.navigate('governance')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span class="nav-text">Risks, MOC & Interfaces</span>
+          </a>
+        </div>
+
+        <!-- Administration & Access -->
+        <div class="nav-group">
+          <div class="nav-group-title">Settings & System</div>
+          <a class="nav-link" data-view="settings" onclick="ProjectFlowApp.navigate('settings')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span class="nav-text">Settings & RACI</span>
+          </a>
+        </div>
+
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button class="header-btn" onclick="ProjectFlowApp.toggleTheme()" title="Toggle Dark/Light Mode">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+        <button class="header-btn" onclick="ProjectFlowApp.toggleDensity()" title="Toggle Comfort/Compact Density">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+        </button>
+        <span style="font-size: 11px; color: var(--pf-text-muted); font-family: monospace;">v3_gemini</span>
+      </div>
+    </aside>
+
+    <!-- Main Canvas -->
+    <main class="main-canvas">
+      
+      <!-- Top Application Header (§3.1, §3.3) -->
+      <header class="header">
+        
+        <div class="header-left">
+          <!-- Project Selector Dropdown (PRJ-01..06) -->
+          <div class="project-selector-wrapper">
+            <div class="project-badge" onclick="document.getElementById('project-select-menu').classList.toggle('active')">
+              <span class="project-dot"></span>
+              <span class="project-code" id="current-project-code">PRJ-084</span>
+              <span class="project-title" id="current-project-title">Golden Ray FPSO Topsides EPCIC</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+
+            <!-- Dropdown Options -->
+            <div id="project-select-menu" style="display:none; position:absolute; top:42px; left:0; background:var(--pf-surface); border:1px solid var(--pf-border); border-radius:var(--pf-radius-md); box-shadow:var(--pf-shadow-lg); z-index:100; min-width:320px; padding:6px;">
+              <div style="padding: 8px 12px; font-size:11px; font-weight:700; color:var(--pf-text-muted); text-transform:uppercase;">Authorized Projects (PRJ-01)</div>
+              <div class="cmd-item" onclick="ProjectFlowApp.switchProject('PRJ-084'); document.getElementById('project-select-menu').style.display='none';">
+                <div>
+                  <strong style="color:var(--pf-brand);">PRJ-084</strong> • Golden Ray FPSO Topsides
+                  <div style="font-size:11px; color:var(--pf-text-secondary);">Deepwater FPSO • 64.2% Progress (Active)</div>
+                </div>
+              </div>
+              <div class="cmd-item" onclick="ProjectFlowApp.switchProject('PRJ-092'); document.getElementById('project-select-menu').style.display='none';">
+                <div>
+                  <strong style="color:var(--pf-brand);">PRJ-092</strong> • South Natuna Gas Pipeline
+                  <div style="font-size:11px; color:var(--pf-text-secondary);">Subsea 24" Pipeline • 24.5% Progress (Active)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Reporting Indicator -->
+          <div class="snapshot-badge" id="snapshot-indicator">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background-color: var(--pf-success);"></span>
+            <span>LIVE DATA (Cutoff Nov 06)</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          
+          <!-- Command Palette Trigger (§3.1) -->
+          <button class="cmd-palette-btn" onclick="ProjectFlowApp.openCommandPalette()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Search or jump...</span>
+            <span class="cmd-key">Ctrl K</span>
+          </button>
+
+          <!-- Persona / Role Selector Dropdown (§2.1, §2.6) -->
+          <div style="position: relative;">
+            <div class="persona-selector" onclick="document.getElementById('persona-menu').classList.toggle('active')">
+              <div class="avatar" id="user-avatar">SJ</div>
+              <div class="persona-info">
+                <span class="persona-name" id="user-name">Sarah Jenkins</span>
+                <span class="persona-role" id="user-role">Project Manager (PM)</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+
+            <!-- Persona Menu -->
+            <div id="persona-menu" style="display:none; position:absolute; top:44px; right:0; background:var(--pf-surface); border:1px solid var(--pf-border); border-radius:var(--pf-radius-md); box-shadow:var(--pf-shadow-lg); z-index:100; min-width:280px; padding:6px;">
+              <div style="padding: 8px 12px; font-size:11px; font-weight:700; color:var(--pf-text-muted); text-transform:uppercase;">Switch Active Persona (§2.1)</div>
+              
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-001'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>Sarah Jenkins</strong>
+                  <div style="font-size:11px; color:var(--pf-brand);">Project Manager (L2) • Full Authority</div>
+                </div>
+              </div>
+
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-002'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>Michael Chen</strong>
+                  <div style="font-size:11px; color:var(--pf-accent);">Lead Planning Engineer (L2) • Controls</div>
+                </div>
+              </div>
+
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-003'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>Elena Rostova</strong>
+                  <div style="font-size:11px; color:var(--pf-text-secondary);">Lead Document Controller (L3) • MDR/CRS</div>
+                </div>
+              </div>
+
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-004'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>David Miller</strong>
+                  <div style="font-size:11px; color:var(--pf-text-secondary);">Expediting & Procurement Lead (L3)</div>
+                </div>
+              </div>
+
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-005'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>Johan Vries (Client)</strong>
+                  <div style="font-size:11px; color:var(--pf-info);">Equinor Client Rep (L5) • Restricted View</div>
+                </div>
+              </div>
+
+              <div class="cmd-item" onclick="ProjectFlowApp.switchPersona('USR-006'); document.getElementById('persona-menu').style.display='none';">
+                <div>
+                  <strong>Tuan Nguyen</strong>
+                  <div style="font-size:11px; color:var(--pf-text-secondary);">QAQC & Yard Engineer (L4)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </header>
+
+      <!-- View Sections Canvas -->
+      <div class="content-container">
+        
+        <section id="view-dashboard" class="view-section active"></section>
+        <section id="view-tasks" class="view-section"></section>
+        <section id="view-documents" class="view-section"></section>
+        <section id="view-procurement" class="view-section"></section>
+        <section id="view-planning" class="view-section"></section>
+        <section id="view-execution" class="view-section"></section>
+        <section id="view-governance" class="view-section"></section>
+        <section id="view-settings" class="view-section"></section>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Slide-out Inspector Drawer (§3.3 UX-03) -->
+  <div class="inspector-overlay" id="inspector-overlay"></div>
+  <aside class="inspector-drawer" id="inspector-drawer">
+    <div class="inspector-header">
+      <div class="inspector-meta">
+        <span class="inspector-code" id="inspector-code">—</span>
+        <h3 class="inspector-title" id="inspector-title">—</h3>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="badge badge-brand" id="inspector-status-badge">—</span>
+        <button class="btn btn-icon" onclick="ProjectFlowApp.closeInspector()">✕</button>
+      </div>
+    </div>
+    
+    <div class="inspector-body" id="inspector-body">
+      <!-- Injected by openInspector -->
+    </div>
+  </aside>
+
+  <!-- Command Palette Modal (Ctrl+K) -->
+  <div class="modal-backdrop" id="cmd-palette-modal">
+    <div class="modal-dialog">
+      <div class="cmd-input-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="cmd-input" id="cmd-palette-input" placeholder="Type a command, package, document, or module..." onkeyup="ProjectFlowApp.filterCommandPalette(this.value)">
+        <span class="cmd-key">ESC</span>
+      </div>
+      <div class="cmd-list" id="cmd-palette-list">
+        <!-- Rendered by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- JavaScript Modules in Dependency Order -->
+  <script src="js/data.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/tasks.js"></script>
+  <script src="js/modules/documents.js"></script>
+  <script src="js/modules/procurement.js"></script>
+  <script src="js/modules/planning.js"></script>
+  <script src="js/modules/execution.js"></script>
+  <script src="js/modules/governance.js"></script>
+  <script src="js/modules/settings.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    // Simple toggle helpers for dropdowns
+    document.addEventListener('click', (e) => {
+      const projMenu = document.getElementById('project-select-menu');
+      const personaMenu = document.getElementById('persona-menu');
+      if (projMenu && !e.target.closest('.project-selector-wrapper')) {
+        projMenu.style.display = 'none';
+      } else if (projMenu && e.target.closest('.project-badge')) {
+        projMenu.style.display = (projMenu.style.display === 'block') ? 'none' : 'block';
+      }
+
+      if (personaMenu && !e.target.closest('.persona-selector')) {
+        personaMenu.style.display = 'none';
+      } else if (personaMenu && e.target.closest('.persona-selector')) {
+        personaMenu.style.display = (personaMenu.style.display === 'block') ? 'none' : 'block';
+      }
+    });
+  </script>
+</body>
+</html>

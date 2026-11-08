@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Flow — MVP Demo (v1_claude)</title>
+<meta name="description" content="Project Flow — EPCIC project management application. Click-through MVP demo built from the final consolidated specification.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Login -->
+  <div id="login-screen" class="auth-screen"></div>
+
+  <!-- Project selector -->
+  <div id="selector-screen" class="selector-screen hidden"></div>
+
+  <!-- Application shell -->
+  <div id="app">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main-col">
+      <header class="topbar" id="topbar-wrap">
+        <div class="breadcrumb">Project Flow / <strong id="breadcrumb-text">Dashboard</strong></div>
+        <div id="topbar" style="display:flex;align-items:center;gap:16px;flex:1;"></div>
+      </header>
+      <div class="content-scroll">
+        <main class="content" id="view-root"></main>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record inspector drawer -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer"></aside>
+
+  <!-- Toasts -->
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

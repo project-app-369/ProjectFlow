@@ -1,0 +1,34 @@
+const paths: Record<string, string> = {
+  grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
+  brief: 'M3 7h18v13H3z M8 7V4h8v3 M3 12h18 M10 12v3h4v-3',
+  check: 'M9 11l3 3 8-9 M20 12v8H4V4h10',
+  gear: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z',
+  clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l3 2',
+  bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z M10 21h4',
+  search: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14 M15 15l6 6',
+  arrow: 'M4 12h16 M15 7l5 5-5 5',
+  down: 'M12 3v12 M7 10l5 5 5-5 M4 17v4h16v-4',
+  plus: 'M12 5v14 M5 12h14',
+  risk: 'M12 3L2 21h20z M12 9v5 M12 17v1',
+  chart: 'M4 3v17h17 M7 15l4-5 4 2 6-7',
+  calendar: 'M3 5h18v16H3z M7 3v4 M17 3v4 M3 10h18',
+  box: 'M3 7l9-5 9 5v10l-9 5-9-5z M3 7l9 5 9-5 M12 12v10 M7 5l10 5',
+  close: 'M6 6l12 12 M18 6L6 18',
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  layers: 'M12 3L2 8l10 5 10-5z M2 12l10 5 10-5 M2 16l10 5 10-5',
+  shield: 'M12 2l8 3v7c0 5-8 10-8 10S4 17 4 12V5z M8 11l3 3 5-6',
+  building: 'M4 21V7l8-4 8 4v14 M9 21v-6h6v6 M9 10h.01 M15 10h.01 M9 14h.01 M15 14h.01',
+  anchor: 'M12 2v6 M12 22v-8 M5 12H2a10 10 0 0 0 20 0h-3 M9 5a3 3 0 1 0 6 0',
+  flag: 'M5 22V3 M5 4h13l-3 4.5L18 13H5',
+  doc: 'M14 2H5v20h14V7z M14 2v5h5 M8 12h8 M8 16h8',
+  people: 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 7 M19 14a5 5 0 0 1 3 4v3',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+};
+
+export function Icon({ name }: { name?: string }) {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={paths[name ?? ''] ?? paths.grid} />
+    </svg>
+  );
+}

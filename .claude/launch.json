@@ -1,0 +1,71 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "v1_claude-demo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--directory",
+        "v1_claude"
+      ],
+      "port": 4173
+    },
+    {
+      "name": "mvp-claude-demo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4174",
+        "--directory",
+        "MVP/Claude"
+      ],
+      "port": 4174
+    },
+    {
+      "name": "app-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/api",
+        "start"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "app-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/web",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "app-sheets-sim",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/sheets",
+        "dev"
+      ],
+      "port": 3200
+    },
+    {
+      "name": "app-web-sheets",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/web",
+        "dev:sheets",
+        "--port",
+        "5174"
+      ],
+      "port": 5174
+    }
+  ]
+}

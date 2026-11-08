@@ -1,0 +1,15 @@
+# PostgreSQL for local development. The API falls back to an embedded PGlite
+# database when DATABASE_URL is not set, so this is optional for a first run.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: projectflow
+      POSTGRES_PASSWORD: projectflow
+      POSTGRES_DB: projectflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

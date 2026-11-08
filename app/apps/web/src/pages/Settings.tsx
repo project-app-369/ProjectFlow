@@ -1,0 +1,147 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { apiMode, errorText, request, type ModuleInfo, type OperationState, type WorkspaceId } from '../api';
+import { fmtDate } from '../format';
+import { pathOf, topModules } from '../nav';
+import { CrumbContext, useAccess, useApp, usePrefs, useToast } from '../state';
+import { Badge, Btn, Breadcrumb, PageHead } from '../ui';
+import ProjectsTab from './SettingsProjects';
+import UsersTab from './SettingsUsers';
+
+type TabId = 'projects' | 'users' | 'modules' | 'general' | 'data';
+const ALL_TABS: [TabId, string][] = [['projects', 'Projects'], ['users', 'Users'], ['modules', 'Modules'], ['general', 'General'], ['data', 'Data sources']];
+const isOn = (s: OperationState) => s === 'Enabled' || s === 'Pilot' || s === 'Locked' || s === 'Read-only';
+
+export default function Settings() {
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const { project, me } = useApp();
+  // Projects and Users exist only where the backend has users (the sheets pre-build); Users is admin mode.
+  const TABS = ALL_TABS.filter(([id]) => (id === 'projects' ? !!me : id === 'users' ? !!me?.isAdmin : true));
+  const current = TABS.find(([id]) => id === tab);
+  if (!current) return <Navigate to={`/settings/${me ? 'projects' : 'modules'}`} replace />;
+  const needsProject = (tab === 'modules' || tab === 'data') && !project.id;
+
+  return (
+    <CrumbContext.Provider value={['Settings', current[1]]}>
+      <PageHead title="Settings" desc={me ? 'Choose your project, manage projects and users, turn modules on or off, and set your display preferences.' : 'Turn modules on or off, set your display preferences, and see where the data comes from.'} />
+      <div className="tabs" role="tablist">
+        {TABS.map(([id, label]) => (
+          <button key={id} className={`tab ${tab === id ? 'active' : ''}`} role="tab" aria-selected={tab === id} onClick={() => navigate(`/settings/${id}`)}>{label}</button>
+        ))}
+      </div>
+      {needsProject ? <div className="panel empty">Select a project first. <Btn kind="small" onClick={() => navigate('/settings/projects')}>Open projects</Btn></div>
+        : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
+    </CrumbContext.Provider>
+  );
+}
+
+function ModulesTab() {
+  const { project, modules } = useApp();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const prefs = usePrefs();
+  const access = useAccess();
+  const [ws, setWs] = useState<WorkspaceId>(prefs.workspace);
+
+  const change = useMutation({
+    mutationFn: ({ key, state }: { key: string; state: OperationState }) => request<ModuleInfo>(`/projects/${project.id}/modules/${key}`, { method: 'PUT', body: JSON.stringify({ state }) }),
+    onSuccess: (m) => qc.invalidateQueries({ queryKey: ['modules', project.id] }).then(() =>
+      toast(m.sheetsCreated?.length ? `Modules updated. Sheet created: ${m.sheetsCreated.map(s => s.name).join(', ')}` : 'Modules updated.')),
+    onError: (e: Error) => toast(errorText(e)),
+  });
+
+  const byKey = new Map(modules.modules.map(m => [m.key, m]));
+  const wsModules = modules.modules.filter(m => m.workspace === ws);
+  const count = (id: WorkspaceId) => {
+    const all = modules.modules.filter(m => m.workspace === id);
+    return `${all.filter(m => isOn(m.state)).length}/${all.length}`;
+  };
+  const tone = { Available: 'green', 'In development': 'amber', Planned: 'indigo' } as const;
+
+  return (
+    <>
+      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+        Enable or disable each module and submodule. A disabled module hides its submodules and rejects data requests; later-phase modules can be switched on
+        early and show a placeholder until they ship.{!access.canConfigure && ' Only an administrator or the Project Manager can change modules.'}
+      </p>
+      <div className="actions" style={{ marginBottom: 18 }}>
+        {modules.workspaces.map(w => (
+          <Btn key={w.id} kind={w.id === ws ? 'primary' : ''} onClick={() => setWs(w.id)}>{w.label} <span className="tiny">{count(w.id)}</span></Btn>
+        ))}
+      </div>
+      <section className="panel">
+        <div className="panel-head"><div><h2>{modules.workspaces.find(w => w.id === ws)?.label} workspace</h2><p>{topModules(modules.modules, ws).length} modules</p></div></div>
+        {wsModules.map(m => {
+          const parentOn = !m.parent || !!byKey.get(m.parent)?.effective;
+          return (
+            <div key={m.key} className={`setting-row ${parentOn ? '' : 'is-off'}`} style={{ paddingLeft: 22 + m.depth * 28 }}>
+              <div>
+                <Breadcrumb parts={pathOf(modules, m.key)} />
+                <small>
+                  {m.description && <>{m.description} </>}
+                  <Badge tone={tone[m.availability]}>{m.availability}</Badge> <Badge tone="indigo">{m.phase}</Badge>
+                  {m.core && ' · core, always on'}
+                  {m.sheet && <> · <a href={m.sheet.url} target="_blank" rel="noreferrer">Sheet: {m.sheet.name} ↗</a></>}
+                  {m.sheetCapable && !m.sheet && m.effective && ' · no sheet yet'}
+                  {!['Enabled', 'Disabled'].includes(m.state) && ` · ${m.state}`}
+                </small>
+              </div>
+              <input
+                className="switch" type="checkbox" checked={isOn(m.state)} disabled={m.core || !parentOn || change.isPending || !access.canConfigure}
+                aria-label={pathOf(modules, m.key).join(' / ')}
+                onChange={e => change.mutate({ key: m.key, state: e.target.checked ? 'Enabled' : 'Disabled' })}
+              />
+            </div>
+          );
+        })}
+      </section>
+    </>
+  );
+}
+
+function GeneralTab() {
+  const prefs = usePrefs();
+  const { modules } = useApp();
+  return (
+    <div className="settings-grid">
+      <section className="panel">
+        <div className="panel-head"><h2>Display</h2></div>
+        <div className="setting-row"><div><strong>Dark appearance</strong><small>Saved in this browser.</small></div>
+          <input className="switch" type="checkbox" checked={prefs.dark} onChange={e => prefs.setDark(e.target.checked)} aria-label="Dark appearance" /></div>
+        <div className="setting-row"><div><strong>Default workspace</strong><small>The workspace shown when the app opens.</small></div>
+          <select className="filter" value={prefs.workspace} onChange={e => prefs.setWorkspace(e.target.value as WorkspaceId)} aria-label="Default workspace">
+            {modules.workspaces.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+          </select></div>
+      </section>
+      <section className="panel">
+        <div className="panel-head"><h2>Reset</h2></div>
+        <div className="setting-row"><div><strong>Reset display preferences</strong><small>Module states are project settings and are not affected.</small></div><Btn kind="small" onClick={prefs.reset}>Reset</Btn></div>
+      </section>
+    </div>
+  );
+}
+
+function DataTab() {
+  const { project } = useApp();
+  const health = useQuery({ queryKey: ['health'], queryFn: () => request<{ status: string; database: string; spreadsheet?: string }>('/health') });
+  return (
+    <section className="panel">
+      <div className="panel-head"><h2>Data sources</h2></div>
+      <div style={{ padding: '0 22px 22px' }}>
+        <p className="tiny muted">Reference data was extracted once from the project workbooks in <code>/data</code> and loaded into the database. The API serves it read-only; nothing writes back to the source files.</p>
+        <div className="detail-grid">
+          <div><small>Project</small><strong>{project.name}</strong></div>
+          <div><small>Contract</small><strong>{project.contract}</strong></div>
+          <div><small>Schedule source</small><strong>Procurement Plan workbook · S-CURVES (M), Progress Table (W)</strong></div>
+          <div><small>Procurement source</small><strong>Expediting Report · pgk_gen_info</strong></div>
+          <div><small>Expediting source</small><strong>Expediting Report · Equipment / Structural / Pipe-Fitting / Valves / Misc summaries</strong></div>
+          <div><small>Cut-off date</small><strong>{fmtDate(project.cutoff)}</strong></div>
+          <div><small>API status</small><strong>{health.data ? `${health.data.status} · ${health.data.database === 'sheets' ? 'Google Sheets via Apps Script' : health.data.database === 'pglite' ? 'embedded PGlite' : 'PostgreSQL'}` : '…'}</strong></div>
+          {apiMode === 'sheets' && health.data?.spreadsheet && <div><small>Data spreadsheet</small><strong><a href={health.data.spreadsheet} target="_blank" rel="noreferrer">Open the spreadsheet ↗</a></strong></div>}
+        </div>
+      </div>
+    </section>
+  );
+}

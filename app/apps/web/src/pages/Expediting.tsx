@@ -1,0 +1,134 @@
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
+import { downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Page } from '../api';
+import { DataTable } from '../DataTable';
+import { fmtDate, initials, signed } from '../format';
+import { Icon } from '../icons';
+import { Toolbar, useListState } from '../Register';
+import { useApp, useToast } from '../state';
+import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+
+const PAGE_SIZE = 50;
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+const text = (v: unknown) => (v == null || v === '' ? undefined : String(v));
+const num = (v: unknown) => (typeof v === 'number' ? v : undefined);
+
+function Progress({ p }: { p: ExpeditingPackage }) {
+  if (p.actualPct == null) return <span className="tiny muted">No data</span>;
+  return (
+    <div className="progress-stack">
+      <div className="progress-numbers"><strong>{p.actualPct}%</strong><span className="muted">Plan {p.planPct ?? 0}%</span></div>
+      <div className="progress-line"><div className={`progress-fill ${p.actualPct < (p.planPct ?? 0) ? 'behind' : ''}`} style={{ width: `${Math.min(100, p.actualPct)}%` }} /></div>
+    </div>
+  );
+}
+
+function Pair({ label, plan, actual }: { label: string; plan?: number; actual?: number }) {
+  if (plan == null && actual == null) return null;
+  return <div><small>{label}</small><strong>{actual ?? '—'}% <span className="tiny muted">/ {plan ?? '—'}% plan</span></strong></div>;
+}
+
+function Detail({ p }: { p: ExpeditingPackage }) {
+  if (p.discipline === 'Equipment') {
+    const eta = text(p.etaSite);
+    return (
+      <>
+        <div className="detail-grid">
+          <div><small>Required on site (ROS)</small><strong>{fmtDate(p.rosDate)}</strong></div>
+          <div><small>ETA at site</small><strong>{eta && isoDate.test(eta) ? fmtDate(eta) : eta ?? '—'}</strong></div>
+          <Pair label="Engineering" plan={num(p.engPlan)} actual={num(p.engActual)} />
+          <Pair label="Procurement" plan={num(p.procPlan)} actual={num(p.procActual)} />
+          <Pair label="Fabrication" plan={num(p.fabPlan)} actual={num(p.fabActual)} />
+          <Pair label="Testing" plan={num(p.testPlan)} actual={num(p.testActual)} />
+          <Pair label="Delivery" plan={num(p.delPlan)} actual={num(p.delActual)} />
+          <Pair label="Overall" plan={p.planPct ?? undefined} actual={p.actualPct ?? undefined} />
+        </div>
+        <h3>Highlight / area of concern</h3><p className="tiny muted" style={{ whiteSpace: 'pre-line' }}>{text(p.highlight) ?? 'None recorded.'}</p>
+        <h3>Short-term action plan</h3><p className="tiny muted" style={{ whiteSpace: 'pre-line' }}>{text(p.actionPlan) ?? 'None recorded.'}</p>
+      </>
+    );
+  }
+  const delivery = text(p.deliveryDate);
+  return (
+    <>
+      <div className="detail-grid">
+        {text(p.poNo) && <div><small>PO number</small><strong>{text(p.poNo)}</strong></div>}
+        {delivery && <div><small>PO delivery date</small><strong>{isoDate.test(delivery) ? fmtDate(delivery) : delivery}</strong></div>}
+        <Pair label="Ex-works" plan={num(p.planExw)} actual={num(p.actExw)} />
+        <Pair label="Arrival at site" plan={num(p.planArrival)} actual={num(p.actArrival)} />
+        <Pair label="Cumulative progress" plan={p.planPct ?? undefined} actual={p.actualPct ?? undefined} />
+        {p.variance != null && <div><small>Variance</small><strong>{signed(p.variance)} pp</strong></div>}
+      </div>
+      {text(p.currentStatusText) && <><h3>Current status</h3><p className="tiny muted" style={{ whiteSpace: 'pre-line' }}>{text(p.currentStatusText)}</p></>}
+    </>
+  );
+}
+
+export default function Expediting() {
+  const { project } = useApp();
+  const toast = useToast();
+  const list = useListState();
+  const [selected, setSelected] = useState<ExpeditingPackage | null>(null);
+  const base = `/projects/${project.id}/expediting`;
+
+  const summary = useQuery({ queryKey: ['expediting-summary', project.id], queryFn: () => request<ExpeditingSummary>(`${base}/summary`) });
+  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE });
+  const page = useQuery({ queryKey: ['expediting-packages', project.id, query], queryFn: () => request<Page<ExpeditingPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
+
+  const columns = useMemo<ColumnDef<ExpeditingPackage>[]>(() => [
+    {
+      id: 'package', header: 'PACKAGE', meta: { sortKey: 'code' },
+      cell: ({ row: { original: p } }) => (
+        <button className="link-button vendor" onClick={() => setSelected(p)}>
+          <span className="vendor-logo">{initials(p.discipline)}</span>
+          <span><strong>{p.code}</strong><small>{p.name}</small></span>
+        </button>
+      ),
+    },
+    { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: p } }) => p.discipline },
+    { id: 'vendor', header: 'VENDOR', meta: { sortKey: 'vendor' }, cell: ({ row: { original: p } }) => <span className="tiny">{p.vendor ?? '—'}</span> },
+    { id: 'progress', header: 'CUMULATIVE PROGRESS', meta: { sortKey: 'actualPct' }, cell: ({ row: { original: p } }) => <Progress p={p} /> },
+    { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: p } }) => <span className={(p.variance ?? 0) < 0 ? 'negative' : 'positive'}>{p.variance == null ? '—' : `${signed(p.variance)} pp`}</span> },
+    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: p } }) => <Badge>{p.status}</Badge> },
+    { id: 'open', header: '', cell: ({ row: { original: p } }) => <button className="icon-btn" aria-label={`Open ${p.code}`} onClick={() => setSelected(p)}><Icon name="arrow" /></button> },
+  ], []);
+
+  const s = summary.data;
+  const csv = `${base}/packages.csv${list.query()}`;
+
+  return (
+    <>
+      <PageHead title="Vendor Overview" desc={`Equipment, Structural, Piping, Valves & Misc expediting status${s ? ` · ${s.total} packages` : ''}.`}
+        actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'expediting-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
+      <div className="stats">
+        <Stat label="Total packages" value={s?.total ?? '—'} foot="Across 5 disciplines" icon="chart" />
+        <Stat label="Delayed" value={s?.delayed ?? '—'} foot="ETA at site slipping past ROS" icon="clock" />
+        <Stat label="At risk" value={s?.atRisk ?? '—'} foot="Watching forecast vs. plan" icon="risk" />
+        <Stat label="Normal / on track" value={s?.normal ?? '—'} foot="No active flag" icon="check" />
+      </div>
+      <div className="panel">
+        <div className="panel-head"><div><h2>Expediting packages</h2><p>Select a package to review highlights and action plan</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
+        <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, vendor or description…" label="Search expediting packages" />
+        {page.error ? <ErrorBox error={page.error} /> : (
+          <>
+            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
+            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+          </>
+        )}
+      </div>
+      {selected && (
+        <Modal title={`${selected.code} · Expediting status`} onClose={() => setSelected(null)} actions={<Btn onClick={() => setSelected(null)}>Close</Btn>}>
+          <div className="dialog-body">
+            <div className="drawer-intro">
+              <div className="eyebrow">{selected.discipline}{selected.vendor ? ` · ${selected.vendor}` : ''}</div>
+              <h1>{selected.name ?? selected.code}</h1>
+              <Badge>{selected.status}</Badge>
+            </div>
+            <Detail p={selected} />
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}

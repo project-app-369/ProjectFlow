@@ -1,0 +1,154 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { apiMode, getUserId, request, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
+import { Layout } from './Layout';
+import { defaultKey, landing, pathOf, SHEETS_KEYS } from './nav';
+import Dashboard from './pages/Dashboard';
+import Expediting from './pages/Expediting';
+import { InterfaceMatrixPage, InterfacePointsPage, InterfaceRegister } from './pages/Interfaces';
+import Milestones from './pages/Milestones';
+import Placeholder from './pages/Placeholder';
+import Procurement from './pages/Procurement';
+import Risks from './pages/Risks';
+import { ProgressOverall, WorkPackages } from './pages/Schedule';
+import Settings from './pages/Settings';
+import Tasks from './pages/Tasks';
+import TaskCalendar from './pages/tasks/TaskCalendar';
+import TaskManagement from './pages/tasks/TaskManagement';
+import TaskWorkload from './pages/tasks/TaskWorkload';
+import { AppDataProvider, CrumbContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
+import { ErrorBox, Loading, PageHead } from './ui';
+
+const PAGES: Record<string, () => ReactNode> = {
+  dashboard: () => <Dashboard />,
+  'task-management.board': () => (apiMode === 'sheets' ? <TaskManagement /> : <Tasks />),
+  'task-management.calendar': () => <TaskCalendar />,
+  'task-management.workload': () => <TaskWorkload />,
+  'planning.overall-progress': () => <ProgressOverall />,
+  'planning.work-packages': () => <WorkPackages />,
+  'planning.milestones': () => <Milestones />,
+  'procurement.procurement-plan': () => <Procurement />,
+  'procurement.expediting.vendor-overview': () => <Expediting />,
+  'management.risks': () => <Risks />,
+  'interface.register': () => <InterfaceRegister />,
+  'interface.matrix': () => <InterfaceMatrixPage />,
+  'interface.points': () => <InterfacePointsPage />,
+};
+const sheetsOnly = new Set<string>(SHEETS_KEYS);
+
+function ModuleRoute() {
+  const { key = '' } = useParams();
+  const { modules } = useApp();
+  const { setWorkspace } = usePrefs();
+  const m = modules.modules.find(x => x.key === key);
+
+  useEffect(() => { if (m?.effective) setWorkspace(m.workspace); }, [m, setWorkspace]);
+
+  if (!m || !m.effective) return <Navigate to="/" replace />;
+  const target = landing(modules.modules, key);
+  if (target !== key) return <Navigate to={`/m/${target}`} replace />;
+  const page = PAGES[key] && (apiMode === 'sheets' || !sheetsOnly.has(key)) ? PAGES[key] : null;
+
+  return (
+    <CrumbContext.Provider value={pathOf(modules, key)}>
+      <SheetContext.Provider value={m.sheet ?? null}>
+        {page ? page() : <Placeholder moduleKey={key} />}
+      </SheetContext.Provider>
+    </CrumbContext.Provider>
+  );
+}
+
+function Home() {
+  const { modules } = useApp();
+  const { workspace } = usePrefs();
+  const key = defaultKey(modules.modules, workspace);
+  if (key) return <Navigate to={`/m/${key}`} replace />;
+  const label = modules.workspaces.find(w => w.id === workspace)?.label;
+  return (
+    <CrumbContext.Provider value={[label ?? '']}>
+      <PageHead title={label ?? 'Workspace'} desc={`No ${label} modules are enabled.`} />
+      <div className="panel empty"><Link className="btn small" to="/settings/modules">Open module settings</Link></div>
+    </CrumbContext.Provider>
+  );
+}
+
+/* ---------------- demo sign-in (sheets pre-build only) ---------------- */
+function SignIn({ onSignIn }: { onSignIn: (id: string) => void }) {
+  const dir = useQuery({ queryKey: ['directory'], queryFn: () => request<DirectoryUser[]>('/directory') });
+  return (
+    <div className="signin">
+      <div className="panel signin-card">
+        <div className="brand" style={{ padding: '0 0 18px' }}><span className="brandmark" />Project Flow</div>
+        <h1>Who are you?</h1>
+        <p className="page-sub" style={{ marginBottom: 18 }}>Pre-build demo: pick a person to act as. This is not authentication — roles are enforced, but anyone can choose any name.</p>
+        {dir.isPending ? <Loading /> : dir.error ? <ErrorBox error={dir.error} /> : (
+          <div className="signin-list">
+            {dir.data.map(u => (
+              <button key={u.id} className="btn signin-user" onClick={() => onSignIn(u.id)}>
+                <span className="avatar teal">{u.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}</span>{u.name}
+              </button>
+            ))}
+            {!dir.data.length && <div className="empty">No active users. Run the sheets setup function first.</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const PROJECT_KEY = 'projectflow.project';
+const loadProject = () => { try { return localStorage.getItem(PROJECT_KEY); } catch { return null; } };
+const saveProject = (id: string | null) => { try { if (id) localStorage.setItem(PROJECT_KEY, id); else localStorage.removeItem(PROJECT_KEY); } catch { /* storage unavailable */ } };
+
+/** Signed-in session: resolves the user, the visible projects and the selected project, then its module registry. */
+function Session({ userId, signOut }: { userId: string | null; signOut: () => void }) {
+  const navigate = useNavigate();
+  const [selected, setSelected] = useState<string | null>(loadProject);
+  const me = useQuery({ queryKey: ['me', userId], queryFn: () => request<Me>('/me'), enabled: apiMode === 'sheets' });
+  const projects = useQuery({ queryKey: ['projects', userId], queryFn: () => request<Project[]>('/projects') });
+  const list = projects.data;
+  const project = list?.find(p => p.id === selected) ?? list?.find(p => p.myRole) ?? list?.[0] ?? null;
+  const modules = useQuery({ queryKey: ['modules', project?.id], queryFn: () => request<ModulesResponse>(`/projects/${project!.id}/modules`), enabled: !!project });
+
+  const selectProject = useCallback((id: string) => { saveProject(id); setSelected(id); navigate('/'); }, [navigate]);
+  const value = useMemo(() => ({
+    project: project ?? NO_PROJECT,
+    modules: modules.data ?? { workspaces: [], modules: [] },
+    me: me.data ?? null, projects: list ?? [], selectProject, signOut,
+  }), [project, modules.data, me.data, list, selectProject, signOut]);
+
+  if (projects.error || me.error) return <div style={{ padding: 40 }}><ErrorBox error={projects.error ?? me.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
+  if (!list || (apiMode === 'sheets' && !me.data)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
+  if (project && modules.error) return <div style={{ padding: 40 }}><ErrorBox error={modules.error} /><button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button></div>;
+  if (project && !modules.data) return <div style={{ padding: 40 }}><Loading label="Loading project…" /></div>;
+
+  const home = apiMode === 'sheets' ? 'projects' : 'modules';
+  return (
+    <AppDataProvider value={value}>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={project ? <Home /> : <Navigate to="/settings/projects" replace />} />
+          <Route path="m/:key" element={project ? <ModuleRoute /> : <Navigate to="/settings/projects" replace />} />
+          <Route path="settings" element={<Navigate to={`/settings/${project ? 'modules' : home}`} replace />} />
+          <Route path="settings/:tab" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </AppDataProvider>
+  );
+}
+
+export function App() {
+  const qc = useQueryClient();
+  const [userId, setUser] = useState<string | null>(getUserId);
+  const signOut = useCallback(() => { setUserId(null); setUser(null); qc.clear(); }, [qc]);
+  const signIn = (id: string) => { qc.clear(); setUserId(id); setUser(id); };
+  useEffect(() => {
+    window.addEventListener('projectflow:signed-out', signOut);
+    return () => window.removeEventListener('projectflow:signed-out', signOut);
+  }, [signOut]);
+
+  if (apiMode === 'sheets' && !userId) return <SignIn onSignIn={signIn} />;
+  return <Session key={userId ?? 'none'} userId={userId} signOut={signOut} />;
+}
