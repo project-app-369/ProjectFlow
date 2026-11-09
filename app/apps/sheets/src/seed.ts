@@ -99,6 +99,7 @@ export function seedRows() {
     procurement: procurementRows(raw.procurement as RawRow[], (raw as unknown as { procurementPlan?: RawRow[] }).procurementPlan ?? []),
     logistics: withProject(((raw as unknown as { logistics?: RawRow[] }).logistics ?? []).map((r, i) => ({ id: `LG-${String(i + 1).padStart(4, '0')}`, ...r }))),
     materialBalance: withProject(((raw as unknown as { materialBalance?: RawRow[] }).materialBalance ?? []).map((r, i) => ({ id: `MB-${String(i + 1).padStart(3, '0')}`, ...r }))),
+    phaseProgress: withProject(((raw as unknown as { phaseProgress?: RawRow[] }).phaseProgress ?? []).map((r, i) => ({ id: `PH-${String(i + 1).padStart(2, '0')}`, reportDate: (raw as unknown as { progressCutoff?: string }).progressCutoff ?? null, ...r }))),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
     materialSummary: withProject(((raw as unknown as { materialSummary?: RawRow[] }).materialSummary ?? []).map((r, i) => ({ id: `MS-${String(i + 1).padStart(2, '0')}`, ...r }))),
     expediting: withProject(expediting.map(x => ({
@@ -189,7 +190,7 @@ export function ensureAllSheets(store: Store) {
   const sheets: [string, readonly { key: string; type: string }[]][] = [
     [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
-    [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.budget, COLUMNS.budget],
+    [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
     [SHEET.risks, COLUMNS.risks], [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints],
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
   ];
@@ -222,6 +223,7 @@ export function seedStore(store: Store, now = new Date().toISOString()) {
     store.appendRows(SHEET.materialBalance, COLUMNS.materialBalance, rows.materialBalance);
     store.appendRows(SHEET.materialSummary, COLUMNS.materialSummary, rows.materialSummary);
     store.appendRows(SHEET.procCurves, COLUMNS.procCurves, rows.procCurves);
+    store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
     store.appendRows(SHEET.procConcerns, COLUMNS.procConcerns, concernsSeed(raw.expediting as RawRow[], raw.procurement as RawRow[], (raw as unknown as { logistics?: RawRow[] }).logistics ?? [], String(raw.project.cutoff), now));
     const cutoff = String(raw.project.cutoff);
     const shift = (n: number | null) => (n === null ? null : new Date(new Date(`${cutoff}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10));

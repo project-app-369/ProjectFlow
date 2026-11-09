@@ -34,6 +34,7 @@ export const COLUMNS = {
     ...text('projectId', 'id', 'packageCode', 'type', 'title', 'description', 'severity', 'area', 'owner'), ...date('raisedDate', 'dueDate'),
     ...text('status', 'action', 'source', 'sourceRef'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
   ],
+  phaseProgress: [...text('projectId', 'id', 'phase'), ...num('plan', 'actual'), ...date('reportDate'), ...stamp('updatedAt')],
   procCurves: [...text('projectId', 'id', 'facility', 'scope'), ...date('start'), ...text('plan', 'forecast', 'actual'), ...stamp('updatedAt')],
   budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt')],
   knowledge: [
@@ -90,6 +91,7 @@ export const SHEET = {
   materialSummary: 'EPCIC - Material summary',
   procConcerns: 'EPCIC - Procurement concerns',
   procCurves: 'EPCIC - Procurement S-curves',
+  phaseProgress: 'EPCIC - Phase progress',
   risks: 'Governance - Risks',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
@@ -115,10 +117,10 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'phaseProgress', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
-export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
+export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
 export type SnapshotDataset = (typeof SNAPSHOT_DATASETS)[number];
 export const SNAPSHOT_KEY_OF_SHEET: Record<string, SnapshotDataset> = Object.fromEntries(SNAPSHOT_DATASETS.map(k => [SHEET[k], k]));
 

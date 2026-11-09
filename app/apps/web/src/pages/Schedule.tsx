@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { request, type OverallProgressResponse, type WorkPackagesResponse } from '../api';
-import { signed } from '../format';
+import { fmtDate, signed } from '../format';
 import { useApp } from '../state';
-import { ErrorBox, Loading, PageHead, Stat } from '../ui';
+import { ActualPlanBar, ErrorBox, Loading, PageHead, Stat } from '../ui';
 
 const SCurveChart = lazy(() => import('../SCurveChart'));
 
@@ -20,7 +20,7 @@ export function ProgressOverall() {
   const wk = data.thisWeek.actual - data.thisWeek.plan;
   return (
     <>
-      <PageHead title="Overall Progress" desc="Cumulative procurement progress, reproduced from stored work-package inputs." />
+      <PageHead title="Overall Progress" desc={`Cumulative progress of the whole EPCIC scope${data.reportDate ? ` at ${fmtDate(data.reportDate)}` : ''}, with progress by phase.`} />
       <div className="stats">
         <Stat label="Cumulative actual" value={data.latest?.actual ?? 0} unit="%" foot={`vs ${data.latest?.plan ?? 0}% planned`} icon="chart" />
         <Stat label="Achieved this week" value={data.thisWeek.actual} unit="%" foot={<><span className={wk < 0 ? 'warning' : 'positive'}>{signed(wk)} pp</span> vs. {data.thisWeek.plan}% plan</>} icon="calendar" />
@@ -30,9 +30,17 @@ export function ProgressOverall() {
         <Stat label="Forecast" value={data.latest?.forecast ?? '—'} unit="%" foot="At latest reported period" icon="clock" />
       </div>
       <div className="panel">
-        <div className="panel-head"><div><h2>Procurement S-curve</h2><p>Cumulative weighted progress · monthly cut-offs</p></div></div>
+        <div className="panel-head"><div><h2>EPCIC S-curve</h2><p>Cumulative weighted progress · monthly cut-offs</p></div></div>
         <Suspense fallback={<Loading label="Loading chart…" />}><SCurveChart points={data.scurve} /></Suspense>
       </div>
+      {data.phases?.length ? (
+        <div className="panel" style={{ marginTop: 22 }}>
+          <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick)</p></div></div>
+          <div style={{ padding: '5px 24px 22px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,18rem),1fr))', gap: '14px 28px' }}>
+            {data.phases.map(p => <ActualPlanBar key={p.id} label={p.phase} actual={p.actual} plan={p.plan} />)}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -51,7 +59,7 @@ export function WorkPackages() {
         <Stat label="Achieved this week" value={overall.thisWeekActual} unit="%" foot={<><span className={wk < 0 ? 'warning' : 'positive'}>{signed(wk)} pp</span> vs. {overall.thisWeekPlan}% plan</>} icon="calendar" />
         <Stat label="Last week" value={overall.lastWeekActual} unit="%" foot={`vs ${overall.lastWeekPlan}% planned`} icon="clock" />
         <Stat label="Work packages" value={items.length} foot="Weighted into overall progress" icon="layers" />
-        <Stat label="This-week plan" value={overall.thisWeekPlan} unit="%" foot="Cumulative procurement plan" icon="chart" />
+        <Stat label="This-week plan" value={overall.thisWeekPlan} unit="%" foot="Cumulative plan, all work packages" icon="chart" />
         <Stat label="Variance" value={signed(wk)} unit="pp" foot="Actual less plan this week" icon="risk" />
         <Stat label="Behind plan" value={items.filter(w => w.thisWeekActual != null && w.thisWeekPlan != null && w.thisWeekActual < w.thisWeekPlan).length} foot="Work packages needing recovery" icon="flag" />
       </div>

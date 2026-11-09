@@ -41,5 +41,5 @@ export default function SCurveChart({ points }: { points: ScurvePoint[] }) {
     return () => { ro.disconnect(); chart.dispose(); };
   }, [points, dark]);
 
-  return <div className="chart"><div ref={el} role="img" aria-label="Procurement S-curve, plan versus forecast and actual" style={{ height: 260 }} /></div>;
+  return <div className="chart"><div ref={el} role="img" aria-label="EPCIC S-curve, plan versus forecast and actual" style={{ height: 260 }} /></div>;
 }

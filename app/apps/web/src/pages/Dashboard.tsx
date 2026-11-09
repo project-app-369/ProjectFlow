@@ -19,47 +19,48 @@ export default function Dashboard() {
   if (isPending) return <Loading />;
   if (error) return <ErrorBox error={error} />;
 
-  const { overallProgress: op, workPackages: wp, procurement: pr, expediting: ex } = data;
+  const { overallProgress: op, workPackages: wp } = data;
   const latest = op?.latest;
-  const gap = latest ? (latest.actual ?? 0) - (latest.plan ?? 0) : 0;
-  const poPlaced = pr?.byStatus['PO placed'] ?? 0;
+  const behind = wp ? wp.items.filter(w => (w.thisWeekActual ?? 0) < (w.thisWeekPlan ?? 0)).length : 0;
+  const move = op?.lastWeek ? op.thisWeek.actual - op.lastWeek.actual : null;
+  const ms = data.milestones, rk = data.risks, itf = data.interfaces;
+  const hot = rk ? (rk.byLevel.High ?? 0) + (rk.byLevel.Extreme ?? 0) : 0;
 
   return (
     <>
-      <PageHead title="Project overview" desc={`${project.name} — progress, procurement and delivery priorities.`} />
+      <PageHead title="Project overview" desc={`${project.name} — EPCIC progress${op?.reportDate ? ` at ${fmtDate(op.reportDate)}` : ''}, by work package and phase.`} />
       <div className="stats">
-        <Stat label="Work packages tracked" value={wp?.items.length ?? '—'} foot="WP2 – WP6 · EPCIC scope" icon="layers" />
-        <Stat label="Cumulative procurement progress" value={op ? latest?.actual ?? 0 : '—'} unit={op ? '%' : undefined}
-          foot={op ? <><span className={gap < 0 ? 'warning' : 'positive'}>{gap.toFixed(1)} pp</span> vs. {latest?.plan}% planned</> : 'Overall Progress is off'} icon="chart" />
-        <Stat label="Procurement packages" value={pr?.total ?? '—'} foot={pr ? `${poPlaced} PO placed · ${pr.total - poPlaced} in progress` : 'Procurement Plan is off'} icon="box" />
-        <Stat label="Expediting flags" value={ex ? ex.delayed + ex.atRisk : '—'} foot={ex ? <><span className="negative">{ex.delayed} delayed</span> · {ex.atRisk} at risk</> : 'Vendor Overview is off'} icon="calendar" />
-        <Stat label="Milestones overdue" value={data.milestones?.overdue ?? '—'} foot={data.milestones ? `${data.milestones.dueSoon} due in 30 days` : 'Milestones unavailable'} icon="flag" />
-        <Stat label="Active risks" value={data.risks?.active ?? '—'} foot={data.risks ? `${data.risks.reviewOverdue} reviews overdue` : 'Risk register unavailable'} icon="risk" />
+        <Stat label="EPCIC progress" value={op ? latest?.actual ?? 0 : '—'} unit={op ? '%' : undefined}
+          foot={op && latest ? <ActualPlanBar actual={latest.actual} plan={latest.plan} compact /> : 'Overall Progress is off'} icon="chart" />
+        <Stat label="Progress this period" value={move != null ? `${move > 0 ? '+' : ''}${move.toFixed(1)}` : '—'} unit={move != null ? 'pp' : undefined} foot="Change in actual since last week" icon="calendar" />
+        <Stat label="Work packages" value={wp?.items.length ?? '—'} foot={wp ? <span className={behind ? 'warning' : 'positive'}>{behind} behind plan · {wp.items.length - behind} on or ahead</span> : 'Work Packages is off'} icon="layers" />
+        <Stat label="Milestones overdue" value={ms?.overdue ?? '—'} foot={ms ? `${ms.dueSoon} due in 30 days · ${ms.done} of ${ms.total} achieved` : 'Milestones are off'} icon="flag" />
+        <Stat label="Active risks" value={rk?.active ?? '—'} foot={rk ? <span className={hot ? 'negative' : ''}>{hot} high or extreme · {rk.reviewOverdue} reviews overdue</span> : 'Risks are off'} icon="risk" />
+        <Stat label="Open interfaces" value={itf?.open ?? '—'} foot={itf ? `${itf.overdue} overdue · ${itf.pointsOpen} open points` : 'Interfaces are off'} icon="link" />
       </div>
 
       <div className="grid-main">
         {op ? (
           <div className="panel">
-            <div className="panel-head"><div><h2>Procurement S-curve</h2><p>Cumulative weighted progress, plan vs. actual</p></div></div>
+            <div className="panel-head"><div><h2>EPCIC S-curve</h2><p>Cumulative weighted progress of the whole scope, plan vs. actual</p></div></div>
             <Suspense fallback={<Loading label="Loading chart…" />}><SCurveChart points={op.scurve} /></Suspense>
           </div>
         ) : <Unavailable label="Overall Progress" />}
 
-        {ex ? (
+        {ms ? (
           <div className="panel">
-            <div className="panel-head"><div><h2>Needs attention</h2><p>Open expediting flags with a recorded highlight</p></div><Icon name="risk" /></div>
-            <div className="watchlist">
-              {ex.flags.slice(0, 4).map(f => (
-                <div className="watch-item" key={f.id}>
-                  <span className={`watch-symbol ${f.status === 'Delay' ? 'red' : ''}`}><Icon name={f.status === 'Delay' ? 'clock' : 'risk'} /></span>
-                  <div><h3>{f.name || f.code}</h3><p>{f.vendor || f.code} · <Badge>{f.status}</Badge></p></div>
-                </div>
-              ))}
-              {!ex.flags.length && <div className="empty">No open flags.</div>}
-            </div>
-            <div className="panel-foot"><Link className="btn text" to="/m/procurement.expediting.vendor-overview">View expediting register →</Link></div>
+            <div className="panel-head"><div><h2>Next milestones</h2><p>The earliest key dates not yet achieved</p></div><Icon name="flag" /></div>
+            {ms.next.slice(0, 5).map(m => (
+              <div className="list-card" key={m.id}>
+                <Icon name="flag" />
+                <div className="grow"><p>{m.description}</p><small>{m.facility ?? m.subName ?? m.id} · {fmtDate(m.forecast ?? m.planBaseline)}</small></div>
+                <Badge tone={m.status === 'Overdue' ? 'red' : m.status === 'Due soon' ? 'amber' : 'indigo'}>{m.status}</Badge>
+              </div>
+            ))}
+            {!ms.next.length && <div className="empty">Every milestone is achieved.</div>}
+            <div className="panel-foot"><Link className="btn text" to="/m/planning.milestones">Open milestones →</Link></div>
           </div>
-        ) : <Unavailable label="Vendor Overview" />}
+        ) : <Unavailable label="Milestones" />}
       </div>
 
       <div className="bottom-grid">
@@ -77,15 +78,15 @@ export default function Dashboard() {
           </div>
         ) : <Unavailable label="Work Packages" />}
 
-        {pr ? (
+        {op?.phases?.length ? (
           <div className="panel">
-            <div className="panel-head"><h2>Procurement by discipline</h2></div>
-            {Object.entries(pr.byDiscipline).sort((a, b) => b[1] - a[1]).map(([d, n]) => (
-              <div className="list-card" key={d}><Icon name="box" /><div className="grow"><p>{d}</p></div><span className="tiny muted">{n} packages</span></div>
-            ))}
-            <div className="panel-foot"><Link className="btn text" to="/m/procurement.procurement-plan">Open procurement →</Link></div>
+            <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick){op.reportDate ? ` · ${fmtDate(op.reportDate)}` : ''}</p></div></div>
+            <div style={{ padding: '5px 24px 22px' }}>
+              {op.phases.map(p => <div style={{ margin: '14px 0' }} key={p.id}><ActualPlanBar label={p.phase} actual={p.actual} plan={p.plan} /></div>)}
+            </div>
+            <div className="panel-foot"><Link className="btn text" to="/m/planning.overall-progress">Open overall progress →</Link></div>
           </div>
-        ) : <Unavailable label="Procurement Plan" />}
+        ) : null}
       </div>
 
       {(data.milestones !== undefined || data.risks !== undefined || data.interfaces !== undefined) && (

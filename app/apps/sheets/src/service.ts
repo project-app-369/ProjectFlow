@@ -157,7 +157,8 @@ export class Service {
     const scurve = this.rows(SHEET.scurve, COLUMNS.scurve, projectId).map(({ projectId: _p, ...p }) => p).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const latest = [...scurve].reverse().find(p => p.actual !== null) ?? null;
     const wps = this.workPackages(projectId);
-    return { scurve, latest, thisWeek: { plan: wps.overall.thisWeekPlan, actual: wps.overall.thisWeekActual }, workPackageCount: wps.items.length };
+    const phases = this.rows(SHEET.phaseProgress, COLUMNS.phaseProgress, projectId).map(({ projectId: _p, updatedAt: _u, ...p }) => p);
+    return { scurve, latest, thisWeek: { plan: wps.overall.thisWeekPlan, actual: wps.overall.thisWeekActual }, lastWeek: { plan: wps.overall.lastWeekPlan, actual: wps.overall.lastWeekActual }, workPackageCount: wps.items.length, phases, reportDate: (phases[0]?.reportDate as string | null) ?? null };
   }
 
   /* ---------- procurement ---------- */

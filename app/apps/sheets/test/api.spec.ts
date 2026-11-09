@@ -24,7 +24,7 @@ describe('setup', () => {
     expect(store.sheetNames()).toEqual([
       'Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
-      'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Construction budget',
+      'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
     ]);
@@ -72,8 +72,11 @@ describe('data endpoints match the NestJS API contract', () => {
     expect(d.procurement.total).toBe(145);
     expect(d.expediting).toMatchObject({ total: 153, delayed: 11, atRisk: 6 });
     expect(d.workPackages.items).toHaveLength(5);
-    expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(45.1, 1);
-    expect(d.overallProgress.latest).toMatchObject({ date: '2026-10-30', actual: 39.89 });
+    expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(27.1, 1);
+    expect(d.workPackages.items.map((w: any) => w.code)).toEqual(['WP2', 'WP3', 'WP4', 'WP5', 'WP6']);
+    expect(d.overallProgress.latest).toMatchObject({ date: '2026-10-30', actual: 27.1 });
+    expect(d.overallProgress.phases.map((p: any) => p.phase).slice(0, 3)).toEqual(['Engineering', 'Procurement', 'Onshore construction']);
+    expect(d.overallProgress.phases[1]).toMatchObject({ plan: 41.24, actual: 43.65, reportDate: '2026-10-30' });
     expect(d.overallProgress.scurve.at(-1).actual).toBeNull();
     expect(d.milestones.total).toBe(48);
     expect(d.risks).toMatchObject({ total: 0, active: 0 });
@@ -996,15 +999,15 @@ describe('procurement registers', () => {
     expect(ok(call('GET', `${P}/procurement/s-curve?facility=nope`)).facility).toBe('OVERALL');
   });
 
-  it('uses the procurement Progress Table (W) values even when Planning is disabled', () => {
+  it('shows procurement progress by work package from the procurement S-curves, apart from project progress, even when Planning is disabled', () => {
     const d = ok(call('GET', `${P}/procurement/dashboard`));
     expect(d.workPackages.items.length).toBe(5);
-    expect(d.workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50, actual: 47.6 });
-    expect(d.workPackages.overall).toMatchObject({ plan: 43.3, actual: 45.1 });
+    expect(d.workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 47.56 });
+    expect(d.workPackages.overall).toMatchObject({ plan: 43.31, actual: 45.07 });
     ok(call('PUT', `${P}/modules/planning.work-packages`, { state: 'Disabled' }));
     expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages).toEqual(d.workPackages);
     store.updateRow(SHEET.workPackages, COLUMNS.workPackages, 'code', 'WP3', { thisWeekActual: 12, thisWeekPlan: 15 });
-    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ actual: 12, plan: 15 });
+    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 47.56 });
   });
 
   it('adds new signals to a package when they are raised and drops sections whose module is off', () => {

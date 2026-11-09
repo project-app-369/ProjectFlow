@@ -372,13 +372,13 @@ export class ProcurementOps {
       score: e.score, level: e.score >= 9 ? 'Critical' : e.score >= 5 ? 'High' : 'Medium', reasons: [...new Set(e.reasons)],
     })).sort((a, b) => b.score - a.score || a.code.localeCompare(b.code));
 
-    // The seeded work-package rows come from Procurement Plan → Progress Table (W),
-    // M/N (cumulative this-week plan/actual). The source sheet's OVERALL row
-    // reconciles to the weighted roll-up in Service.workPackages.
-    const progressRows = this.svc.workPackages(projectId);
+    // Procurement progress by work package comes from the procurement S-curves (latest point at the cut-off), not from the
+    // project-wide work package progress on the main dashboard.
+    const WP: Record<string, [string, string]> = { 'CGF TOPSIDES': ['WP2', 'CGF Topsides'], 'CGF JACKET & BRIDGE': ['WP3', 'CGF Jacket & Bridge'], 'LQ MODULE #2': ['WP4', 'New LQ Module #2'], 'BROWN FIELD': ['WP5', 'Brownfield'], PIPELINE: ['WP6', 'Pipeline'] };
+    const facilities = this.curves(projectId).facilities;
     const workPackages = {
-      overall: { plan: progressRows.overall.thisWeekPlan, actual: progressRows.overall.thisWeekActual },
-      items: progressRows.items.map(w => ({ code: w.code, name: w.name, plan: w.thisWeekPlan, actual: w.thisWeekActual })),
+      overall: { plan: this.curves(projectId).latest?.plan ?? null, actual: this.curves(projectId).latest?.actual ?? null },
+      items: facilities.filter(f => WP[f]).map(f => { const l = this.curves(projectId, f, 'OVR').latest; return { code: WP[f][0], name: WP[f][1], plan: l?.plan ?? null, actual: l?.actual ?? null }; }),
     };
     return { cutoff, pipeline, expediting, logistics, materials, concerns, workPackages, attention: attention.slice(0, 15), attentionCount: attention.length };
   }

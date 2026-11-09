@@ -176,8 +176,11 @@ export interface WeeklyOverall { lastWeekPlan: number; lastWeekActual: number; t
 export interface WorkPackagesResponse { items: WorkPackage[]; overall: WeeklyOverall }
 export interface ScurvePoint { date: string; plan: number | null; forecast: number | null; actual: number | null }
 export interface OverallProgressResponse {
-  scurve: ScurvePoint[]; latest: ScurvePoint | null; thisWeek: { plan: number; actual: number }; workPackageCount: number;
+  scurve: ScurvePoint[]; latest: ScurvePoint | null; thisWeek: { plan: number; actual: number }; lastWeek?: { plan: number; actual: number }; workPackageCount: number;
+  /** Progress by phase (engineering, procurement, construction, ...) at the report date. */
+  phases?: PhaseProgress[]; reportDate?: string | null;
 }
+export interface PhaseProgress { id: string; phase: string; plan: number | null; actual: number | null; reportDate: string | null }
 
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 export interface Milestone {
