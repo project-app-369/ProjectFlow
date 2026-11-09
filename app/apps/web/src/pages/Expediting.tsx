@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import { apiMode, downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Page } from '../api';
+import { apiMode, downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Insights, type Page } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { expeditingFields } from './procFields';
 import { DataTable } from '../DataTable';
@@ -9,6 +9,7 @@ import { fmtDate, initials, signed } from '../format';
 import { Icon } from '../icons';
 import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
+import { FilterChips, InsightsView, usePick } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
 
 const PAGE_SIZE = 50;
@@ -20,7 +21,7 @@ function Progress({ p }: { p: ExpeditingPackage }) {
   if (p.actualPct == null) return <span className="tiny muted">No data</span>;
   return (
     <div className="progress-stack">
-      <ActualPlanBar actual={p.actualPct} plan={p.planPct ?? 0} compact />
+      <ActualPlanBar actual={p.actualPct} plan={p.planPct} compact />
     </div>
   );
 }
@@ -77,7 +78,10 @@ export default function Expediting() {
   const base = `/projects/${project.id}/expediting`;
 
   const summary = useQuery({ queryKey: ['expediting-summary', project.id], queryFn: () => request<ExpeditingSummary>(`${base}/summary`) });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE });
+  const sheets = apiMode === 'sheets';
+  const insights = useQuery({ queryKey: ['insights', 'expediting', project.id], enabled: sheets, queryFn: () => request<Insights>(`${base}/insights`) });
+  const filter = usePick(list, { within: '' });
+  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, within: filter.extra.within });
   const page = useQuery({ queryKey: ['expediting-packages', project.id, query], queryFn: () => request<Page<ExpeditingPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
 
   const columns = useMemo<ColumnDef<ExpeditingPackage>[]>(() => [
@@ -99,7 +103,7 @@ export default function Expediting() {
   ], []);
 
   const s = summary.data;
-  const csv = `${base}/packages.csv${list.query()}`;
+  const csv = `${base}/packages.csv${list.query({ within: filter.extra.within })}`;
 
   return (
     <>
@@ -108,15 +112,18 @@ export default function Expediting() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'expediting-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
         </>} />
-      <div className="stats">
+      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} /> : <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot="Across 5 disciplines" icon="chart" />
         <Stat label="Delayed" value={s?.delayed ?? '—'} foot="ETA at site slipping past ROS" icon="clock" />
         <Stat label="At risk" value={s?.atRisk ?? '—'} foot="Watching forecast vs. plan" icon="risk" />
         <Stat label="Normal / on track" value={s?.normal ?? '—'} foot="No active flag" icon="check" />
-      </div>
+        <Stat label="Flagged" value={s ? s.delayed + s.atRisk : '—'} foot="Delay or at-risk status" icon="flag" />
+        <Stat label="Flag rate" value={s?.total ? Math.round(((s.delayed + s.atRisk) / s.total) * 100) : 0} unit="%" foot="Share requiring follow-up" icon="chart" />
+      </div>}
       <div className="panel">
         <div className="panel-head"><div><h2>Expediting packages</h2><p>Select a package to review highlights and action plan</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
         <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, vendor or description…" label="Search expediting packages" />
+        <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
             <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
@@ -141,7 +148,7 @@ export default function Expediting() {
         return (
           <RecordDrawer title={editing === 'new' ? 'New expediting package' : `${editing.code} · Edit expediting status`} size="lg" base={base + '/packages'} id={editing === 'new' ? undefined : editing.id}
             record={editing === 'new' ? null : editing as never} defaults={editing === 'new' ? { status: 'Normal' } : undefined} canDelete={access.canManage}
-            invalidate={['expediting-packages', 'expediting-summary', 'procurement-dashboard', 'dashboard']}
+            invalidate={['expediting-packages', 'expediting-summary', 'procurement-dashboard', 'dashboard', 'insights']}
             fields={expeditingFields({ discipline: page.data?.facets.disciplines ?? [], vendor: suggest(rows, 'vendor') })} onClose={() => setEditing(null)} />
         );
       })()}

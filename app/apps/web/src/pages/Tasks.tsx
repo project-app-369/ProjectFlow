@@ -40,10 +40,13 @@ export default function Tasks() {
     <>
       <PageHead title="Task management" desc="Personal workspace — your own follow-ups and reminders."
         actions={<Btn kind="small" icon="plus" onClick={() => setCreating(true)}>New task</Btn>} />
-      <div className="stats" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+      <div className="stats">
         <Stat label="Open tasks" value={open} foot="To do + in progress" icon="check" />
         <Stat label="Overdue" value={overdue} foot="Due date before the project cut-off" icon="clock" />
         <Stat label="Completed" value={tasks.length - open} foot="Marked done" icon="risk" />
+        <Stat label="All tasks" value={tasks.length} foot="In this workspace" icon="layers" />
+        <Stat label="To do" value={tasks.filter(t => t.status === 'To do').length} foot="Not yet started" icon="calendar" />
+        <Stat label="In progress" value={tasks.filter(t => t.status === 'In progress').length} foot="Work under way" icon="chart" />
       </div>
       <div className="board">
         {COLUMNS.map(col => {

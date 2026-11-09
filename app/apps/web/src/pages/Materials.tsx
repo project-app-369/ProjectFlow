@@ -7,7 +7,8 @@ import { DataTable } from '../DataTable';
 import { Icon } from '../icons';
 import { useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, Loading, PageHead, Pager, Stat } from '../ui';
+import { InsightsView, useInsights } from '../Insights';
+import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead, Pager } from '../ui';
 import { stockFields, weightFields } from './procFields';
 
 const PAGE_SIZE = 50;
@@ -30,12 +31,9 @@ export default function Materials() {
   const facets = page.data?.facets;
 
   const w = weights.data?.items ?? [];
-  const total = (supply: string) => {
-    const rows = w.filter(r => r.supply === supply);
-    const mto = rows.reduce((n, r) => n + (r.mtoKg ?? 0), 0), got = rows.reduce((n, r) => n + (r.arrivedKg ?? 0), 0);
-    return { mto, got, pct: mto ? Math.round((got / mto) * 1000) / 10 : null };
-  };
-  const ptsc = total('PTSC MC'), client = total('Client');
+  const insights = useInsights('materials', project.id, `/projects/${project.id}/materials/insights`);
+  const pick = (f: Record<string, string>) => { const [k, v] = Object.entries(f)[0]; setFilters(s => ({ ...s, [k]: s[k as 'yard'] === v ? '' : v })); list.set({}); };
+  const isOn = (f: Record<string, string>) => Object.entries(f).every(([k, v]) => filters[k as 'yard'] === v);
 
   const columns = useMemo<ColumnDef<StockLine>[]>(() => [
     {
@@ -66,12 +64,7 @@ export default function Materials() {
     <>
       <PageHead title="Materials" desc="Weight of material arrived against the weight needed for purchase, and the stock still on hand in the yards."
         actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}/balance.csv${list.query(filters)}`, 'material-balance.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
-      <div className="stats">
-        <Stat label="PTSC MC supply arrived" value={ptsc.pct != null ? `${ptsc.pct}%` : '—'} foot={`${t(ptsc.got)} of ${t(ptsc.mto)} needed`} icon="box" />
-        <Stat label="Client supply arrived" value={client.pct != null ? `${client.pct}%` : '—'} foot={`${t(client.got)} of ${t(client.mto)} needed`} icon="layers" />
-        <Stat label="Stock lines" value={page.data ? (weights.data ? page.data.total : '…') : '—'} foot="On hand, matching the filters below" icon="check" />
-        <Stat label="Weight lines" value={w.length || '—'} foot="Facilities tracked" icon="chart" />
-      </div>
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} />
 
       <div className="panel" style={{ marginBottom: 22 }}>
         <div className="panel-head">
@@ -87,7 +80,7 @@ export default function Materials() {
                   <tr key={r.id}>
                     <td>{r.supply}</td><td><strong>{r.facility}</strong></td>
                     <td style={{ textAlign: 'right' }} className="mono">{t(r.mtoKg)}</td><td style={{ textAlign: 'right' }} className="mono">{t(r.arrivedKg)}</td>
-                    <td style={{ minWidth: 140 }}>{r.arrivedPct != null ? <><div className="progress-line"><div className={`progress-fill ${r.arrivedPct < 100 ? 'behind' : ''}`} style={{ width: `${Math.min(100, r.arrivedPct)}%` }} /></div><span className={`tiny ${r.arrivedPct < 100 ? 'warning' : 'muted'}`}>{r.arrivedPct}%</span></> : <span className="tiny muted">no target</span>}</td>
+                    <td style={{ minWidth: 220 }}>{r.arrivedPct != null ? <ActualPlanBar actual={r.arrivedPct} plan={null} compact /> : <span className="tiny muted">no target</span>}</td>
                     <td style={{ textAlign: 'right' }} className="mono">{t(r.vspYardKg)}</td><td style={{ textAlign: 'right' }} className="mono">{t(r.mcYardKg)}</td>
                     <td>{access.canWrite && <Btn kind="small" onClick={() => setWeight(r)}>Edit</Btn>}</td>
                   </tr>
@@ -122,11 +115,11 @@ export default function Materials() {
       {stock && (
         <RecordDrawer title={stock === 'new' ? 'New stock line' : `${stock.materialCode ?? stock.id} · Stock`} size="lg" base={`${base}/balance`} id={stock === 'new' ? undefined : stock.id} record={stock === 'new' ? null : stock as never}
           fields={stockFields({ facility: facets?.facility ?? [], supply: facets?.supply ?? [], discipline: facets?.disciplines ?? [], category: facets?.category ?? [], yard: facets?.yard ?? [] })}
-          canDelete={access.canManage} invalidate={['material-balance', 'procurement-dashboard']} onClose={() => setStock(null)} />
+          canDelete={access.canManage} invalidate={['material-balance', 'procurement-dashboard', 'insights']} onClose={() => setStock(null)} />
       )}
       {weight && (
         <RecordDrawer title={weight === 'new' ? 'New weight line' : `${weight.facility} · Weights`} size="sm" base={`${base}/summary`} id={weight === 'new' ? undefined : weight.id} record={weight === 'new' ? null : weight as never}
-          fields={weightFields} defaults={weight === 'new' ? { supply: 'Client' } : undefined} canDelete={access.canManage} invalidate={['material-weights', 'procurement-dashboard']} onClose={() => setWeight(null)} />
+          fields={weightFields} defaults={weight === 'new' ? { supply: 'Client' } : undefined} canDelete={access.canManage} invalidate={['material-weights', 'procurement-dashboard', 'insights']} onClose={() => setWeight(null)} />
       )}
     </>
   );

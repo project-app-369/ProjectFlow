@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import { apiMode, downloadCsv, request, type Page, type ProcurementPackage, type ProcurementSummary } from '../api';
+import { apiMode, downloadCsv, request, type Insights, type Page, type ProcurementPackage, type ProcurementSummary } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { packageFields } from './procFields';
 import { DataTable } from '../DataTable';
@@ -9,6 +9,7 @@ import { fmtDate, initials } from '../format';
 import { Icon } from '../icons';
 import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
+import { FilterChips, InsightsView, usePick } from '../Insights';
 import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
 
 const PAGE_SIZE = 50;
@@ -24,7 +25,10 @@ export default function Procurement() {
   const base = `/projects/${project.id}/procurement`;
 
   const summary = useQuery({ queryKey: ['procurement-summary', project.id], queryFn: () => request<ProcurementSummary>(`${base}/summary`) });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE });
+  const sheets = apiMode === 'sheets';
+  const insights = useQuery({ queryKey: ['insights', 'plan', project.id], enabled: sheets, queryFn: () => request<Insights>(`${base}/insights`) });
+  const filter = usePick(list, { workPackage: '', buyer: '' });
+  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, workPackage: filter.extra.workPackage, buyer: filter.extra.buyer });
   const page = useQuery({ queryKey: ['procurement-packages', project.id, query], queryFn: () => request<Page<ProcurementPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
 
   const columns = useMemo<ColumnDef<ProcurementPackage>[]>(() => [
@@ -48,7 +52,7 @@ export default function Procurement() {
 
   const s = summary.data;
   const poPlaced = s?.byStatus['PO placed'] ?? 0;
-  const csv = `${base}/packages.csv${list.query()}`;
+  const csv = `${base}/packages.csv${list.query({ workPackage: filter.extra.workPackage, buyer: filter.extra.buyer })}`;
 
   return (
     <>
@@ -57,15 +61,18 @@ export default function Procurement() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'procurement-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
         </>} />
-      <div className="stats">
+      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} /> : <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot={`Across ${s ? Object.keys(s.byDiscipline).length : '—'} disciplines`} icon="box" />
         <Stat label="PO placed" value={poPlaced} foot={s ? `${Math.round((poPlaced / s.total) * 100)}% of register` : ''} icon="check" />
         <Stat label="LOA issued" value={s?.byStatus['LOA issued'] ?? 0} foot="Letter of award, PO pending" icon="clock" />
         <Stat label="Not yet awarded" value={(s?.byStatus['In tendering'] ?? 0) + (s?.byStatus['Planned'] ?? 0)} foot={`${s?.byStatus['Planned'] ?? 0} planned · ${s?.byStatus['In tendering'] ?? 0} in tendering`} icon="risk" />
-      </div>
+        <Stat label="In tendering" value={s?.byStatus['In tendering'] ?? '—'} foot="Bid process under way" icon="calendar" />
+        <Stat label="Planned" value={s?.byStatus['Planned'] ?? '—'} foot="Awaiting procurement start" icon="layers" />
+      </div>}
       <div className="panel">
         <div className="panel-head"><div><h2>Procurement packages</h2><p>Select a package to review full award detail</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
         <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, description, vendor or buyer…" label="Search procurement packages" />
+        <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
             <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
@@ -98,7 +105,7 @@ export default function Procurement() {
         const rows = (page.data?.items ?? []) as unknown as Record<string, unknown>[];
         return (
           <RecordDrawer title={editing === 'new' ? 'New procurement package' : `${editing.code} · Edit package`} size="lg" base={base + '/packages'} id={editing === 'new' ? undefined : editing.id}
-            record={editing === 'new' ? null : editing as never} canDelete={access.canManage} invalidate={['procurement-packages', 'procurement-summary', 'procurement-dashboard', 'dashboard']}
+            record={editing === 'new' ? null : editing as never} canDelete={access.canManage} invalidate={['procurement-packages', 'procurement-summary', 'procurement-dashboard', 'dashboard', 'insights']}
             fields={packageFields({ discipline: page.data?.facets.disciplines ?? [], vendor: suggest(rows, 'vendor'), buyer: suggest(rows, 'buyer'), expeditor: suggest(rows, 'expeditor'), workPackage: suggest(rows, 'workPackage') })}
             deleteNote="The package leaves the register. Concerns and shipments that name its code are kept." onClose={() => setEditing(null)} />
         );

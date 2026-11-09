@@ -81,9 +81,14 @@ const ROUTES: Route[] = [
   // planning
   route('GET', `${PID}/schedule/overall-progress`, c => c.api.svc.overall(c.p.pid), { module: OVERALL }),
   route('GET', `${PID}/schedule/work-packages`, c => c.api.svc.workPackages(c.p.pid), { module: WORK_PACKAGES }),
+  route('GET', `${PID}/milestones/insights`, c => c.api.reg.milestoneInsights(c.p.pid), { module: MILESTONES }),
   route('GET', `${PID}/milestones/summary`, c => c.api.reg.milestoneSummary(c.p.pid), { module: MILESTONES }),
   route('GET', `${PID}/milestones[.]csv`, c => c.api.reg.milestoneCsv(c.p.pid, c.q), { module: MILESTONES }),
   route('GET', `${PID}/milestones`, c => c.api.reg.milestoneList(c.p.pid, c.q), { module: MILESTONES }),
+  route('POST', `${PID}/milestones`, c => c.api.reg.milestoneCreate(c.p.pid, c.body, c.actor), { module: MILESTONES, status: 201 }),
+  route('GET', `${PID}/milestones/(?<id>[^/]+)`, c => c.api.reg.milestoneGet(c.p.pid, c.p.id), { module: MILESTONES }),
+  route('PATCH', `${PID}/milestones/(?<id>[^/]+)`, c => c.api.reg.milestoneUpdate(c.p.pid, c.p.id, c.body, c.actor), { module: MILESTONES }),
+  route('DELETE', `${PID}/milestones/(?<id>[^/]+)`, c => { c.api.reg.milestoneDelete(c.p.pid, c.p.id, c.actor); return null; }, { module: MILESTONES, status: 204 }),
 
   // procurement and expediting
   route('GET', `${PID}/procurement/summary`, c => c.api.svc.procurementSummary(c.p.pid), { module: PROCUREMENT }),
@@ -98,6 +103,11 @@ const ROUTES: Route[] = [
   route('DELETE', `${PID}/expediting/packages/(?<id>[^/]+)`, c => { c.api.proc.expediting.remove(c.p.pid, c.p.id, c.actor); return null; }, { module: EXPEDITING, status: 204 }),
   route('GET', `${PID}/procurement/dashboard`, c => c.api.proc.dashboard(c.p.pid), { module: PROC_DASH }),
   route('GET', `${PID}/procurement/s-curve`, c => c.api.proc.curves(c.p.pid, c.q.facility, c.q.scope), { module: PROC_DASH }),
+  route('GET', `${PID}/procurement/insights`, c => c.api.proc.planInsights(c.p.pid), { module: PROCUREMENT }),
+  route('GET', `${PID}/expediting/insights`, c => c.api.proc.expeditingInsights(c.p.pid), { module: EXPEDITING }),
+  route('GET', `${PID}/logistics/insights`, c => c.api.proc.logisticsInsights(c.p.pid), { module: LOGISTICS }),
+  route('GET', `${PID}/materials/insights`, c => c.api.proc.materialsInsights(c.p.pid), { module: MATERIALS }),
+  route('GET', `${PID}/procurement/concerns/insights`, c => c.api.proc.concernsInsights(c.p.pid), { module: CONCERNS }),
   route('GET', `${PID}/procurement/concerns/summary`, c => c.api.proc.concernSummary(c.p.pid), { module: CONCERNS }),
   ...crud('procurement/concerns', c => c.api.proc.concerns, CONCERNS),
   ...crud('logistics/shipments', c => c.api.proc.logistics, LOGISTICS),

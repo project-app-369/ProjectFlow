@@ -44,6 +44,8 @@ export default function TaskWorkload() {
         <Stat label="Hours in view" value={hours(hrs(w.totals.total))} foot={`${w.periods.length} ${by}s`} icon="clock" />
         <Stat label="Unscheduled" value={cnt(w.unscheduled)} foot={`${hours(hrs(w.unscheduled))} · no date set`} icon="calendar" />
         <Stat label="Outside this range" value={w.outside.tasks} foot={`${hours(w.outside.hours)} · use ‹ › to look further`} icon="layers" />
+        <Stat label="Total assigned" value={w.totals.total.tasks} foot="All statuses across periods" icon="box" />
+        <Stat label="Open assigned" value={w.totals.total.open} foot="Tasks still to complete" icon="flag" />
       </div>
       <div className="panel">
         <div className="panel-head">

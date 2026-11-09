@@ -1,6 +1,7 @@
 import raw from '../../api/seed/sttp2b.json';
 import { MANIFESTS, defaultState } from '../../api/src/registry/catalog';
 import { COLUMNS, SHEET, pathOf, tabColorOf } from './datasets';
+import { milestoneFacility } from './registers-service';
 import { isIsoDate, type Row, type Store } from './store';
 
 export const PROJECT_ID = 'sttp2b';
@@ -94,7 +95,7 @@ export function seedRows() {
     project: [{ id: pid, code: raw.project.code, name: raw.project.name, shortName: 'STTP2B', client: null, contract: raw.project.contract, location: null, lifecycle: 'Active', cutoff: raw.project.cutoff }] as Row[],
     scurve: withProject(raw.schedule.scurve),
     workPackages: withProject(raw.schedule.workPackages),
-    milestones: withProject((raw as unknown as { milestones: RawRow[] }).milestones),
+    milestones: withProject((raw as unknown as { milestones: RawRow[] }).milestones.map(m => ({ ...m, facility: m.facility ?? milestoneFacility(String(m.id)) }))),
     procurement: procurementRows(raw.procurement as RawRow[], (raw as unknown as { procurementPlan?: RawRow[] }).procurementPlan ?? []),
     logistics: withProject(((raw as unknown as { logistics?: RawRow[] }).logistics ?? []).map((r, i) => ({ id: `LG-${String(i + 1).padStart(4, '0')}`, ...r }))),
     materialBalance: withProject(((raw as unknown as { materialBalance?: RawRow[] }).materialBalance ?? []).map((r, i) => ({ id: `MB-${String(i + 1).padStart(3, '0')}`, ...r }))),

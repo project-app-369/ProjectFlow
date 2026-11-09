@@ -67,6 +67,8 @@ export default function ConstructionBudget() {
         <Stat label="Scheduled" value={s ? hrs(s.scheduledHours) : '—'} foot="Activities with start and finish" icon="calendar" />
         <Stat label="Not scheduled" value={s ? hrs(s.unscheduledHours) : '—'} foot={<span className={s?.unscheduledHours ? 'warning' : ''}>Add dates to see these in the histogram</span>} icon="clock" />
         <Stat label="Peak" value={h?.peak ? hrs(h.peak.hours) : '—'} foot={h?.peak ? `${by === 'week' ? 'Week' : 'Month'} of ${fmtShort(h.peak.start)}` : 'No scheduled hours yet'} icon="chart" />
+        <Stat label="Activities" value={s?.activities ?? '—'} foot="Budgeted work items" icon="box" />
+        <Stat label="WBS nodes" value={s?.nodes ?? '—'} foot="Hierarchy entries" icon="layers" />
       </div>
 
       <div className="panel" style={{ marginBottom: 22 }}>

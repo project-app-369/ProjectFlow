@@ -292,8 +292,37 @@ describe('milestones (reference data)', () => {
     expect(ok(call('GET', `${P}/milestones.csv`)).csv).toContain('Project Effective Date');
   });
 
-  it('is read-only', () => {
-    expect(err(call('POST', `${P}/milestones`, { id: 'X' })).status).toBe(404);
+  it('creates, updates and deletes milestones, deriving variance and facility', () => {
+    const made = ok(call('POST', `${P}/milestones`, { description: 'Hold point review', planBaseline: '2026-11-10', forecast: '2026-11-20', subName: 'MC' }));
+    expect(made).toMatchObject({ id: 'KM-001', facility: 'Project', variance: 10, slipDays: 10, status: 'Due soon' });
+    const done = ok(call('PATCH', `${P}/milestones/KM-001`, { actual: '2026-11-17', facility: 'CGF Topsides' }));
+    expect(done).toMatchObject({ status: 'Done', variance: 7, facility: 'CGF Topsides' });
+    expect(ok(call('GET', `${P}/milestones?facility=${encodeURIComponent('CGF Topsides')}`)).items.map((m: any) => m.id)).toContain('KM-001');
+    expect(ok(call('GET', `${P}/milestones`)).facets.facilities).toEqual(expect.arrayContaining(['Project', 'CGF Topsides', 'CGF Jacket & Bridge', 'LQ Module #2', 'Pipeline']));
+    expect(ok(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Own id' })).id).toBe('M-99');
+    expect(err(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Again' })).status).toBe(409);
+    expect(err(call('POST', `${P}/milestones`, { description: '' })).status).toBe(400);
+    expect(err(call('DELETE', `${P}/milestones/KM-001`, undefined, MEMBER)).status).toBe(403);
+    expect(call('DELETE', `${P}/milestones/KM-001`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
+    expect(err(call('GET', `${P}/milestones/KM-001`)).status).toBe(404);
+  });
+
+  it('refuses to delete a milestone a risk is linked to, and is read-only for clients', () => {
+    const ms = ok(call('POST', `${P}/milestones`, { description: 'Linked' })).id;
+    ok(call('POST', `${P}/risks`, { title: 'Linked risk', category: 'Cost', owner: 'o', likelihood: 1, impact: 1, milestoneId: ms }));
+    expect(err(call('DELETE', `${P}/milestones/${ms}`, undefined, MANAGER)).error.code).toBe('IN_USE');
+    expect(err(call('POST', `${P}/milestones`, { description: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
+  });
+
+  it('summarises milestones for the page: cards, status strip, look-ahead and charts', () => {
+    const ins = ok(call('GET', `${P}/milestones/insights`));
+    expect(ins.cards).toHaveLength(6);
+    expect(ins.cards[0]).toMatchObject({ label: 'Milestones', value: 48 });
+    expect(ins.strip.boxes.map((b: any) => b.label)).toEqual(['Done', 'Overdue', 'Due soon', 'Planned']);
+    expect(ins.lookAhead.boxes.map((b: any) => b.label)).toEqual(['Overdue', 'Within 30 days', 'Within 45 days', 'Within 60 days', 'No date']);
+    expect(ins.charts.map((c: any) => c.filterKey)).toEqual([undefined, 'facility', 'sub']);
+    const w = ok(call('GET', `${P}/milestones?within=60`));
+    expect(w.total).toBe(ins.lookAhead.boxes[3].value);
   });
 });
 
@@ -822,6 +851,14 @@ describe('general knowledge', () => {
 });
 
 describe('procurement registers', () => {
+  it('summarises Logistics before the register with six cards, receiving windows and weight trends', () => {
+    const insights = ok(call('GET', `${P}/logistics/insights`));
+    expect(insights.cards).toHaveLength(6);
+    expect(insights.lookAhead.boxes.map((b: any) => b.label)).toEqual(['Overdue', 'Within 30 days', 'Within 45 days', 'Within 60 days', 'No date']);
+    expect(insights.charts.map((c: any) => c.title)).toEqual(['Arrivals at site by month (gross weight, t)', 'Weight at delivery yards (t)']);
+    expect(insights.charts[0].series.map((s: any) => s.name)).toEqual(['Received (actual)', 'Open (forecast)']);
+    expect(insights.charts[1].series.map((s: any) => s.name)).toEqual(['Received', 'Still to arrive']);
+  });
   const PK = `${P}/procurement/packages`;
   const EX = `${P}/expediting/packages`;
   const LG = `${P}/logistics/shipments`;
@@ -959,10 +996,15 @@ describe('procurement registers', () => {
     expect(ok(call('GET', `${P}/procurement/s-curve?facility=nope`)).facility).toBe('OVERALL');
   });
 
-  it('carries the work package progress on the dashboard', () => {
+  it('uses the procurement Progress Table (W) values even when Planning is disabled', () => {
     const d = ok(call('GET', `${P}/procurement/dashboard`));
     expect(d.workPackages.items.length).toBe(5);
-    expect(d.workPackages.overall.thisWeekActual).toBeGreaterThan(0);
+    expect(d.workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50, actual: 47.6 });
+    expect(d.workPackages.overall).toMatchObject({ plan: 43.3, actual: 45.1 });
+    ok(call('PUT', `${P}/modules/planning.work-packages`, { state: 'Disabled' }));
+    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages).toEqual(d.workPackages);
+    store.updateRow(SHEET.workPackages, COLUMNS.workPackages, 'code', 'WP3', { thisWeekActual: 12, thisWeekPlan: 15 });
+    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ actual: 12, plan: 15 });
   });
 
   it('adds new signals to a package when they are raised and drops sections whose module is off', () => {

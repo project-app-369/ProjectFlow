@@ -78,6 +78,8 @@ export default function Risks() {
         <Stat label="High or extreme" value={s ? hot : '—'} foot={<span className={hot ? 'negative' : ''}>{s?.byLevel.Extreme ?? 0} extreme · {s?.byLevel.High ?? 0} high</span>} icon="flag" />
         <Stat label="Mitigating" value={s?.byStatus.Mitigating ?? '—'} foot="Actions under way" icon="shield" />
         <Stat label="Reviews overdue" value={s?.reviewOverdue ?? '—'} foot="Review date before the cut-off" icon="clock" />
+        <Stat label="Extreme" value={s?.byLevel.Extreme ?? '—'} foot="Highest current severity" icon="flag" />
+        <Stat label="Closed" value={s?.byStatus.Closed ?? '—'} foot="Risks resolved in the register" icon="check" />
       </div>
 
       <div className="panel" style={{ marginBottom: 22 }}>

@@ -20,21 +20,22 @@ export function Stat({ label, value, unit, foot, icon }: { label: string; value:
 
 /** A progress bar that shows the actual figure as the fill and the plan as a tick, with both numbers written out. */
 export function ActualPlanBar({ actual, plan, label, compact }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean }) {
-  const a = actual ?? 0;
-  const gap = plan == null ? null : a - plan;
+  const a = actual != null && Number.isFinite(actual) ? actual : null;
+  const p = plan != null && Number.isFinite(plan) ? plan : null;
+  const gap = p == null || a == null ? null : a - p;
   const at = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
-  const text = `${a.toFixed(1)}% actual${plan != null ? `, ${plan.toFixed(1)}% plan` : ''}`;
+  const text = `${a == null ? 'Actual unavailable' : `${a.toFixed(1)}% actual`}, ${p == null ? 'plan unavailable' : `${p.toFixed(1)}% plan`}${gap == null ? '' : `, ${signed(gap)} pp`}`;
   return (
     <div className={`apbar ${compact ? 'compact' : ''}`}>
       <div className="apbar-figures">
         {label && <span className="apbar-label">{label}</span>}
-        <span><strong>{a.toFixed(1)}%</strong> <span className="muted">actual</span></span>
-        {plan != null && <span className="muted">{plan.toFixed(1)}% plan</span>}
-        {gap != null && <span className={gap < 0 ? 'negative' : 'positive'}>{signed(gap)} pp</span>}
+        <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>
+        <span className="muted">{p == null ? '—' : `${p.toFixed(1)}%`} plan</span>
+        {gap != null && <span className={gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}>{signed(gap)} pp</span>}
       </div>
       <div className="apbar-track" role="img" aria-label={text} title={text}>
-        <div className={`apbar-fill ${gap != null && gap < 0 ? 'behind' : ''}`} style={{ width: at(a) }} />
-        {plan != null && <div className="apbar-plan" style={{ left: at(plan) }} />}
+        {a != null && <div className={`apbar-fill ${gap != null && gap < 0 ? 'behind' : ''}`} style={{ width: at(a) }} />}
+        {p != null && <div className="apbar-plan" style={{ left: at(p) }} />}
       </div>
     </div>
   );

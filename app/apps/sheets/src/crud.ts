@@ -24,6 +24,8 @@ export interface ResourceDef {
   defaultSort: string;
   /** Query parameters that filter by equality, beyond `discipline` and `status`, and their facets. */
   filters?: string[];
+  /** Query parameters that keep rows by a rule, such as `within=30` (due inside 30 days), run on the viewed row. */
+  predicates?: Record<string, (row: AnyRow, value: string, ctx: { cutoff: string }) => boolean>;
   /** Statuses that count as open: `?active=true` keeps only these. */
   activeStatuses?: string[];
   csvHeader: string[];
@@ -53,11 +55,12 @@ export class Resource {
   /** Filters, searches and sorts every record for a list or an export. */
   private select(projectId: string, raw: unknown) {
     const extra = this.def.filters ?? [];
-    const shape = { ...listQuery(this.def.sortKeys).shape, active: z.enum(['true', 'false']).optional(), ...Object.fromEntries(extra.map(k => [k, z.string().max(80).optional()])) };
+    const rules = Object.keys(this.def.predicates ?? {});
+    const shape = { ...listQuery(this.def.sortKeys).shape, active: z.enum(['true', 'false']).optional(), ...Object.fromEntries([...extra, ...rules].map(k => [k, z.string().max(80).optional()])) };
     const f = parse(z.object(shape), raw ?? {}) as ListParams & Record<string, string | undefined>;
     const cutoff = this.cutoff(projectId);
     const all = this.rows(projectId).map(r => this.view(r, cutoff));
-    const kept = all.filter(r => extra.every(k => !f[k] || String(r[k] ?? '') === f[k]) && (f.active !== 'true' || !this.def.activeStatuses || this.def.activeStatuses.includes(String(r.status))));
+    const kept = all.filter(r => extra.every(k => !f[k] || String(r[k] ?? '') === f[k]) && rules.every(k => !f[k] || this.def.predicates![k](r, f[k]!, { cutoff })) && (f.active !== 'true' || !this.def.activeStatuses || this.def.activeStatuses.includes(String(r.status))));
     return { f, all, extra, rows: filterAndSort(kept, f, this.def.searchKeys, this.def.defaultSort) };
   }
 

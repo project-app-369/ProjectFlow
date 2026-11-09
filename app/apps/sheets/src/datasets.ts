@@ -44,7 +44,7 @@ export const COLUMNS = {
   snapshotData: [...text('projectId'), ...date('cutoff'), ...text('dataset'), ...num('part'), ...text('json')],
   scurve: [...text('projectId'), ...date('date'), ...num('plan', 'forecast', 'actual')],
   workPackages: [...text('projectId', 'code', 'name'), ...num('weight', 'lastWeekPlan', 'lastWeekActual', 'achievedPlan', 'achievedActual', 'thisWeekPlan', 'thisWeekActual')],
-  milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment')],
+  milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment', 'facility')],
   procurement: [
     ...text('projectId', 'id', 'code', 'discipline', 'description', 'vendorCode', 'vendor', 'origins', 'loaNo'), ...date('loaDate'),
     ...text('poNo'), ...date('poDate'), ...text('buyer', 'expeditor', 'pe', 'vqc', 'status', 'workPackage', 'packageType'), ...num('weightPct'),

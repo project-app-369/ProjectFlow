@@ -34,7 +34,7 @@ This plan separates what exists today (a *pre-build* on Google Sheets plus a fir
 | Projects: list, select, create, edit, lifecycle, delete rules | PRJ-01, 03, 07, SET-07 | Done | **Open** |
 | Project members and project roles | §2.1, PRJ-07 | Done (5 roles) | **Open** |
 | Users and account states (admin mode) | SET-08, AUTH-02 | Done (no passwords) | **Open** |
-| Milestones (reference data) | PLAN-03 | Done, read-only | **Open** |
+| Milestones (reference data) | PLAN-03 | Sheets-backed create, edit and guarded delete; linked risks and interfaces block deletion | **Open** |
 | Risk register, 5×5 matrix, heatmap | MGT-01, MGT-06 | Done | **Open** |
 | Interface register, points, matrix, transition rules | INT-01…04 | Done | **Open** |
 | Authentication, sessions, invitations | AUTH-01…, §2 | Demo identity only | **Open** |

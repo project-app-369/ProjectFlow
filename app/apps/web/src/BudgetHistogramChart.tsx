@@ -1,3 +1,4 @@
+import { chartTheme } from './chartTheme';
 import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
@@ -8,7 +9,6 @@ import { usePrefs } from './state';
 
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
-const PALETTE = ['#343c78', '#00877d', '#c98f2c', '#bc5660', '#6b7bd6', '#5aa985', '#8a5aa8', '#8d97d6'];
 const label = (start: string, by: 'week' | 'month') =>
   new Date(`${start}T12:00:00Z`).toLocaleDateString('en-GB', by === 'week' ? { day: 'numeric', month: 'short', timeZone: 'UTC' } : { month: 'short', year: '2-digit', timeZone: 'UTC' });
 const fmt = (n: number) => n.toLocaleString('en-GB', { maximumFractionDigits: 0 });
@@ -21,16 +21,16 @@ export default function BudgetHistogramChart({ data }: { data: BudgetHistogram }
   useEffect(() => {
     if (!el.current) return;
     const chart = echarts.init(el.current);
-    const muted = dark ? '#a3b0c4' : '#5d697c';
-    const line = dark ? '#2c3549' : '#e3e8f0';
+    const theme = chartTheme();
+    const { muted, line } = theme;
     const x = data.periods.map(p => label(p.start, data.by));
     chart.setOption({
       animation: false,
-      color: PALETTE,
+      color: theme.palette,
       grid: { left: 56, right: 56, top: 64, bottom: 52 },
       legend: { type: 'scroll', top: 0, left: 0, right: 0, textStyle: { color: muted, fontSize: 12 }, itemWidth: 12, itemHeight: 8 },
       tooltip: {
-        trigger: 'axis', axisPointer: { type: 'shadow' },
+        ...theme.tooltip, trigger: 'axis', axisPointer: { type: 'shadow' },
         formatter: (raw: unknown) => {
           const items = raw as { dataIndex: number; seriesName: string; value: number; marker: string; seriesType: string }[];
           const p = data.periods[items[0].dataIndex];
@@ -48,7 +48,7 @@ export default function BudgetHistogramChart({ data }: { data: BudgetHistogram }
           name: g.label, type: 'bar' as const, stack: 'hours', barMaxWidth: 36,
           data: data.periods.map(p => p.byGroup[g.key] ?? 0),
         })),
-        { name: 'Cumulative', type: 'line' as const, yAxisIndex: 1, showSymbol: false, data: data.cumulative, lineStyle: { color: dark ? '#e6ebf3' : '#1d2b40', width: 2 }, itemStyle: { color: dark ? '#e6ebf3' : '#1d2b40' } },
+        { name: 'Cumulative', type: 'line' as const, yAxisIndex: 1, showSymbol: false, data: data.cumulative, lineStyle: { color: theme.ink, width: 2 }, itemStyle: { color: theme.ink } },
       ],
     });
     const ro = new ResizeObserver(() => chart.resize());

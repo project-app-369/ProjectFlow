@@ -26,6 +26,8 @@ export function ProgressOverall() {
         <Stat label="Achieved this week" value={data.thisWeek.actual} unit="%" foot={<><span className={wk < 0 ? 'warning' : 'positive'}>{signed(wk)} pp</span> vs. {data.thisWeek.plan}% plan</>} icon="calendar" />
         <Stat label="Work packages" value={data.workPackageCount} foot="WP2 – WP6" icon="layers" />
         <Stat label="Overall variance" value={signed(wk)} unit="pp" foot="Achieved vs. planned, this week" icon="risk" />
+        <Stat label="Cumulative plan" value={data.latest?.plan ?? '—'} unit="%" foot="At latest reported period" icon="flag" />
+        <Stat label="Forecast" value={data.latest?.forecast ?? '—'} unit="%" foot="At latest reported period" icon="clock" />
       </div>
       <div className="panel">
         <div className="panel-head"><div><h2>Procurement S-curve</h2><p>Cumulative weighted progress · monthly cut-offs</p></div></div>
@@ -49,6 +51,9 @@ export function WorkPackages() {
         <Stat label="Achieved this week" value={overall.thisWeekActual} unit="%" foot={<><span className={wk < 0 ? 'warning' : 'positive'}>{signed(wk)} pp</span> vs. {overall.thisWeekPlan}% plan</>} icon="calendar" />
         <Stat label="Last week" value={overall.lastWeekActual} unit="%" foot={`vs ${overall.lastWeekPlan}% planned`} icon="clock" />
         <Stat label="Work packages" value={items.length} foot="Weighted into overall progress" icon="layers" />
+        <Stat label="This-week plan" value={overall.thisWeekPlan} unit="%" foot="Cumulative procurement plan" icon="chart" />
+        <Stat label="Variance" value={signed(wk)} unit="pp" foot="Actual less plan this week" icon="risk" />
+        <Stat label="Behind plan" value={items.filter(w => w.thisWeekActual != null && w.thisWeekPlan != null && w.thisWeekActual < w.thisWeekPlan).length} foot="Work packages needing recovery" icon="flag" />
       </div>
       <div className="panel">
         <div className="panel-head"><h2>Work package register</h2></div>

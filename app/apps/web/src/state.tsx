@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Me, ModulesResponse, Project, Role, SheetInfo, WorkspaceId } from './api';
 
 /* ---------------- personal UI preferences (browser-local) ---------------- */
@@ -20,7 +20,7 @@ export const usePrefs = () => useContext(PrefsContext);
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
-  useEffect(() => {
+  useLayoutEffect(() => {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ }
     document.body.classList.toggle('dark', prefs.dark);
     document.documentElement.dataset.nav = prefs.navCollapsed ? 'collapsed' : 'expanded';

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { request, type AttentionItem, type ExpeditingBrief, type ProcurementCurve, type ProcurementDashboard as Dash, type Severity, type Shipment } from '../api';
 import { fmtDate, fmtShort, signed, type Tone } from '../format';
 import { Icon } from '../icons';
+import { progressTableValues } from '../procurementProgress';
 import { useApp } from '../state';
 import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat } from '../ui';
 
@@ -12,8 +13,8 @@ const SCOPE_LABEL = { OVR: 'All', LS: 'Lump sum', PS: 'Reimbursable' } as const;
 const FACILITY_LABEL = (f: string) => (f === 'OVERALL' ? 'All facilities' : f.replace(/\b([A-Z])([A-Z]+)\b/g, (_, a: string, b: string) => (b.length > 2 ? a + b.toLowerCase() : a + b)).replace('Cgf', 'CGF').replace('Lq', 'LQ'));
 
 const LEVEL_TONE: Record<AttentionItem['level'], Tone> = { Critical: 'red', High: 'amber', Medium: 'indigo' };
-const SEV_COLOR: Record<Severity, string> = { Critical: '#b23a52', High: '#c2602f', Medium: '#c98f2c', Low: '#5aa985' };
-const STAGE_COLOR: Record<string, string> = { Planned: '#c3c9de', 'In tendering': '#8d97d6', 'LOA issued': '#d6a043', 'PO placed': '#2f9d83' };
+const SEV_COLOR: Record<Severity, string> = { Critical: 'var(--red)', High: 'var(--chart-orange)', Medium: 'var(--amber)', Low: 'var(--green)' };
+const STAGE_COLOR: Record<string, string> = { Planned: 'var(--chart-neutral)', 'In tendering': 'var(--chart-plan)', 'LOA issued': 'var(--amber)', 'PO placed': 'var(--green)' };
 const kg = (n: number) => `${(n / 1000).toLocaleString('en-GB', { maximumFractionDigits: 0 })} t`;
 
 /** One horizontal bar made of coloured parts. */
@@ -26,7 +27,7 @@ function Bar({ parts, total, height = 10 }: { parts: { value: number; color: str
 }
 
 function Legend({ items }: { items: { label: string; color: string }[] }) {
-  return <div className="legend" style={{ padding: '0 22px 8px' }}>{items.map(i => <span key={i.label}><span className="dot" style={{ background: i.color }} />{i.label}</span>)}</div>;
+  return <div className="legend panel-legend">{items.map(i => <span key={i.label}><span className="dot" style={{ background: i.color }} />{i.label}</span>)}</div>;
 }
 
 function Panel({ title, sub, foot, children, wide }: { title: string; sub?: ReactNode; foot?: ReactNode; children: ReactNode; wide?: boolean }) {
@@ -116,10 +117,10 @@ export default function ProcurementDashboard() {
         </Panel>
 
         {wp ? (
-          <Panel title="Progress by work package" wide sub="Actual (bar) against plan (tick), cumulative this week" foot={<Link className="btn text" to="/m/planning.work-packages">Open work packages →</Link>}>
-            <div style={{ padding: '0 22px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,18rem),1fr))', gap: '14px 28px' }}>
-              <ActualPlanBar label={<>Overall <span className="muted tiny">· all work packages</span></>} actual={wp.overall.thisWeekActual} plan={wp.overall.thisWeekPlan} />
-              {wp.items.map(w => <ActualPlanBar key={w.code} label={<>{w.code} · {w.name} <span className="muted tiny">· weight {(w.weight ?? 0).toFixed(1)}%</span></>} actual={w.thisWeekActual} plan={w.thisWeekPlan} />)}
+          <Panel title="Procurement progress by work package" wide sub="Progress Table (W) · cumulative this-week actual vs plan">
+            <div className="panel-content progress-grid">
+              <ActualPlanBar label="Overall procurement" {...progressTableValues(wp.overall)} />
+              {wp.items.map(w => <ActualPlanBar key={w.code} label={`${w.code} · ${w.name}`} {...progressTableValues(w)} />)}
             </div>
           </Panel>
         ) : null}
@@ -151,10 +152,10 @@ export default function ProcurementDashboard() {
         {pl ? (
           <Panel title="Award pipeline" sub="Packages by stage and discipline" foot={<Link className="btn text" to="/m/procurement.procurement-plan">Open procurement plan →</Link>}>
             <Legend items={Object.entries(STAGE_COLOR).map(([label, color]) => ({ label, color }))} />
-            <div style={{ padding: '0 22px 16px' }}>
+            <div className="panel-content">
               {pl.byDiscipline.map(r => (
                 <div className="bar-row" key={r.discipline}>
-                  <div className="bar-label"><span>{r.discipline}</span><span className="muted">{r.total}</span></div>
+                  <div className="bar-row-label"><span>{r.discipline}</span><span className="muted">{r.total}</span></div>
                   <Bar total={pl.byDiscipline.reduce((m, x) => Math.max(m, x.total), 1)} parts={Object.entries(STAGE_COLOR).map(([label, color]) => ({ label, color, value: Number(r[label] ?? 0) }))} />
                 </div>
               ))}
@@ -165,12 +166,12 @@ export default function ProcurementDashboard() {
 
         {ex ? (
           <Panel title="Expediting health" sub={`Average progress ${ex.avgActualPct ?? '—'}% against ${ex.avgPlanPct ?? '—'}% planned`} foot={<Link className="btn text" to="/m/procurement.expediting.vendor-overview">Open vendor overview →</Link>}>
-            <Legend items={[{ label: 'Delay', color: '#b23a52' }, { label: 'High risk', color: '#c2602f' }, { label: 'At risk', color: '#c98f2c' }, { label: 'On track', color: '#5aa985' }]} />
-            <div style={{ padding: '0 22px 16px' }}>
+            <Legend items={[{ label: 'Delay', color: 'var(--red)' }, { label: 'High risk', color: 'var(--chart-orange)' }, { label: 'At risk', color: 'var(--amber)' }, { label: 'On track', color: 'var(--green)' }]} />
+            <div className="panel-content">
               {ex.byDiscipline.map(r => (
                 <div className="bar-row" key={r.discipline}>
-                  <div className="bar-label"><span>{r.discipline}</span><span className="muted">{r.delay + r.highRisk + r.atRisk} of {r.total} flagged{r.avgVariance != null ? ` · ${signed(r.avgVariance)} pp` : ''}</span></div>
-                  <Bar total={r.total} parts={[{ label: 'Delay', color: '#b23a52', value: r.delay }, { label: 'High risk', color: '#c2602f', value: r.highRisk }, { label: 'At risk', color: '#c98f2c', value: r.atRisk }, { label: 'On track', color: '#5aa985', value: r.total - r.delay - r.highRisk - r.atRisk }]} />
+                  <div className="bar-row-label"><span>{r.discipline}</span><span className="muted">{r.delay + r.highRisk + r.atRisk} of {r.total} flagged{r.avgVariance != null ? ` · ${signed(r.avgVariance)} pp` : ''}</span></div>
+                  <Bar total={r.total} parts={[{ label: 'Delay', color: 'var(--red)', value: r.delay }, { label: 'High risk', color: 'var(--chart-orange)', value: r.highRisk }, { label: 'At risk', color: 'var(--amber)', value: r.atRisk }, { label: 'On track', color: 'var(--green)', value: r.total - r.delay - r.highRisk - r.atRisk }]} />
                 </div>
               ))}
             </div>
@@ -179,10 +180,10 @@ export default function ProcurementDashboard() {
 
         {cn ? (
           <Panel title="Risks, concerns and issues" sub={`${cn.open} open · ${cn.closed} resolved or closed`} foot={<Link className="btn text" to="/m/procurement.concerns">Open register →</Link>}>
-            <div style={{ padding: '0 22px 10px' }}>
+            <div className="panel-content">
               {(['Critical', 'High', 'Medium', 'Low'] as const).map(s => (
                 <div className="bar-row" key={s}>
-                  <div className="bar-label"><span><span className="dot" style={{ background: SEV_COLOR[s], marginRight: 6 }} />{s}</span><span className="muted">{cn.bySeverity[s]}</span></div>
+                  <div className="bar-row-label"><span><span className="dot" style={{ background: SEV_COLOR[s], marginRight: 6 }} />{s}</span><span className="muted">{cn.bySeverity[s]}</span></div>
                   <Bar total={Math.max(1, cn.open)} parts={[{ label: s, color: SEV_COLOR[s], value: cn.bySeverity[s] }]} />
                 </div>
               ))}
@@ -215,8 +216,8 @@ export default function ProcurementDashboard() {
 
         {lg ? (
           <Panel title="Shipments" sub={`${lg.total} shipments · ${kg(lg.receivedKg)} of ${kg(lg.weightKg)} received`} foot={<Link className="btn text" to="/m/procurement.logistics">Open logistics →</Link>}>
-            <Legend items={Object.entries(lg.byStatus).map(([label, n]) => ({ label: `${label} ${n}`, color: label === 'Received' ? '#2f9d83' : label === 'Planned' ? '#c3c9de' : '#d6a043' }))} />
-            <div style={{ padding: '0 22px 10px' }}><Bar height={12} total={lg.total} parts={Object.entries(lg.byStatus).map(([label, value]) => ({ label, value, color: label === 'Received' ? '#2f9d83' : label === 'Planned' ? '#c3c9de' : '#d6a043' }))} /></div>
+            <Legend items={Object.entries(lg.byStatus).map(([label, n]) => ({ label: `${label} ${n}`, color: label === 'Received' ? 'var(--green)' : label === 'Planned' ? 'var(--chart-neutral)' : 'var(--amber)' }))} />
+            <div className="panel-content"><Bar height={12} total={lg.total} parts={Object.entries(lg.byStatus).map(([label, value]) => ({ label, value, color: label === 'Received' ? 'var(--green)' : label === 'Planned' ? 'var(--chart-neutral)' : 'var(--amber)' }))} /></div>
             {lg.overdue.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span className="negative">{r.daysLate} d late</span>} />)}
             {lg.held.slice(0, 5).map(r => <ShipmentRow key={r.id} r={r} note={<Badge tone="amber">Held</Badge>} />)}
             {lg.soon.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span>{fmtShort(r.forecastOnSite!)}</span>} />)}
@@ -226,11 +227,11 @@ export default function ProcurementDashboard() {
 
         {mt ? (
           <Panel title="Material arrival" sub="Weight arrived against the weight needed for purchase" foot={<Link className="btn text" to="/m/procurement.materials">Open materials →</Link>}>
-            <div style={{ padding: '0 22px 16px' }}>
+            <div className="panel-content">
               {mt.totals.map(t => (
                 <div className="bar-row" key={t.supply}>
-                  <div className="bar-label"><strong>{t.supply} supply</strong><span className="muted">{kg(t.arrivedKg)} of {kg(t.mtoKg)}{t.arrivedPct != null ? ` · ${t.arrivedPct}%` : ''}</span></div>
-                  <Bar height={12} total={Math.max(t.mtoKg, t.arrivedKg, 1)} parts={[{ label: 'Arrived', color: t.arrivedPct != null && t.arrivedPct >= 100 ? '#2f9d83' : '#d6a043', value: t.arrivedKg }]} />
+                  <div className="bar-row-label"><strong>{t.supply} supply</strong><span className="muted">{kg(t.arrivedKg)} of {kg(t.mtoKg)}{t.arrivedPct != null ? ` · ${t.arrivedPct}%` : ''}</span></div>
+                  <Bar height={12} total={Math.max(t.mtoKg, t.arrivedKg, 1)} parts={[{ label: 'Arrived', color: t.arrivedPct != null && t.arrivedPct >= 100 ? 'var(--green)' : 'var(--amber)', value: t.arrivedKg }]} />
                 </div>
               ))}
               <div className="detail-grid" style={{ marginBottom: 0 }}>

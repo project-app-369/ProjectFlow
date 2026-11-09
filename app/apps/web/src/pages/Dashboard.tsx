@@ -26,13 +26,15 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHead title="Project overview" desc={`${project.name} — connected modules fed by the project API.`} />
+      <PageHead title="Project overview" desc={`${project.name} — progress, procurement and delivery priorities.`} />
       <div className="stats">
         <Stat label="Work packages tracked" value={wp?.items.length ?? '—'} foot="WP2 – WP6 · EPCIC scope" icon="layers" />
         <Stat label="Cumulative procurement progress" value={op ? latest?.actual ?? 0 : '—'} unit={op ? '%' : undefined}
           foot={op ? <><span className={gap < 0 ? 'warning' : 'positive'}>{gap.toFixed(1)} pp</span> vs. {latest?.plan}% planned</> : 'Overall Progress is off'} icon="chart" />
         <Stat label="Procurement packages" value={pr?.total ?? '—'} foot={pr ? `${poPlaced} PO placed · ${pr.total - poPlaced} in progress` : 'Procurement Plan is off'} icon="box" />
         <Stat label="Expediting flags" value={ex ? ex.delayed + ex.atRisk : '—'} foot={ex ? <><span className="negative">{ex.delayed} delayed</span> · {ex.atRisk} at risk</> : 'Vendor Overview is off'} icon="calendar" />
+        <Stat label="Milestones overdue" value={data.milestones?.overdue ?? '—'} foot={data.milestones ? `${data.milestones.dueSoon} due in 30 days` : 'Milestones unavailable'} icon="flag" />
+        <Stat label="Active risks" value={data.risks?.active ?? '—'} foot={data.risks ? `${data.risks.reviewOverdue} reviews overdue` : 'Risk register unavailable'} icon="risk" />
       </div>
 
       <div className="grid-main">
@@ -87,7 +89,7 @@ export default function Dashboard() {
       </div>
 
       {(data.milestones !== undefined || data.risks !== undefined || data.interfaces !== undefined) && (
-        <div className="bottom-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+        <div className="bottom-grid dashboard-registers">
           {data.milestones === undefined ? null : data.milestones ? (
             <div className="panel">
               <div className="panel-head"><div><h2>Milestones</h2><p>{data.milestones.done} of {data.milestones.total} achieved</p></div><Icon name="flag" /></div>

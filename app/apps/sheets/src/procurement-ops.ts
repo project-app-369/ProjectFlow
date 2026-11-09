@@ -3,6 +3,7 @@ import { isEffective } from '../../api/src/registry/catalog';
 import { Resource, issue, type AnyRow, type ResourceDef } from './crud';
 import { COLUMNS, SHEET } from './datasets';
 import { HttpError } from './http';
+import { concernDue, concernsInsights, expeditingDone, expeditingDue, expeditingInsights, logisticsInsights, materialsInsights, planInsights, shipmentDue, shipmentOpen, withinPredicate, type Insights } from './insights';
 import type { Service } from './service';
 import type { Row } from './store';
 
@@ -61,7 +62,7 @@ const STAGES = ['engPlan', 'engActual', 'procPlan', 'procActual', 'fabPlan', 'fa
 const defs: Record<'packages' | 'expediting' | 'logistics' | 'balance' | 'summary' | 'concerns', ResourceDef> = {
   packages: {
     label: 'procurement package', sheet: SHEET.procurement, columns: COLUMNS.procurement, idKey: 'id', idPrefix: 'PR', idWidth: 3,
-    ...withPartial(packageShape), searchKeys: ['code', 'description', 'vendor', 'buyer'], sortKeys: ['code', 'discipline', 'vendor', 'status', 'poDate', 'loaDate'], defaultSort: 'code',
+    ...withPartial(packageShape), searchKeys: ['code', 'description', 'vendor', 'buyer'], sortKeys: ['code', 'discipline', 'vendor', 'status', 'poDate', 'loaDate'], defaultSort: 'code', filters: ['workPackage', 'packageType', 'buyer'],
     csvName: 'procurement-packages.csv', csvHeader: ['Code', 'Discipline', 'Description', 'Vendor', 'LOA No', 'LOA Date', 'PO No', 'PO Date', 'Buyer', 'Expeditor', 'Status'],
     csvRow: p => [p.code, p.discipline, p.description, p.vendor, p.loaNo, p.loaDate, p.poNo, p.poDate, p.buyer, p.expeditor, p.status],
     prepare(row, { existing, rows }) {
@@ -73,6 +74,7 @@ const defs: Record<'packages' | 'expediting' | 'logistics' | 'balance' | 'summar
   expediting: {
     label: 'expediting package', sheet: SHEET.expediting, columns: COLUMNS.expediting, idKey: 'id', idPrefix: 'EX', idWidth: 3,
     ...withPartial(expeditingShape), searchKeys: ['code', 'name', 'vendor'], sortKeys: ['code', 'discipline', 'vendor', 'status', 'actualPct', 'variance'], defaultSort: 'code',
+    predicates: { within: withinPredicate(expeditingDue, r => !expeditingDone(r)) },
     csvName: 'expediting-packages.csv', csvHeader: ['Code', 'Discipline', 'Name', 'Vendor', 'Plan %', 'Actual %', 'Variance', 'Status'],
     csvRow: x => [x.code, x.discipline, x.name, x.vendor, x.planPct, x.actualPct, x.variance, x.status],
     prepare(row, { existing, rows }) {
@@ -86,7 +88,8 @@ const defs: Record<'packages' | 'expediting' | 'logistics' | 'balance' | 'summar
   logistics: {
     label: 'shipment', sheet: SHEET.logistics, columns: COLUMNS.logistics, idKey: 'id', idPrefix: 'LG', idWidth: 4,
     ...withPartial(logisticsShape), searchKeys: ['packageNo', 'packageDescription', 'poNo', 'shipmentNo', 'shipmentDescription', 'vessel', 'issue'],
-    sortKeys: ['packageNo', 'shipmentNo', 'status', 'forecastOnSite', 'actualOnSite', 'etaPod', 'grossWeightKg'], defaultSort: 'forecastOnSite', filters: ['source', 'deliveryYard'],
+    sortKeys: ['packageNo', 'shipmentNo', 'status', 'forecastOnSite', 'actualOnSite', 'etaPod', 'grossWeightKg'], defaultSort: 'forecastOnSite', filters: ['source', 'deliveryYard', 'month', 'yard'],
+    predicates: { within: withinPredicate(shipmentDue, shipmentOpen), late: (r, v) => v !== 'true' || !!r.overdue || (!!r.issue && r.status !== 'Received') },
     csvName: 'logistics-shipments.csv',
     csvHeader: ['ID', 'Source', 'Package', 'Description', 'PO', 'Shipment', 'ETD POL', 'ETA POD', 'Forecast on site', 'Actual on site', 'Status', 'Overdue', 'Gross weight (kg)', 'Qty', 'Yard', 'Issue'],
     csvRow: r => [r.id, r.source, r.packageNo, r.packageDescription, r.poNo, r.shipmentNo, r.etdPol, r.etaPod, r.forecastOnSite, r.actualOnSite, r.status, r.overdue ? 'Yes' : 'No', r.grossWeightKg, r.qty, r.deliveryYard, r.issue],
@@ -96,7 +99,8 @@ const defs: Record<'packages' | 'expediting' | 'logistics' | 'balance' | 'summar
     },
     view(r, { cutoff }) {
       const late = !r.actualOnSite && r.status !== 'Received' && !!r.forecastOnSite && String(r.forecastOnSite) < cutoff;
-      return { ...r, overdue: late, daysLate: late ? daysBetween(String(r.forecastOnSite), cutoff) : null };
+      const when = r.actualOnSite ?? r.forecastOnSite;
+      return { ...r, overdue: late, daysLate: late ? daysBetween(String(r.forecastOnSite), cutoff) : null, month: when ? String(when).slice(0, 7) : null, yard: r.deliveryYard ? String(r.deliveryYard) : 'Not stated' };
     },
   },
   balance: {
@@ -121,6 +125,7 @@ const defs: Record<'packages' | 'expediting' | 'logistics' | 'balance' | 'summar
     label: 'concern', sheet: SHEET.procConcerns, columns: COLUMNS.procConcerns, idKey: 'id', idPrefix: 'PC', idWidth: 3,
     create: concernCreate as never, patch: z.object(concernShape).partial() as never, searchKeys: ['id', 'packageCode', 'title', 'description', 'owner', 'action'],
     sortKeys: ['id', 'packageCode', 'severity', 'status', 'dueDate', 'raisedDate', 'owner'], defaultSort: 'id', filters: ['type', 'severity', 'area', 'source', 'packageCode', 'owner'], activeStatuses: ['Open', 'Mitigating'],
+    predicates: { within: withinPredicate(concernDue, r => ACTIVE.has(String(r.status))) },
     csvName: 'procurement-concerns.csv',
     csvHeader: ['ID', 'Package', 'Type', 'Title', 'Severity', 'Area', 'Owner', 'Raised', 'Due', 'Status', 'Overdue', 'Action', 'Source'],
     csvRow: r => [r.id, r.packageCode, r.type, r.title, r.severity, r.area, r.owner, r.raisedDate, r.dueDate, r.status, r.overdue ? 'Yes' : 'No', r.action, r.source],
@@ -189,6 +194,39 @@ export class ProcurementOps {
   private viewConcern(r: Row, cutoff: string): AnyRow {
     const { projectId: _p, ...rest } = r;
     return defs.concerns.view!(rest, { cutoff });
+  }
+
+  /* ---- the summaries at the top of each page ---- */
+  private shipmentViews(projectId: string, cutoff: string): AnyRow[] {
+    return this.svc.rows(SHEET.logistics, COLUMNS.logistics, projectId).map(({ projectId: _p, ...r }) => defs.logistics.view!(r, { cutoff }));
+  }
+
+  logisticsInsights(projectId: string): Insights {
+    const cutoff = String(this.svc.project(projectId).cutoff);
+    return logisticsInsights(this.shipmentViews(projectId, cutoff), cutoff);
+  }
+
+  planInsights(projectId: string): Insights {
+    const cutoff = String(this.svc.project(projectId).cutoff);
+    const pkgRows: AnyRow[] = this.svc.rows(SHEET.procurement, COLUMNS.procurement, projectId);
+    const groups = new Map<string, number>();
+    for (const r of pkgRows) groups.set(baseCode(String(r.code)), (groups.get(baseCode(String(r.code))) ?? 0) + 1);
+    const weightOf = (r: AnyRow) => (r.weightPct == null ? 0 : Number(r.weightPct) / (groups.get(baseCode(String(r.code))) ?? 1));
+    return planInsights(pkgRows, cutoff, weightOf);
+  }
+
+  expeditingInsights(projectId: string): Insights {
+    const cutoff = String(this.svc.project(projectId).cutoff);
+    return expeditingInsights(this.svc.rows(SHEET.expediting, COLUMNS.expediting, projectId), cutoff);
+  }
+
+  materialsInsights(projectId: string): Insights {
+    return materialsInsights(this.summary.rows(projectId).map(({ projectId: _p, ...r }) => defs.summary.view!(r, { cutoff: '' })), this.balance.rows(projectId));
+  }
+
+  concernsInsights(projectId: string): Insights {
+    const cutoff = String(this.svc.project(projectId).cutoff);
+    return concernsInsights(this.concerns.rows(projectId).map(r => this.viewConcern(r, cutoff)), r => ACTIVE.has(String(r.status)), cutoff);
   }
 
   /** Cumulative procurement progress by week for one facility and one scope (LS, PS or both), plan against forecast and actual. */
@@ -334,7 +372,14 @@ export class ProcurementOps {
       score: e.score, level: e.score >= 9 ? 'Critical' : e.score >= 5 ? 'High' : 'Medium', reasons: [...new Set(e.reasons)],
     })).sort((a, b) => b.score - a.score || a.code.localeCompare(b.code));
 
-    const workPackages = on('planning.work-packages') ? this.svc.workPackages(projectId) : null;
+    // The seeded work-package rows come from Procurement Plan → Progress Table (W),
+    // M/N (cumulative this-week plan/actual). The source sheet's OVERALL row
+    // reconciles to the weighted roll-up in Service.workPackages.
+    const progressRows = this.svc.workPackages(projectId);
+    const workPackages = {
+      overall: { plan: progressRows.overall.thisWeekPlan, actual: progressRows.overall.thisWeekActual },
+      items: progressRows.items.map(w => ({ code: w.code, name: w.name, plan: w.thisWeekPlan, actual: w.thisWeekActual })),
+    };
     return { cutoff, pipeline, expediting, logistics, materials, concerns, workPackages, attention: attention.slice(0, 15), attentionCount: attention.length };
   }
 }

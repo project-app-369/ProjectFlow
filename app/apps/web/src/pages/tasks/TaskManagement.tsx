@@ -36,6 +36,8 @@ export default function TaskManagement() {
         <Stat label="Overdue" value={stats.overdue} foot={<span className={stats.overdue ? 'negative' : ''}>Deadline passed, not completed</span>} icon="clock" />
         <Stat label="Open effort" value={hours(stats.hours)} foot="Estimated, open tasks" icon="chart" />
         <Stat label="Completed" value={stats.done} foot="Marked completed" icon="flag" />
+        <Stat label="All tasks" value={tasks.length} foot="Across your projects" icon="layers" />
+        <Stat label="Completion" value={tasks.length ? Math.round(stats.done / tasks.length * 100) : 0} unit="%" foot="Share of all tasks completed" icon="chart" />
       </div>
       <div className="tabs" role="tablist" aria-label="Task views">
         {VIEWS.map(([id, label]) => (

@@ -182,7 +182,7 @@ export interface OverallProgressResponse {
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 export interface Milestone {
   id: string; description: string; planBaseline: string | null; planSub: string | null; subName: string | null;
-  forecast: string | null; actual: string | null; variance: number | null; comment: string | null;
+  forecast: string | null; actual: string | null; variance: number | null; comment: string | null; facility: string | null;
   status: MilestoneStatus; slipDays: number | null; daysToGo: number | null;
 }
 export interface MilestoneSummary {
@@ -279,7 +279,10 @@ export interface ProcurementDashboard {
   };
   materials: null | { rows: MaterialWeight[]; totals: { supply: string; mtoKg: number; arrivedKg: number; arrivedPct: number | null }[]; stockLines: number };
   concerns: null | ConcernSummary;
-  workPackages: null | WorkPackagesResponse;
+  workPackages: null | {
+    overall: { plan?: number | null; actual?: number | null; thisWeekPlan?: number | null; thisWeekActual?: number | null };
+    items: { code: string; name: string; plan?: number | null; actual?: number | null; thisWeekPlan?: number | null; thisWeekActual?: number | null }[];
+  };
   attention: AttentionItem[]; attentionCount: number;
 }
 
@@ -369,3 +372,17 @@ export const qs = (params: Record<string, string | number | undefined>) => {
   const s = u.toString();
   return s ? `?${s}` : '';
 };
+
+/* ---------- summaries at the top of each page ---------- */
+export interface InsightCard { label: string; value: string | number; foot: string; icon: string; tone?: 'red' | 'amber' | 'green' }
+export interface InsightBox { label: string; value: number; sub: string; tone?: 'red' | 'amber' | 'green'; filter?: Record<string, string> }
+export interface InsightChart {
+  title: string; sub: string; layout: 'column' | 'bar'; stacked?: boolean; unit: string; categoryKind?: 'month';
+  categories: string[]; series: { name: string; color: string; data: number[] }[]; filterKey?: string; filterValues?: string[];
+}
+export interface Insights {
+  cards: InsightCard[];
+  strip?: { title: string; sub: string; boxes: InsightBox[] };
+  lookAhead?: { title: string; sub: string; boxes: InsightBox[] };
+  charts: InsightChart[];
+}

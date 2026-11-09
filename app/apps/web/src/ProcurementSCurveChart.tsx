@@ -1,3 +1,4 @@
+import { chartTheme } from './chartTheme';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
@@ -19,9 +20,9 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
   useEffect(() => {
     if (!el.current) return;
     const chart = echarts.init(el.current);
-    const muted = dark ? '#96a4b8' : '#7a8597';
-    const line = dark ? '#2c3549' : '#e7ebf2';
-    const teal = dark ? '#69d8cb' : '#00877d';
+    const theme = chartTheme();
+    const { muted, line } = theme;
+    const teal = theme.teal;
     const cut = curve.dates.findIndex(d => d > curve.cutoff);
     const cutIndex = cut === -1 ? curve.dates.length - 1 : Math.max(0, cut - 1);
     const series = (name: string, data: (number | null)[], color: string, dashed = false, width = 2, mark = false) => ({
@@ -33,10 +34,10 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
       animation: false,
       grid: { left: 40, right: 16, top: 28, bottom: 28 },
       legend: { top: 0, right: 0, textStyle: { color: muted, fontSize: 12 }, itemWidth: 14, itemHeight: 6 },
-      tooltip: { trigger: 'axis', valueFormatter: (v: unknown) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—') },
+      tooltip: { ...theme.tooltip, trigger: 'axis', valueFormatter: (v: unknown) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—') },
       xAxis: { type: 'category', data: curve.dates, axisLabel: { color: muted, fontSize: 12, hideOverlap: true, formatter: (v: string) => monthLabel(v) }, axisPointer: { label: { formatter: (p: { value: string | number }) => dayLabel(String(p.value)) } }, axisLine: { lineStyle: { color: line } }, axisTick: { show: false } },
       yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: muted, fontSize: 12, formatter: '{value}%' }, splitLine: { lineStyle: { color: line, type: 'dashed' } } },
-      series: [series('Plan', curve.plan, '#aab2d3', false, 2, true), series('Forecast', curve.forecast, '#b8a4cf', true), series('Actual', curve.actual, teal, false, 2.5)],
+      series: [series('Plan', curve.plan, theme.plan, false, 2, true), series('Forecast', curve.forecast, theme.forecast, true), series('Actual', curve.actual, teal, false, 2.5)],
     }, true);
     const ro = new ResizeObserver(() => chart.resize());
     ro.observe(el.current);

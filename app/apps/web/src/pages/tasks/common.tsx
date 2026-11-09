@@ -5,7 +5,7 @@ import {
 } from '../../api';
 import { fmtDate, localToday, type Tone } from '../../format';
 import { useApp, useToast } from '../../state';
-import { Badge, Btn, Confirm, Field, Modal } from '../../ui';
+import { ActualPlanBar, Badge, Btn, Confirm, Field, Modal } from '../../ui';
 
 export const urgencyTone: Record<Urgency, Tone> = { Low: 'indigo', Normal: 'green', High: 'amber', Urgent: 'red' };
 export const statusTone: Record<TaskStatus, Tone> = { Backlog: 'indigo', Planned: 'indigo', Ongoing: 'amber', Completed: 'green' };
@@ -76,10 +76,10 @@ export function SubtaskProgress({ task }: { task: PTask }) {
   if (!task.subtasksTotal) return <span className="tiny muted">—</span>;
   const pct = Math.round((task.subtasksDone / task.subtasksTotal) * 100);
   return (
-    <span className="subprogress" title={`${task.subtasksDone} of ${task.subtasksTotal} sub-tasks done`}>
-      <span className="progress-line"><span className="progress-fill" style={{ width: `${pct}%`, display: 'block' }} /></span>
-      <span className="tiny">{task.subtasksDone}/{task.subtasksTotal}</span>
-    </span>
+    <div className="subprogress" title={`${task.subtasksDone} of ${task.subtasksTotal} sub-tasks done`}>
+      <ActualPlanBar actual={pct} plan={null} compact />
+      <span className="tiny muted">{task.subtasksDone}/{task.subtasksTotal} sub-tasks complete</span>
+    </div>
   );
 }
 

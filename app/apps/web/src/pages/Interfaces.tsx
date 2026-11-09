@@ -80,6 +80,8 @@ export function InterfaceRegister() {
         <Stat label="Open" value={s?.open ?? '—'} foot="Not yet agreed or closed" icon="clock" />
         <Stat label="Overdue" value={s?.overdue ?? '—'} foot={<span className={s?.overdue ? 'negative' : ''}>Need date before the cut-off</span>} icon="risk" />
         <Stat label="Open points" value={s?.pointsOpen ?? '—'} foot="Blocking closure" icon="check" />
+        <Stat label="Closed interfaces" value={s?.byStatus.Closed ?? '—'} foot="Agreement completed" icon="shield" />
+        <Stat label="Under review" value={s?.byStatus['Under review'] ?? '—'} foot="Awaiting acceptance" icon="calendar" />
       </div>
       <div className="panel">
         <div className="panel-head"><div><h2>Interfaces</h2><p>Select an interface to see its points and move it through the workflow</p></div><span className="tiny muted">{page.data?.total ?? '…'} interfaces</span></div>

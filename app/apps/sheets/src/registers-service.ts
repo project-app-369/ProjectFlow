@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireManage, requireWrite, type Actor } from './auth';
 import { COLUMNS, SHEET } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
+import { milestonesInsights } from './insights';
 import { INTERFACE_STATUSES, INTERFACE_TYPES, POINT_STATUSES, allowedNext, interfaceSettled, pointResolved } from './interface-flow';
 import { ACTIVE_RISK, IMPACT_LABELS, LIKELIHOOD_LABELS, RISK_CATEGORIES, RISK_MATRIX_VERSION, RISK_STATUSES, riskLevel, riskScore } from './risk-matrix';
 import type { Service } from './service';
@@ -19,7 +20,25 @@ type Any = Record<string, any>;
 const strip = ({ projectId: _p, ...rest }: Row): Any => rest;
 
 /* ---------------- milestones (reference data) ---------------- */
-const milestoneQuery = listQuery(['id', 'description', 'planBaseline', 'forecast', 'actual', 'subName', 'variance'] as const).extend({ sub: z.string().max(40).optional() });
+const milestoneQuery = listQuery(['id', 'description', 'planBaseline', 'forecast', 'actual', 'subName', 'variance'] as const).extend({ sub: z.string().max(40).optional(), facility: z.string().max(60).optional(), within: z.string().max(10).optional() });
+
+/** The facility a milestone belongs to, read from the workbook's ID: the digits before the first dash are the work package. */
+export function milestoneFacility(id: string): string {
+  const wp: Record<string, string> = { '01': 'Project', '02': 'CGF Topsides', '03': 'CGF Jacket & Bridge', '04': 'LQ Module #2', '05': 'Brown Field', '06': 'Pipeline' };
+  const m = /^(\d{2})-/.exec(id);
+  if (m) return wp[m[1]] ?? 'Project';
+  if (/^LQM-/.test(id)) return 'LQ Module #2';
+  if (/^M\d/.test(id)) return 'CGF Jacket & Bridge';
+  return 'Project';
+}
+
+const milestoneFields = {
+  description: z.string().trim().min(1).max(200),
+  planBaseline: iso.nullish().transform(v => v ?? null), planSub: iso.nullish().transform(v => v ?? null),
+  subName: txt(40), facility: txt(60), forecast: iso.nullish().transform(v => v ?? null), actual: iso.nullish().transform(v => v ?? null), comment: txt(500),
+};
+const milestoneCreate = z.object({ id: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{1,39}$/, 'Use letters, digits, dots, dashes or underscores (2 to 40 characters).').optional(), ...milestoneFields });
+const milestonePatch = z.object(milestoneFields).partial();
 
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 const MILESTONE_STATUSES: MilestoneStatus[] = ['Done', 'Overdue', 'Due soon', 'Planned'];
@@ -111,14 +130,32 @@ export class RegistersService {
     return { ...strip(m), status, slipDays: m.planBaseline && m.forecast ? daysBetween(String(m.planBaseline), String(m.forecast)) : null, daysToGo: !m.actual && due ? daysBetween(cutoff, due) : null };
   }
 
+  /** Keeps milestones by the look-ahead window: not yet achieved and due (forecast, else baseline) inside it. */
+  private withinWindow(rows: Row[], within: string | undefined, cutoff: string): Row[] {
+    if (!within) return rows;
+    return rows.filter(m => {
+      if (m.actual) return false;
+      const d = m.forecast ?? m.planBaseline ? String(m.forecast ?? m.planBaseline) : null;
+      if (within === 'none') return !d;
+      if (!d) return false;
+      return within === 'overdue' ? d < cutoff : d >= cutoff && d <= addDays(cutoff, Number(within));
+    });
+  }
+
+  milestoneInsights(projectId: string) {
+    const cutoff = this.cutoff(projectId);
+    return milestonesInsights(this.milestones(projectId).map(m => this.milestoneView(m, cutoff)), cutoff);
+  }
+
   milestoneList(projectId: string, raw: unknown) {
     const cutoff = this.cutoff(projectId);
-    const { sub, ...f } = parse(milestoneQuery, raw);
-    const all = this.milestones(projectId).map(m => ({ ...this.milestoneView(m, cutoff), discipline: m.subName })) as unknown as Row[];
-    const rows = filterAndSort(all, { ...f, discipline: sub ?? f.discipline } as ListParams, ['id', 'description', 'subName', 'comment'], 'planBaseline');
+    const { sub, facility, within, ...f } = parse(milestoneQuery, raw);
+    const every = this.milestones(projectId).map(m => ({ ...this.milestoneView(m, cutoff), discipline: m.subName })) as unknown as Row[];
+    const all = this.withinWindow(every, within, cutoff).filter(m => !facility || m.facility === facility);
+    const rows = filterAndSort(all, { ...f, discipline: sub ?? f.discipline } as ListParams, ['id', 'description', 'subName', 'facility', 'comment'], 'planBaseline');
     return {
       items: paginate(rows, f).map(({ discipline: _d, ...r }) => r), total: rows.length, page: f.page, pageSize: f.pageSize,
-      facets: { disciplines: unique(all.map(r => r.discipline)), statuses: MILESTONE_STATUSES },
+      facets: { disciplines: unique(every.map(r => r.discipline)), facilities: unique(every.map(r => r.facility as string | null)), statuses: MILESTONE_STATUSES },
     };
   }
 
@@ -141,6 +178,54 @@ export class RegistersService {
     const bySub = all.reduce<Record<string, number>>((a, m) => { const k = String(m.subName ?? 'Unassigned'); a[k] = (a[k] ?? 0) + 1; return a; }, {});
     const next = all.filter(m => m.status !== 'Done').sort((a, b) => String(a.forecast ?? a.planBaseline).localeCompare(String(b.forecast ?? b.planBaseline))).slice(0, 5);
     return { total: all.length, done: count('Done'), overdue: count('Overdue'), dueSoon: count('Due soon'), planned: count('Planned'), bySub, next, cutoff };
+  }
+
+  /** Days from the baseline to the actual date, or to the forecast while not done; null when either is missing. */
+  private milestoneVariance(m: Any): number | null {
+    const end = m.actual ?? m.forecast;
+    return m.planBaseline && end ? daysBetween(String(m.planBaseline), String(end)) : null;
+  }
+
+  milestoneCreate(projectId: string, body: unknown, actor: Actor) {
+    requireWrite(actor, projectId);
+    const { id: wanted, ...v } = parse(milestoneCreate, body);
+    return this.store.withLock(() => {
+      const rows = this.milestones(projectId);
+      if (wanted && rows.some(r => r.id === wanted)) throw new HttpError(409, { code: 'ID_TAKEN', message: `A milestone with the ID ${wanted} already exists.` });
+      const id = wanted ?? nextId('KM', rows.filter(r => /^KM-\d+$/.test(String(r.id))));
+      this.store.appendRows(SHEET.milestones, COLUMNS.milestones, [{ projectId, id, ...v, facility: v.facility ?? milestoneFacility(id), variance: this.milestoneVariance(v) }]);
+      return this.milestoneGet(projectId, id);
+    });
+  }
+
+  milestoneGet(projectId: string, id: string) {
+    const m = this.milestones(projectId).find(r => r.id === id);
+    if (!m) throw notFound('NOT_FOUND', `Milestone "${id}" was not found.`);
+    return this.milestoneView(m, this.cutoff(projectId));
+  }
+
+  milestoneUpdate(projectId: string, id: string, body: unknown, actor: Actor) {
+    requireWrite(actor, projectId);
+    const patch = parse(milestonePatch, body);
+    return this.store.withLock(() => {
+      const current = this.milestones(projectId).find(r => r.id === id);
+      if (!current) throw notFound('NOT_FOUND', `Milestone "${id}" was not found.`);
+      const merged = { ...current, ...patch };
+      this.store.updateRow(SHEET.milestones, COLUMNS.milestones, 'id', id, { ...(patch as Row), variance: this.milestoneVariance(merged) }, { projectId });
+      return this.milestoneGet(projectId, id);
+    });
+  }
+
+  milestoneDelete(projectId: string, id: string, actor: Actor) {
+    requireManage(actor, projectId);
+    this.store.withLock(() => {
+      const users = [
+        ...this.riskRows(projectId).filter(r => r.milestoneId === id).map(r => `risk ${r.id}`),
+        ...this.interfaceRows(projectId).filter(r => r.milestoneId === id).map(r => `interface ${r.id}`),
+      ];
+      if (users.length) throw new HttpError(409, { code: 'IN_USE', message: `Milestone ${id} is linked from ${users.slice(0, 3).join(', ')}${users.length > 3 ? ` and ${users.length - 3} more` : ''}. Unlink it first.` });
+      if (!this.store.deleteRow(SHEET.milestones, COLUMNS.milestones, 'id', id, { projectId })) throw notFound('NOT_FOUND', `Milestone "${id}" was not found.`);
+    });
   }
 
   /* ================= risks ================= */
