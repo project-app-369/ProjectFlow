@@ -1,7 +1,7 @@
 # ProjectFlow_spec_final
 
 **Product:** Project Flow — EPCIC project management application  
-**Version:** 1.6 — procurement dashboard, risks and concerns, logistics, materials; right-side drawers  
+**Version:** 1.7 — issue management added to procurement dashboard, logistics, materials and right-side drawers  
 **Date:** 8 November 2026  
 **Status:** Final consolidated specification for design, estimation, and implementation. Project-specific operating rules and production acceptance remain subject to the release gates below.  
 **Audience:** Product owner, project management, discipline leads, design, engineering, QA, and operations.
@@ -17,6 +17,8 @@ This document is the governing specification for the app. It consolidates the fo
 **Revision 1.3:** Organizes navigation into four workspaces — Personal, EPCIC, Governance, and Reports — with display groups inside EPCIC (Yard Execution, Installation, Commissioning), keeping T&I apart from HUC and grouping HUC with Onshore Precom-Commissioning. Settings become separate pages by setting type, with a dedicated Modules page that lists every module and submodule as a breadcrumb-titled hierarchy with an enable/disable control. Release allocation and the effort estimate do not change; the module registry ships in P0 and Settings in P1 as before.
 
 **Revision 1.5:** Adds the Construction → Budget submodule (manhours per WBS activity with a histogram, CON-05 to CON-07) and the General Knowledge module in Reports, with one submodule per knowledge area (KNW-01 to KNW-04). Release allocation and the effort estimate do not change; Budget is delivered ahead of the P2 Construction module it belongs to, as a stand-alone screen.
+
+**Revision 1.7:** Adds Issue Management (Governance → Management → Issues, MGT-07 to MGT-10): issues with several persons in charge by email, sub-tasks, a history log of every change, summaries at the top of the page and due-date reminders by email. Release allocation and the effort estimate do not change.
 
 **Revision 1.6:** Detail and edit modals slide in from the right edge as drawers on every screen size (NAV-09; this replaces the centred overlay of 1.5). Procurement is built out from the project's procurement files: a monitoring dashboard, a register of risks, concerns and issues per package, shipment logistics, and material weights and stock, with create, edit and delete on each register and a live Google Sheets store (PROC-04 to PROC-08). Release allocation and the effort estimate do not change; Logistics and Materials, planned for P2, are delivered early as stand-alone registers.
 
@@ -517,6 +519,16 @@ Document Control is a dedicated P1 business module over core files, revisions, t
 
 **Acceptance:** One document in two package registers counts once in the MDR; Engineering/Reports open the same record; transmitted content cannot be overwritten; pending MWS review blocks the applicable operation; a new revision does not inherit old approval silently; responding to a CRS comment does not close it without the required acceptance.
 
+### Issue management
+
+**MGT-07:** Issue Management registers issues with title, description, priority (Critical, High, Medium, Low), responsible team, status (Not started, In progress, Pending, Completed), start and due dates, next action and remarks. The page opens with six cards, a status strip, a due-date look-ahead (overdue, 30, 45, 60 days, no date) and charts by person in charge and team; a card, box or bar filters the register. Roles that may write create and edit issues; roles that manage delete them.
+
+**MGT-08:** An issue has one or more persons in charge, each identified by email address (up to ten); a person need not have an account. Adding a person emails them. An issue is broken into sub-tasks, each with a title, an optional person by email, a due date and a done flag; the page shows how many are done.
+
+**MGT-09:** Every change to an issue and its sub-tasks is logged with who, when, the field and its old and new value: creation, edits, status changes, people added or removed, sub-tasks added, completed, reopened, changed or removed, notes and reminders. The log cannot be edited; it is deleted only with the issue. A note can be added to it at any time.
+
+**MGT-10:** The persons in charge are reminded by email of due dates: once a day, each person receives one message listing their open issues and sub-tasks that are overdue or due within three days; an item is not reminded twice on the same day; and anyone who may write can send a reminder to the people in charge of one issue at once. Reminders are logged. A mail failure never undoes a change.
+
 ## 7. Supply chain modules
 
 ### 7.1 Procurement Plan
@@ -1003,6 +1015,7 @@ The selection preserves capability intent without treating every proposed implem
 | General Knowledge with the nine knowledge areas | KNW-01 to KNW-04 | One Reports module, a submodule per area; starter articles come from loaded data |
 | Edit modal pushed from the right; submenu arrows; collapsible navbar; icon buttons | NAV-08, NAV-09 | Modals are a right-hand drawer overlay rather than a native dialog (an earlier centred version misread the request); icon vocabulary lives in one place (`Btn`) |
 | Procurement data from `data/EPCIC/Procurement`, linked to Google Sheets, with CRUD | PROC-04, PROC-07, PROC-08 | Procurement plan, expediting, logistics, material balance and weights are loaded by `extract_procurement.py` and stored on the sheets; each register has create, edit and delete |
+| Issue management: several PICs by email, sub-tasks, history log, due-date reminders | MGT-07 to MGT-10 | Source is the task monitor workbook; reminders go out by Apps Script mail |
 | Procurement dashboard: six cards, S-curve by facility and LS/PS, progress by work package, actual-against-plan bars; risks and concerns per package | PROC-05, PROC-05a, PROC-06 | One dashboard with attention score per package; the S-curve comes from the plan workbook's weekly series; the supplied bar reference is implemented with actual fill, a plan tick and a single row of actual, plan and signed percentage-point variance; work-package figures use the procurement `Progress Table (W)` cumulative this-week columns M/N; concerns are typed Risk, Concern or Issue with severity, owner and action |
 | Header: short project name, cut-off dropdown, snapshot button, full-width content, no sidebar project card | NAV-07 | Saved cut-off reports opened read-only from the dropdown; the Friday default is a shortcut, not a rule |
 | Task Management: list/card/kanban/gantt, task fields, calendar, workload | TASK-13 to TASK-15 | Personal tasks with derived Overdue; Planned added as a stored status so the four kanban columns map to the status field |

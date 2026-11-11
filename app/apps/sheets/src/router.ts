@@ -38,6 +38,7 @@ const MILESTONES = 'planning.milestones';
 const PROCUREMENT = 'procurement.procurement-plan';
 const EXPEDITING = 'procurement.expediting.vendor-overview';
 const RISKS = 'management.risks';
+const ISSUES = 'management.issues';
 const IF_REGISTER = 'interface.register';
 const IF_MATRIX = 'interface.matrix';
 const IF_POINTS = 'interface.points';
@@ -119,6 +120,19 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/expediting/packages/(?<id>[^/]+)`, c => c.api.svc.expeditingGet(c.p.pid, c.p.id), { module: EXPEDITING }),
 
   // risk management
+  route('GET', `${PID}/issues/insights`, c => c.api.issues.insights(c.p.pid), { module: ISSUES }),
+  route('GET', `${PID}/issues[.]csv`, c => c.api.issues.csv(c.p.pid, c.q), { module: ISSUES }),
+  route('GET', `${PID}/issues`, c => c.api.issues.list(c.p.pid, c.q), { module: ISSUES }),
+  route('POST', `${PID}/issues`, c => c.api.issues.create(c.p.pid, c.body, c.actor), { module: ISSUES, status: 201 }),
+  route('POST', `${PID}/issues/remind-due`, c => { requireWrite(c.actor, c.p.pid); return c.api.issues.remindDue(c.p.pid); }, { module: ISSUES }),
+  route('GET', `${PID}/issues/(?<id>[^/]+)`, c => c.api.issues.get(c.p.pid, c.p.id), { module: ISSUES }),
+  route('PATCH', `${PID}/issues/(?<id>[^/]+)`, c => c.api.issues.update(c.p.pid, c.p.id, c.body, c.actor), { module: ISSUES }),
+  route('DELETE', `${PID}/issues/(?<id>[^/]+)`, c => { c.api.issues.delete(c.p.pid, c.p.id, c.actor); return null; }, { module: ISSUES, status: 204 }),
+  route('POST', `${PID}/issues/(?<id>[^/]+)/comments`, c => c.api.issues.comment(c.p.pid, c.p.id, c.body, c.actor), { module: ISSUES, status: 201 }),
+  route('POST', `${PID}/issues/(?<id>[^/]+)/remind`, c => c.api.issues.remind(c.p.pid, c.p.id, c.actor), { module: ISSUES }),
+  route('POST', `${PID}/issues/(?<id>[^/]+)/subtasks`, c => c.api.issues.addSubtask(c.p.pid, c.p.id, c.body, c.actor), { module: ISSUES, status: 201 }),
+  route('PATCH', `${PID}/issues/(?<id>[^/]+)/subtasks/(?<sid>[^/]+)`, c => c.api.issues.updateSubtask(c.p.pid, c.p.id, c.p.sid, c.body, c.actor), { module: ISSUES }),
+  route('DELETE', `${PID}/issues/(?<id>[^/]+)/subtasks/(?<sid>[^/]+)`, c => c.api.issues.deleteSubtask(c.p.pid, c.p.id, c.p.sid, c.actor), { module: ISSUES }),
   route('GET', `${PID}/risks/summary`, c => c.api.reg.riskSummary(c.p.pid), { module: RISKS }),
   route('GET', `${PID}/risks[.]csv`, c => c.api.reg.riskCsv(c.p.pid, c.q), { module: RISKS }),
   route('GET', `${PID}/risks`, c => c.api.reg.riskList(c.p.pid, c.q), { module: RISKS }),
@@ -181,6 +195,15 @@ function parsePath(path: string): { pathname: string; query: Record<string, stri
     query[decodeURIComponent(k)] = decodeURIComponent(v.replace(/\+/g, ' '));
   }
   return { pathname: pathname.replace(/\/+$/, '') || '/', query };
+}
+
+/**
+ * Batch handler: accepts an array of GET requests and runs each through the router,
+ * returning all responses in one HTTP round trip. Errors on individual requests
+ * are captured per-item so one failure does not block the rest.
+ */
+export function handleBatch(api: Api, requests: ApiRequest[]): Envelope[] {
+  return requests.map(req => handle(api, req));
 }
 
 export function handle(api: Api, req: ApiRequest): Envelope {

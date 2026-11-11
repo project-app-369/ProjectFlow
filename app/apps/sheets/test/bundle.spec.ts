@@ -27,6 +27,7 @@ function loadBundle() {
     Utilities: { getUuid: () => `00000000-0000-4000-8000-${String(++uuid).padStart(12, '0')}`, formatDate: (d: Date) => d.toISOString().slice(0, 10) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k: string) => props.get(k) ?? null, setProperty: (k: string, v: string) => void props.set(k, v) }) },
     ContentService: { createTextOutput: output, MimeType: { JSON: 'json' } },
+    HtmlService: { createHtmlOutputFromFile: (name: string) => ({ getContent: () => readFileSync(join(root, 'dist', `${name}.html`), 'utf8') }) },
     ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/TEST/exec' }) },
   };
   vm.runInNewContext(readFileSync(join(root, 'dist', 'Code.js'), 'utf8'), sandbox, { filename: 'Code.js' });
@@ -44,11 +45,25 @@ describe('built Apps Script bundle', () => {
     for (const fn of ['doGet', 'doPost', 'onOpen', 'setup', 'showToken']) expect(typeof sandbox[fn]).toBe('function');
   });
 
+  it('answers several GET requests in one POST and refuses them without the token', () => {
+    const b = loadBundle();
+    b.props.set('API_TOKEN', 'test-token');
+    b.call('setup');
+    const requests = [{ method: 'GET', path: '/me' }, { method: 'GET', path: '/projects' }];
+    const res = b.post({ method: 'BATCH', requests, token: 'test-token', user: 'u-admin' });
+    expect(res).toHaveLength(2);
+    expect(res.every((r: { ok: boolean }) => r.ok)).toBe(true);
+    expect(b.post({ method: 'BATCH', requests, user: 'u-admin' })[0]).toMatchObject({ ok: false, status: 401 });
+  });
+
   it('asks for setup before the sheets exist, then serves data after setup', () => {
     const b = loadBundle();
-    expect(b.get('/health')).toMatchObject({ ok: false, status: 503, error: { code: 'NOT_SET_UP' } });
+    expect(b.get('/health')).toMatchObject({ ok: false, status: 401, error: { code: 'UNAUTHORIZED' } });
+    b.props.set('API_TOKEN', 'test-token');
+    expect(b.get('/health', 'test-token')).toMatchObject({ ok: false, status: 503, error: { code: 'NOT_SET_UP' } });
+    b.props.delete('API_TOKEN');
     b.call('setup');
-    expect(b.ss.getSheets().map(s => s.getName())).toEqual(['Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes', 'Personal - Tasks', 'Personal - Subtasks', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget', 'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points', 'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data']);
+    expect(b.ss.getSheets().map(s => s.getName())).toEqual(['Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes', 'Personal - Tasks', 'Personal - Subtasks', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget', 'Governance - Risks', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log', 'Governance - Interfaces', 'Governance - Interface points', 'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data']);
     expect(b.alerts[0]).toContain('Sheets created');
     const health = b.get('/health', b.props.get('API_TOKEN'));
     expect(health).toMatchObject({ ok: true, data: { status: 'ok', database: 'sheets' } });

@@ -4,6 +4,7 @@ import { COLUMNS, SHEET } from '../src/datasets';
 import { MemoryStore } from '../src/memory-store';
 import { handle, type Envelope } from '../src/router';
 import { seedStore } from '../src/seed';
+import { seedData } from '../src/seed-data';
 
 const P = '/projects/sttp2b';
 const ADMIN = 'u-admin', MANAGER = 'u-manager', MEMBER = 'u-member', CLIENT = 'u-client';
@@ -15,7 +16,7 @@ const err = (e: Envelope) => { expect(e.ok).toBe(false); return e as Extract<Env
 
 beforeEach(() => {
   store = new MemoryStore();
-  seedStore(store);
+  seedStore(store, seedData);
   api = new Api(store, () => new Date('2026-11-08T10:00:00Z'));
 });
 
@@ -25,7 +26,7 @@ describe('setup', () => {
       'Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
       'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
-      'Governance - Risks', 'Governance - Interfaces', 'Governance - Interface points',
+      'Governance - Risks', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log', 'Governance - Interfaces', 'Governance - Interface points',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
     ]);
   });
@@ -35,7 +36,7 @@ describe('setup', () => {
     expect(store.readRows(SHEET.expediting, COLUMNS.expediting)).toHaveLength(153);
     expect(store.readRows(SHEET.milestones, COLUMNS.milestones)).toHaveLength(48);
     expect(store.readRows(SHEET.users, COLUMNS.users)).toHaveLength(4);
-    expect(seedStore(store)).toBe(false);
+    expect(seedStore(store, seedData)).toBe(false);
     expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(145);
   });
 
@@ -120,7 +121,7 @@ describe('module registry and sheet links', () => {
     expect(by('procurement.procurement-plan')).toMatchObject({ sheetCapable: true, sheet: { name: 'EPCIC - Procurement packages' } });
     expect(by('management.risks').sheet.name).toBe('Governance - Risks');
     expect(by('interface.matrix').sheet.name).toBe('Governance - Interfaces');
-    expect(by('management.issues')).toMatchObject({ sheetCapable: true, sheet: null });
+    expect(by('management.lessons-learned')).toMatchObject({ sheetCapable: true, sheet: null });
     expect(by('management').sheetCapable).toBe(false);
     expect(by('dashboard').sheetCapable).toBe(false);
   });
@@ -151,10 +152,10 @@ describe('module registry and sheet links', () => {
   });
 
   it('generates a sheet on request and reads only this project\'s rows', () => {
-    const g = ok(call('POST', `${P}/modules/management.issues/sheet`));
-    expect(g).toMatchObject({ created: true, sheet: { name: 'Governance - Management - Issues' } });
+    const g = ok(call('POST', `${P}/modules/management.lessons-learned/sheet`));
+    expect(g).toMatchObject({ created: true, sheet: { name: 'Governance - Management - Lessons Learned' } });
     store.appendRows(g.sheet.name, COLUMNS.generic, [{ projectId: 'sttp2b', id: 'I1', title: 'Late drawings', status: 'Open' }, { projectId: 'other', id: 'I2', title: 'Elsewhere' }]);
-    const rec = ok(call('GET', `${P}/modules/management.issues/records`));
+    const rec = ok(call('GET', `${P}/modules/management.lessons-learned/records`));
     expect(rec.columns).not.toContain('projectId');
     expect(rec.items).toMatchObject([{ id: 'I1', title: 'Late drawings' }]);
     expect(err(call('POST', `${P}/modules/management/sheet`)).error.code).toBe('NO_SHEET');

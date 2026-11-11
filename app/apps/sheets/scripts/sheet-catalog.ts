@@ -6,9 +6,10 @@ import { COLUMNS, SHEET } from '../src/datasets';
 import { MemoryStore } from '../src/memory-store';
 import type { Column } from '../src/store';
 import { seedStore } from '../src/seed';
+import { seedData } from '../src/seed-data';
 
 const store = new MemoryStore();
-seedStore(store);
+seedStore(store, seedData);
 
 const keys = Object.keys(SHEET) as (keyof typeof SHEET)[];
 console.log('| Sheet | Rows seeded | Columns (in order; type if not text) |\n|---|---|---|');

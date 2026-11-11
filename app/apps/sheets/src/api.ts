@@ -3,7 +3,9 @@ import { AdminService } from './admin-service';
 import { RegistersService } from './registers-service';
 import { Service } from './service';
 import { BudgetService } from './budget-service';
+import { IssuesService } from './issues-service';
 import { KnowledgeService } from './knowledge-service';
+import { noMailer, type Mailer } from './mailer';
 import { ProcurementOps } from './procurement-ops';
 import { SnapshotsService } from './snapshots-service';
 import { TasksService } from './tasks-service';
@@ -19,8 +21,9 @@ export class Api {
   readonly budget: BudgetService;
   readonly knowledge: KnowledgeService;
   readonly proc: ProcurementOps;
+  readonly issues: IssuesService;
 
-  constructor(store: Store, clock: () => Date = () => new Date()) {
+  constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer) {
     this.svc = new Service(store, clock);
     this.admin = new AdminService(this.svc);
     this.reg = new RegistersService(this.svc);
@@ -29,6 +32,7 @@ export class Api {
     this.budget = new BudgetService(this.svc);
     this.knowledge = new KnowledgeService(this.svc);
     this.proc = new ProcurementOps(this.svc);
+    this.issues = new IssuesService(this.svc, mailer);
   }
 
   /**

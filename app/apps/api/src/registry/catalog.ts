@@ -41,6 +41,7 @@ const IMPLEMENTED = new Set([
   'planning.work-packages',
   'planning.milestones',
   'management.risks',
+  'management.issues',
   'interface.register',
   'interface.matrix',
   'interface.points',
@@ -104,7 +105,7 @@ const TREE: WorkspaceDef[] = [
     { key: 'huc', label: 'Offshore HUC', icon: 'flag', group: 'Commissioning', phase: 'P3', description: 'Offshore hook-up and commissioning', subs: ['Marine Spread', 'Timeline & Schedule', 'Progress'] },
   ] },
   { id: 'governance', modules: [
-    { key: 'management', label: 'Management', icon: 'risk', description: 'Management registers (MGT-01 to MGT-05)', subs: ['Risks', 'Issues', 'Lessons Learned', 'Management of Change (MOC)', 'Stakeholders'] },
+    { key: 'management', label: 'Management', icon: 'risk', description: 'Management registers (MGT-01 to MGT-05)', subs: ['Risks', { label: 'Issues', key: 'management.issues', description: 'Issue monitoring with several people in charge, sub-tasks, a history log and due-date reminders' }, 'Lessons Learned', 'Management of Change (MOC)', 'Stakeholders'] },
     { key: 'interface', label: 'Interface Management', icon: 'link', description: 'Interface register, matrix and points', subs: ['Register', 'Matrix', 'Points'] },
     { key: 'document-control', label: 'Document Control', icon: 'doc', description: 'Controlled documents, reviews and transmittals', subs: ['MDR', 'Package/Engineering Registers', 'Vendor Registers', 'Transmittals', 'Reviews', 'CRS', 'Correspondence', { label: 'Dossiers', phase: 'P3' }] },
     { key: 'events', label: 'Event Management', icon: 'calendar', description: 'Calendar of meetings and events' },

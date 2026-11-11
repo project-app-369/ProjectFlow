@@ -8,12 +8,13 @@ declare module '@tanstack/react-table' {
 }
 
 /** Server-driven table: sorting, filtering and paging happen in the API; TanStack Table owns column/row modelling. */
-export function DataTable<T>({ columns, data, state, onSort, empty }: {
+export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName }: {
   columns: ColumnDef<T, any>[];
   data: T[];
   state: SortState;
   onSort: (sort: string) => void;
   empty: string;
+  rowClassName?: (row: T) => string;
 }) {
   const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel(), manualSorting: true, manualPagination: true, manualFiltering: true });
   return (
@@ -41,7 +42,7 @@ export function DataTable<T>({ columns, data, state, onSort, empty }: {
         </thead>
         <tbody>
           {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
-            <tr key={row.id}>{row.getVisibleCells().map(c => <td key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>
+            <tr key={row.id} className={rowClassName?.(row.original)}>{row.getVisibleCells().map(c => <td key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>
           )) : <tr><td colSpan={columns.length} className="empty">{empty}</td></tr>}
         </tbody>
       </table>

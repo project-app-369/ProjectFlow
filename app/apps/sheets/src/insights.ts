@@ -361,3 +361,44 @@ export function milestonesInsights(rows: AnyRow[], cutoff: string): Insights {
     ],
   };
 }
+
+/* ============================== issues ============================== */
+export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: string): Insights {
+  const open = rows.filter(r => r.status !== 'Completed');
+  const st = (s: string) => rows.filter(r => r.status === s);
+  const hot = open.filter(r => r.priority === 'Critical' || r.priority === 'High');
+  const overdue = open.filter(r => r.overdue);
+  const due30 = open.filter(r => r.dueDate && String(r.dueDate) >= cutoff && String(r.dueDate) <= addDays(cutoff, 30));
+  const unassigned = open.filter(r => !r.pics.length);
+  const done = subtasks.filter(s => s.done === 'Yes').length;
+  const PRI = ['Critical', 'High', 'Medium', 'Low'], PRI_COLOR = [COLOR.red, '#c2602f', COLOR.amber, '#5aa985'];
+  const byPic = new Map<string, AnyRow[]>();
+  for (const r of open) for (const e of r.pics as string[]) byPic.set(e, [...(byPic.get(e) ?? []), r]);
+  const picKeys = [...byPic.keys()].sort((a, b) => byPic.get(b)!.length - byPic.get(a)!.length).slice(0, 10);
+  const team = tally(open, r => String(r.discipline ?? 'Unassigned'));
+  const teamKeys = [...team.keys].sort((a, b) => team.get(b).length - team.get(a).length).slice(0, 12);
+  const series = (keys: string[], get: (k: string) => AnyRow[]) => PRI.map((p, i) => ({ name: p, color: PRI_COLOR[i], data: keys.map(k => get(k).filter(r => r.priority === p).length) }));
+
+  return {
+    cards: [
+      { label: 'Open issues', value: open.length, foot: `${rows.length} in the register · ${st('Completed').length} completed`, icon: 'risk' },
+      { label: 'Critical or high', value: hot.length, foot: `${open.filter(r => r.priority === 'Critical').length} critical · ${open.filter(r => r.priority === 'High').length} high`, icon: 'flag', tone: hot.length ? 'red' : undefined },
+      { label: 'Overdue', value: overdue.length, foot: 'Due date before the cut-off', icon: 'clock', tone: overdue.length ? 'red' : undefined },
+      { label: 'Due in 30 days', value: due30.length, foot: 'Open, with a due date', icon: 'calendar', tone: due30.length ? 'amber' : undefined },
+      { label: 'Nobody assigned', value: unassigned.length, foot: 'Open issues with no PIC', icon: 'link', tone: unassigned.length ? 'amber' : undefined },
+      { label: 'Sub-tasks done', value: `${done}/${subtasks.length}`, foot: subtasks.length ? `${Math.round((done / subtasks.length) * 100)}% complete` : 'No sub-tasks yet', icon: 'check', tone: 'green' },
+    ],
+    strip: {
+      title: 'Issue status', sub: 'All issues at the cut-off. Select a status to filter the register.',
+      boxes: ['Not started', 'In progress', 'Pending', 'Completed'].map(s => ({ label: s, value: st(s).length, sub: s === 'Completed' ? 'Closed out' : `${st(s).filter(r => r.overdue).length} overdue`, tone: s === 'Completed' ? 'green' : undefined, filter: { status: s } })),
+    },
+    lookAhead: {
+      title: 'Due-date look-ahead', sub: 'Open issues by due date, counted from the cut-off. Select a window to filter the register.',
+      boxes: windows(open, r => (r.dueDate ? String(r.dueDate) : null), cutoff, rs => `${rs.filter(r => r.priority === 'Critical' || r.priority === 'High').length} critical or high`, 'None'),
+    },
+    charts: [
+      { title: 'Open issues by person in charge', sub: 'The ten people with most open issues. An issue with several PICs counts for each. Select a person to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: picKeys, filterKey: 'pic', series: series(picKeys, k => byPic.get(k)!) },
+      { title: 'Open issues by team', sub: 'The responsible team named on the issue. Select a team to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: teamKeys, filterKey: 'discipline', series: series(teamKeys, team.get) },
+    ],
+  };
+}

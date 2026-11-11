@@ -15,7 +15,7 @@ The pre-build keeps all of its data in one Google spreadsheet. A Google Apps Scr
 | Time zone | Asia/Saigon |
 | Code | `app/apps/sheets` (Apps Script bundle in `dist/Code.js`; local simulator for development) |
 | Seed | `app/apps/api/seed/sttp2b.json`, built from the workbooks in `data/` (see §5) |
-| Sheets | 25, in five areas |
+| Sheets | 28, in five areas |
 
 The same code runs against an in-memory store for tests and the local simulator (`pnpm --filter @projectflow/sheets test`; the simulator is started as `app-sheets-sim` on port 3200 and the web app as `app-web-sheets` on port 5174). The live spreadsheet is a separate copy of the data: changes made in the simulator do not appear in it.
 
@@ -69,6 +69,9 @@ Rows are the number the seed loads. “Columns” lists every column in the orde
 | `EPCIC - Procurement S-curves` | 17 | `projectId`, `id`, `facility`, `scope`, `start` (date), `plan`, `forecast`, `actual`, `updatedAt` (datetime) |
 | `EPCIC - Phase progress` | 6 | `projectId`, `id`, `phase`, `plan` (number), `actual` (number), `reportDate` (date), `updatedAt` (datetime) |
 | `Governance - Risks` | 0 | `projectId`, `id`, `title`, `category`, `cause`, `event`, `effect`, `owner`, `likelihood` (number), `impact` (number), `mitigation`, `trigger`, `residualLikelihood` (number), `residualImpact` (number), `reviewDate` (date), `status`, `milestoneId`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
+| `Governance - Issues` | 38 | `projectId`, `id`, `title`, `description`, `priority`, `discipline`, `status`, `startDate` (date), `dueDate` (date), `completedDate` (date), `nextAction`, `remarks`, `pics`, `source`, `lastRemindedOn` (date), `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
+| `Governance - Issue sub-tasks` | 0 | `projectId`, `id`, `issueId`, `title`, `pic`, `dueDate` (date), `done`, `position` (number), `lastRemindedOn` (date), `updatedAt` (datetime) |
+| `Governance - Issue log` | 38 | `projectId`, `id`, `issueId`, `at` (datetime), `actor`, `action`, `field`, `fromValue`, `toValue`, `note` |
 | `Governance - Interfaces` | 0 | `projectId`, `id`, `title`, `type`, `originator`, `receiver`, `coordinator`, `discipline`, `boundary`, `requiredInput`, `requiredOutput`, `needDate` (date), `response`, `acceptance`, `evidence`, `status`, `milestoneId`, `createdAt` (datetime), `updatedAt` (datetime) |
 | `Governance - Interface points` | 0 | `projectId`, `id`, `interfaceId`, `title`, `owner`, `due` (date), `status`, `response`, `createdAt` (datetime), `updatedAt` (datetime) |
 | `Reports - Knowledge` | 4 | `projectId`, `id`, `domain`, `category`, `title`, `summary`, `body`, `tags`, `sources`, `status`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy`, `updatedBy` |
@@ -103,6 +106,20 @@ Rows are the number the seed loads. “Columns” lists every column in the orde
 - A milestone with an actual date is **Done**. Otherwise it is **Overdue** if its forecast (or, with none, its baseline) is before the cut-off, **Due soon** within 30 days after it, and **Planned** after that.
 - A milestone linked from a risk or an interface cannot be deleted (`409 IN_USE`); unlink it first.
 
+### 4.3 Issue management sheets
+
+| Sheet | Meaning |
+|---|---|
+| `Governance - Issues` | One row per issue: title, description, priority (Critical, High, Medium, Low), responsible team (`discipline`), status (Not started, In progress, Pending, Completed), start and due dates, `completedDate`, next action, remarks, **`pics`** and `lastRemindedOn`. 38 issues are loaded from the task monitor workbook (`data/Governance/Issue Management`) by `extract_issues.py` |
+| `Governance - Issue sub-tasks` | The steps of an issue: title, optional `pic` email, due date, `done` (Yes/No), `position`, `lastRemindedOn` |
+| `Governance - Issue log` | The history. One row for every change: who, when, the action (Created, Updated, Status changed, PIC added, PIC removed, Sub-task added, Sub-task done, Sub-task reopened, Sub-task updated, Sub-task removed, Note, Reminder sent), the field with its old and new value, and a note. Rows are only ever added by the app; deleting an issue deletes its log |
+
+- **Persons in charge** are stored as email addresses in `pics`, separated by commas, lower case, without repeats; at most 10 per issue. A sub-task has one `pic`. Any valid email is accepted, so a person does not need an account.
+- **Overdue** is judged against the project cut-off, like the other registers. **Reminders** use today's date.
+- **Emails.** A person is emailed when they are added to an issue or given a sub-task (not when it is you who adds yourself). *Remind PICs* on an issue emails everyone responsible for it and for its open sub-tasks. The daily job (`remindDue`) sends each person one email listing their open issues and sub-tasks that are overdue or due within 3 days, and skips anything it already reminded about today (`lastRemindedOn`). Every reminder is written to the log. A failure to send never undoes the change.
+- **Turning on the daily job:** after deploying, run **Project Flow → Turn on daily issue reminders** once (creates a trigger around 07:00 in the script's time zone). The script then needs two extra permissions, *send email* and *manage triggers*; Google asks for them the first time. Mail goes out from the account that deployed the script and counts against its daily quota (100 recipients on a free Google account, 1,500 on Workspace).
+- The simulator sends no mail; it prints each message in its console.
+
 ## 5. Where the data came from, and how to reload it
 
 All reference data is extracted from the project workbooks under `data/EPCIC` and `data/Governance`. The extractors write into `app/apps/api/seed/sttp2b.json`; the seed and the simulator read that file.
@@ -110,6 +127,7 @@ All reference data is extracted from the project workbooks under `data/EPCIC` an
 | Extractor | Source workbook (folder under `data/EPCIC`) | Writes |
 |---|---|---|
 | `extract_progress.py` | `Schedule Progress/Progress/1 - … Progress Report & Scurve_20261030` | `schedule.scurve`, `schedule.workPackages`, `schedule.overall`, `phaseProgress`, `progressCutoff` |
+| `extract_issues.py` | `Governance/Issue Management/TASK_MONITOR_*` (sheet `Master Task List`) | `issues` |
 | `extract_procurement.py` | `Procurement/` procurement plan, expediting report, logistics weekly report, material stock report and summary list | `procurementPlan`, `logistics`, `materialBalance`, `materialSummary`, `procCurves` |
 | (one-off, script not kept) | Key Milestones workbook, expediting report, interface workbooks | `milestones`, `procurement`, `expediting`, interface data |
 
@@ -136,13 +154,13 @@ Editing in Sheets is allowed for the registers that the app lets you edit, with 
 
 ## 7. Cut-off reports
 
-Saving a cut-off report copies these datasets into `Reports - Snapshot data` as JSON parts, one row per dataset part, with one summary row in `Reports - Cut-off snapshots`: S-curve, work packages, phase progress, milestones, procurement packages, expediting packages, construction budget, logistics, material balance, material summary, concerns, risks, interfaces and interface points. Procurement S-curves are not copied (they are large and reference-only). Opening a report reads the whole snapshot sheet, so it slows as reports accumulate (about 110 KB per report). Modules and their states, members, personal tasks and Settings are not part of a report.
+Saving a cut-off report copies these datasets into `Reports - Snapshot data` as JSON parts, one row per dataset part, with one summary row in `Reports - Cut-off snapshots`: S-curve, work packages, phase progress, milestones, procurement packages, expediting packages, construction budget, logistics, material balance, material summary, concerns, issues, issue sub-tasks, risks, interfaces and interface points. The issue log is not copied. Procurement S-curves are not copied (they are large and reference-only). Opening a report reads the whole snapshot sheet, so it slows as reports accumulate (about 110 KB per report). Modules and their states, members, personal tasks and Settings are not part of a report.
 
 ## 8. Setting up and deploying
 
 1. Create a Google spreadsheet, or use the one above.
-2. Build the script: `pnpm build:sheets` (writes `apps/sheets/dist/Code.js` and `appsscript.json`).
-3. Deploy it with clasp or by pasting `Code.js` into the bound script (steps in `app/apps/sheets/README.md`), authorise it, and run **Set up sheets**. This creates every sheet in §4 with its header, text formats and tab colour, and loads the seed when it creates them. A sheet that already exists is left as it is.
+2. Build the script: `pnpm build:sheets` (writes `apps/sheets/dist/Code.js`, `seed.html` and `appsscript.json`; the data is not in the code, only `seed.html` carries it and only *Set up sheets* reads it).
+3. Deploy it with clasp or by pasting `Code.js` into the bound script and adding `seed.html` as an HTML file named `seed` (steps in `app/apps/sheets/README.md`), authorise it, and run **Set up sheets**. This creates every sheet in §4 with its header, text formats and tab colour, and loads the seed when it creates them. A sheet that already exists is left as it is.
 4. Deploy as a web app and point the web app at its URL (see the README for the exact setting).
 
 A spreadsheet from the earlier layout without `projectId` is not readable by this code.

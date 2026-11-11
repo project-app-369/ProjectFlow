@@ -22,7 +22,11 @@ const sheetsToken: string = import.meta.env.VITE_SHEETS_TOKEN ?? '';
 
 /** Demo identity (pre-build only): the chosen user id is sent with every request; it is not authentication. */
 const USER_KEY = 'projectflow.user';
-export const getUserId = (): string | null => { try { return localStorage.getItem(USER_KEY); } catch { return null; } };
+const DEFAULT_DEMO_USER_ID = 'u-member';
+export const getUserId = (): string | null => {
+  try { return localStorage.getItem(USER_KEY) ?? (apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null); }
+  catch { return apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null; }
+};
 export const setUserId = (id: string | null) => { try { if (id) localStorage.setItem(USER_KEY, id); else localStorage.removeItem(USER_KEY); } catch { /* storage unavailable */ } };
 
 /**
@@ -31,7 +35,8 @@ export const setUserId = (id: string | null) => { try { if (id) localStorage.set
  */
 let currentAsOf: string | null = null;
 export const setCurrentAsOf = (cutoff: string | null) => { currentAsOf = cutoff; };
-const SNAPSHOT_PATH = /^\/projects\/[^/]+\/(dashboard|schedule|milestones|procurement|expediting|risks|interfaces|interface-points)/;
+export const getCurrentAsOf = () => currentAsOf;
+const SNAPSHOT_PATH = /^\/projects\/[^/]+\/(dashboard|schedule|milestones|procurement|expediting|risks|issues|interfaces|interface-points)/;
 
 interface Envelope { ok: boolean; status: number; data?: unknown; error?: { code?: string; message?: string; issues?: { path: string; message: string }[] } }
 
@@ -69,6 +74,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(body.message ?? res.statusText, body.code, res.status, body.issues);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+/**
+ * Batch multiple GET requests in parallel.
+ * Returns one result per path, in the same order.
+ */
+export async function requestBatch<T extends unknown[]>(...paths: { [K in keyof T]: string }): Promise<T> {
+  return Promise.all(paths.map(p => request(p))) as Promise<T>;
 }
 
 /** Fetches a CSV route and saves it as a file (the sheets backend cannot send a download response). */
@@ -389,3 +402,15 @@ export interface Insights {
   lookAhead?: { title: string; sub: string; boxes: InsightBox[] };
   charts: InsightChart[];
 }
+
+/* ---------- issue management (sheets backend) ---------- */
+export type IssueStatus = 'Not started' | 'In progress' | 'Pending' | 'Completed';
+export type IssuePriority = 'Critical' | 'High' | 'Medium' | 'Low';
+export interface Issue {
+  id: string; title: string; description: string | null; priority: IssuePriority; discipline: string | null; status: IssueStatus;
+  startDate: string | null; dueDate: string | null; completedDate: string | null; nextAction: string | null; remarks: string | null;
+  pics: string[]; source: string | null; createdAt: string; updatedAt: string; overdue: boolean; daysToDue: number | null; subtasksTotal: number; subtasksDone: number;
+}
+export interface IssueSubtask { id: string; issueId: string; title: string; pic: string | null; dueDate: string | null; done: boolean; position: number }
+export interface IssueLogEntry { id: string; issueId: string; at: string; actor: string; action: string; field: string | null; fromValue: string | null; toValue: string | null; note: string | null }
+export interface IssueDetail extends Issue { subtasks: IssueSubtask[]; log: IssueLogEntry[] }

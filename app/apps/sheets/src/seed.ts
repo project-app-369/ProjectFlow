@@ -1,4 +1,3 @@
-import raw from '../../api/seed/sttp2b.json';
 import { MANIFESTS, defaultState } from '../../api/src/registry/catalog';
 import { COLUMNS, SHEET, pathOf, tabColorOf } from './datasets';
 import { milestoneFacility } from './registers-service';
@@ -11,6 +10,12 @@ const isoOrNull = (v: unknown) => (isIsoDate(v) ? v : null);
 const str = (v: unknown) => (v === null || v === undefined ? null : String(v));
 
 interface RawRow { [k: string]: unknown }
+
+/**
+ * The reference data file (apps/api/seed/sttp2b.json). It is a parameter, not an import, so the deployed script carries none of it:
+ * Apps Script's setup reads it from the project's seed.html, and the simulator and tests load it from the file.
+ */
+export type SeedData = typeof import('../../api/seed/sttp2b.json');
 
 /** Register code without its trailing split letter: STTP2B-GF-STR-013B belongs to plan package STTP2B-GF-STR-013. */
 const baseCode = (code: string) => code.replace(/(?<=\d)[A-Z]$/, '');
@@ -86,7 +91,7 @@ export const SEED_USERS = [
 ] as const;
 
 /** Reference data extracted from the /data workbooks (the file the NestJS API also seeds from). */
-export function seedRows() {
+export function seedRows(raw: SeedData) {
   const pid = PROJECT_ID;
   const withProject = <T extends RawRow>(rows: T[]) => rows.map(r => ({ projectId: pid, ...r })) as unknown as Row[];
   const expediting = raw.expediting as RawRow[];
@@ -99,6 +104,7 @@ export function seedRows() {
     procurement: procurementRows(raw.procurement as RawRow[], (raw as unknown as { procurementPlan?: RawRow[] }).procurementPlan ?? []),
     logistics: withProject(((raw as unknown as { logistics?: RawRow[] }).logistics ?? []).map((r, i) => ({ id: `LG-${String(i + 1).padStart(4, '0')}`, ...r }))),
     materialBalance: withProject(((raw as unknown as { materialBalance?: RawRow[] }).materialBalance ?? []).map((r, i) => ({ id: `MB-${String(i + 1).padStart(3, '0')}`, ...r }))),
+    issues: (raw as unknown as { issues?: RawRow[] }).issues ?? [],
     phaseProgress: withProject(((raw as unknown as { phaseProgress?: RawRow[] }).phaseProgress ?? []).map((r, i) => ({ id: `PH-${String(i + 1).padStart(2, '0')}`, reportDate: (raw as unknown as { progressCutoff?: string }).progressCutoff ?? null, ...r }))),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
     materialSummary: withProject(((raw as unknown as { materialSummary?: RawRow[] }).materialSummary ?? []).map((r, i) => ({ id: `MS-${String(i + 1).padStart(2, '0')}`, ...r }))),
@@ -191,7 +197,7 @@ export function ensureAllSheets(store: Store) {
     [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
     [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
-    [SHEET.risks, COLUMNS.risks], [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints],
+    [SHEET.risks, COLUMNS.risks], [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog], [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints],
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
@@ -202,12 +208,12 @@ export function ensureAllSheets(store: Store) {
  * are left untouched, and the data load is skipped once the Projects sheet has a row. Sheets for modules without a
  * dataset are generated later, when such a module is enabled or its sheet is requested.
  */
-export function seedStore(store: Store, now = new Date().toISOString()) {
+export function seedStore(store: Store, raw: SeedData, now = new Date().toISOString()) {
   return store.withLock(() => {
     ensureAllSheets(store);
     if (store.readRows(SHEET.projects, COLUMNS.projects).length) return false;
 
-    const rows = seedRows();
+    const rows = seedRows(raw);
     const pid = PROJECT_ID;
     store.appendRows(SHEET.projects, COLUMNS.projects, rows.project.map(p => ({ ...p, createdAt: now, updatedAt: now })));
     store.appendRows(SHEET.users, COLUMNS.users, SEED_USERS.map(u => ({ id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin, status: 'Active', createdAt: now })));
@@ -224,6 +230,15 @@ export function seedStore(store: Store, now = new Date().toISOString()) {
     store.appendRows(SHEET.materialSummary, COLUMNS.materialSummary, rows.materialSummary);
     store.appendRows(SHEET.procCurves, COLUMNS.procCurves, rows.procCurves);
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
+    const issueRows = rows.issues.map((i, n) => ({
+      projectId: pid, id: `ISS-${String(n + 1).padStart(3, '0')}`, title: i.title, description: i.description ?? null, priority: i.priority, discipline: i.discipline ?? null, status: i.status,
+      startDate: isoOrNull(i.startDate), dueDate: isoOrNull(i.dueDate), completedDate: i.status === 'Completed' ? isoOrNull(i.raisedDate) ?? String(raw.project.cutoff) : null,
+      nextAction: i.nextAction ?? null, remarks: i.remarks ?? null, pics: '', source: 'Task monitor', lastRemindedOn: null, createdAt: now, updatedAt: now, createdBy: ADMIN_ID,
+    })) as unknown as Row[];
+    store.appendRows(SHEET.issues, COLUMNS.issues, issueRows);
+    store.appendRows(SHEET.issueLog, COLUMNS.issueLog, issueRows.map((i, n) => ({
+      projectId: pid, id: `LG-${String(n + 1).padStart(5, "0")}`, issueId: i.id, at: now, actor: 'Import', action: 'Created', note: 'Loaded from the task monitor workbook (TASK_MONITOR_2026-11-10)',
+    })));
     store.appendRows(SHEET.procConcerns, COLUMNS.procConcerns, concernsSeed(raw.expediting as RawRow[], raw.procurement as RawRow[], (raw as unknown as { logistics?: RawRow[] }).logistics ?? [], String(raw.project.cutoff), now));
     const cutoff = String(raw.project.cutoff);
     const shift = (n: number | null) => (n === null ? null : new Date(new Date(`${cutoff}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10));

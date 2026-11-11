@@ -15,6 +15,14 @@ const LOCK_WAIT_MS = 20_000;
 export class SheetsStore implements Store {
   constructor(private readonly env: GasEnv) {}
 
+  /**
+   * Rows already read from a sheet during this request. Each Apps Script request builds its own store, so nothing
+   * outlives a request; within one, the same sheets are asked for many times (projects, module states, curves).
+   * A write to a sheet drops its entry. Callers get copies, so changing a returned row never changes the cache.
+   */
+  private readonly read = new Map<string, Row[]>();
+  private forget(name: string) { this.read.delete(name); }
+
   private sheet(name: string) {
     return this.env.spreadsheet.getSheetByName(name);
   }
@@ -59,15 +67,20 @@ export class SheetsStore implements Store {
   }
 
   readRows(name: string, columns: Column[]): Row[] {
-    const s = this.sheet(name);
-    if (!s || s.getLastRow() < 2) return [];
-    const width = Math.max(s.getLastColumn(), 1);
-    const values = s.getRange(1, 1, s.getLastRow(), width).getValues();
-    return cellsToRows(columns, values[0], values.slice(1), this.env.formatDate);
+    let rows = this.read.get(name);
+    if (!rows) {
+      const s = this.sheet(name);
+      // One call for the used area; asking for the last row, the last column and the values separately is three round trips.
+      const values = s ? s.getDataRange().getValues() : [];
+      rows = values.length < 2 ? [] : cellsToRows(columns, values[0], values.slice(1), this.env.formatDate);
+      this.read.set(name, rows);
+    }
+    return rows.map(r => ({ ...r }));
   }
 
   appendRows(name: string, columns: Column[], rows: Row[]) {
     if (!rows.length) return;
+    this.forget(name);
     const s = this.sheet(name) ?? this.env.spreadsheet.getSheetByName(this.ensureSheet(name, columns).name)!;
     const header = this.header(s);
     const byKey = new Map(columns.map(c => [c.key, c]));
@@ -98,6 +111,7 @@ export class SheetsStore implements Store {
   updateRow(name: string, columns: Column[], idKey: string, id: string, patch: Row, scope?: Row) {
     const s = this.sheet(name);
     if (!s) return false;
+    this.forget(name);
     const [rowNo] = this.findRows(s, idKey, id, scope, true);
     if (!rowNo) return false;
     const header = this.header(s);
@@ -111,6 +125,7 @@ export class SheetsStore implements Store {
   deleteRow(name: string, _columns: Column[], idKey: string, id: string, scope?: Row) {
     const s = this.sheet(name);
     if (!s) return false;
+    this.forget(name);
     const [rowNo] = this.findRows(s, idKey, id, scope, true);
     if (!rowNo) return false;
     s.deleteRow(rowNo);
@@ -120,6 +135,7 @@ export class SheetsStore implements Store {
   deleteRows(name: string, _columns: Column[], match: Row) {
     const s = this.sheet(name);
     if (!s) return 0;
+    this.forget(name);
     const rows = this.findRows(s, null, null, match, false);
     for (let i = rows.length - 1; i >= 0; i--) s.deleteRow(rows[i]); // bottom-up keeps the remaining row numbers valid
     return rows.length;

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { apiMode, getUserId, request, setCurrentAsOf, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
+import { apiMode, getUserId, request, requestBatch, setCurrentAsOf, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
 import { Layout } from './Layout';
 import { defaultKey, landing, pathOf, SHEETS_KEYS } from './nav';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +16,7 @@ import Logistics from './pages/Logistics';
 import Materials from './pages/Materials';
 import Procurement from './pages/Procurement';
 import ProcurementDashboard from './pages/ProcurementDashboard';
+import Issues from './pages/Issues';
 import Risks from './pages/Risks';
 import { ProgressOverall, WorkPackages } from './pages/Schedule';
 import Settings from './pages/Settings';
@@ -52,6 +53,7 @@ const PAGES: Record<string, () => ReactNode> = {
   'knowledge.ti': () => <Knowledge domain="ti" />,
   'knowledge.huc': () => <Knowledge domain="huc" />,
   'management.risks': () => <Risks />,
+  'management.issues': () => <Issues />,
   'interface.register': () => <InterfaceRegister />,
   'interface.matrix': () => <InterfaceMatrixPage />,
   'interface.points': () => <InterfacePointsPage />,
@@ -128,28 +130,42 @@ function Session({ userId, signOut }: { userId: string | null; signOut: () => vo
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(loadProject);
   const [asOf, setAsOfState] = useState<string | null>(null);
-  const me = useQuery({ queryKey: ['me', userId], queryFn: () => request<Me>('/me'), enabled: apiMode === 'sheets' });
-  const projects = useQuery({ queryKey: ['projects', userId], queryFn: () => request<Project[]>('/projects') });
-  const list = projects.data;
+
+  // Phase 1: batch /me + /projects in a single HTTP round trip (sheets mode).
+  const bootstrap = useQuery({
+    queryKey: ['bootstrap', userId],
+    queryFn: async () => {
+      if (apiMode === 'sheets') {
+        const [me, projects] = await requestBatch<[Me, Project[]]>('/me', '/projects');
+        return { me, projects };
+      }
+      const projects = await request<Project[]>('/projects');
+      return { me: null as Me | null, projects };
+    },
+  });
+  const meData = bootstrap.data?.me ?? null;
+  const list = bootstrap.data?.projects;
   const project = list?.find(p => p.id === selected) ?? list?.find(p => p.myRole) ?? list?.[0] ?? null;
+
+  // Phase 2: once we know the project, load modules (only one more request).
   const modules = useQuery({ queryKey: ['modules', project?.id], queryFn: () => request<ModulesResponse>(`/projects/${project!.id}/modules`), enabled: !!project });
 
   /** Switches between the current data and a saved cut-off snapshot; every project data query is refetched. */
   const setAsOf = useCallback((cutoff: string | null) => {
     setCurrentAsOf(cutoff);
     setAsOfState(cutoff);
-    const keep = new Set(['me', 'projects', 'directory', 'modules', 'users', 'members', 'snapshots', 'ptasks', 'ptask-workload', 'health']);
+    const keep = new Set(['bootstrap', 'me', 'projects', 'directory', 'modules', 'users', 'members', 'snapshots', 'ptasks', 'ptask-workload', 'health']);
     qc.invalidateQueries({ predicate: q => !keep.has(String(q.queryKey[0])) });
   }, [qc]);
   const selectProject = useCallback((id: string) => { setAsOf(null); saveProject(id); setSelected(id); navigate('/'); }, [navigate, setAsOf]);
   const value = useMemo(() => ({
     project: project ?? NO_PROJECT,
     modules: modules.data ?? { workspaces: [], modules: [] },
-    me: me.data ?? null, projects: list ?? [], selectProject, signOut, asOf, setAsOf,
-  }), [project, modules.data, me.data, list, selectProject, signOut, asOf, setAsOf]);
+    me: meData, projects: list ?? [], selectProject, signOut, asOf, setAsOf,
+  }), [project, modules.data, meData, list, selectProject, signOut, asOf, setAsOf]);
 
-  if (projects.error || me.error) return <div style={{ padding: 40 }}><ErrorBox error={projects.error ?? me.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
-  if (!list || (apiMode === 'sheets' && !me.data)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
+  if (bootstrap.error) return <div style={{ padding: 40 }}><ErrorBox error={bootstrap.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
+  if (!list || (apiMode === 'sheets' && !meData)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
   if (project && modules.error) return <div style={{ padding: 40 }}><ErrorBox error={modules.error} /><button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button></div>;
   if (project && !modules.data) return <div style={{ padding: 40 }}><Loading label="Loading project…" /></div>;
 

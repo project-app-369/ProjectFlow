@@ -4,8 +4,9 @@
  */
 import { Api } from './api';
 import { SHEET } from './datasets';
-import { handle, type ApiRequest, type Envelope } from './router';
-import { seedStore } from './seed';
+import { handle, handleBatch, type ApiRequest, type Envelope } from './router';
+import { noMailer, type Mailer } from './mailer';
+import { seedStore, type SeedData } from './seed';
 import { SheetsStore } from './sheets-store';
 
 const TOKEN_PROPERTY = 'API_TOKEN';
@@ -21,20 +22,28 @@ function openStore() {
   });
 }
 
+/** Email goes out as the deploying user. A failure (for example the daily quota) is swallowed by the caller, never fatal. */
+const appsScriptMailer: Mailer = {
+  send(to, subject, body) {
+    if (typeof MailApp === 'undefined') return noMailer.send(to, subject, body);
+    MailApp.sendEmail({ to: to.join(','), subject, body, name: 'Project Flow' });
+  },
+};
+
 const json = (envelope: unknown) => ContentService.createTextOutput(JSON.stringify(envelope)).setMimeType(ContentService.MimeType.JSON);
 const fail = (status: number, code: string, message: string): Envelope => ({ ok: false, status, error: { code, message } });
 
-/** When an API_TOKEN script property exists, every request must carry it. A shared secret, not user authentication. */
+/** Fail closed until setup has created a token. A shared secret, not user authentication. */
 function authorized(token: unknown) {
   const expected = PropertiesService.getScriptProperties().getProperty(TOKEN_PROPERTY);
-  return !expected || token === expected;
+  return Boolean(expected) && token === expected;
 }
 
 function respond(request: ApiRequest, token: unknown): Envelope {
   if (!authorized(token)) return fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.');
   const store = openStore();
   if (!store.sheetInfo(SHEET.projects)) return fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.');
-  return handle(new Api(store), request);
+  return handle(new Api(store, () => new Date(), appsScriptMailer), request);
 }
 
 export function doGet(e: GoogleAppsScript.Events.DoGet) {
@@ -44,25 +53,53 @@ export function doGet(e: GoogleAppsScript.Events.DoGet) {
 }
 
 export function doPost(e: GoogleAppsScript.Events.DoPost) {
-  let payload: { method?: string; path?: string; body?: unknown; token?: string; user?: string };
+  let payload: { method?: string; path?: string; body?: unknown; token?: string; user?: string; requests?: { method?: string; path: string }[] };
   try {
     payload = JSON.parse(e.postData.contents);
   } catch {
     return json(fail(400, 'BAD_REQUEST', 'Body must be JSON: {"method","path","body","token"}.'));
+  }
+  // Several GET requests in one round trip: the web app asks for what a screen needs together, and each call to Apps Script costs seconds.
+  if (payload.method === 'BATCH' && Array.isArray(payload.requests)) {
+    if (!authorized(payload.token)) return json([fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.')]);
+    const store = openStore();
+    if (!store.sheetInfo(SHEET.projects)) return json(payload.requests.map(() => fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.')));
+    const requests = payload.requests.slice(0, 20).map(q => ({ method: 'GET', path: q.path, user: payload.user }));
+    return json(handleBatch(new Api(store, () => new Date(), appsScriptMailer), requests));
   }
   if (!payload.method || !payload.path) return json(fail(400, 'BAD_REQUEST', 'method and path are required.'));
   return json(respond({ method: payload.method, path: payload.path, body: payload.body, user: payload.user }, payload.token));
 }
 
 export function onOpen() {
-  SpreadsheetApp.getUi().createMenu('Project Flow').addItem('Set up sheets', 'setup').addItem('Show API token', 'showToken').addToUi();
+  SpreadsheetApp.getUi().createMenu('Project Flow').addItem('Set up sheets', 'setup').addItem('Show API token', 'showToken').addItem('Turn on daily issue reminders', 'installReminders').addToUi();
+}
+
+/** The daily job (a time trigger runs it): emails each person their issues and sub-tasks that are due soon or overdue. */
+export function remindDue() {
+  const store = openStore();
+  if (!store.sheetInfo(SHEET.projects)) return [];
+  return new Api(store, () => new Date(), appsScriptMailer).issues.remindAll();
+}
+
+/** Creates the daily 07:00 trigger for remindDue, once. */
+export function installReminders() {
+  const have = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'remindDue');
+  if (!have) ScriptApp.newTrigger('remindDue').timeBased().everyDays(1).atHour(7).create();
+  SpreadsheetApp.getUi().alert('Issue reminders', have ? 'Daily reminders were already on.' : 'Daily reminders are on: every morning around 07:00 each person in charge gets an email about issues and sub-tasks that are due within 3 days or overdue.', SpreadsheetApp.getUi().ButtonSet.OK);
+  return { installed: !have };
 }
 
 /** Creates one sheet per dataset, loads the reference data, and makes sure an API token exists. */
+/** The reference data lives in the project's seed.html (written by the build). It is read only here, never on a request. */
+function loadSeed(): SeedData {
+  return JSON.parse(HtmlService.createHtmlOutputFromFile('seed').getContent()) as SeedData;
+}
+
 export function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const store = openStore();
-  const seeded = seedStore(store);
+  const seeded = seedStore(store, loadSeed());
   const defaultSheet = ss.getSheetByName('Sheet1');
   if (defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() === 0) ss.deleteSheet(defaultSheet);
 

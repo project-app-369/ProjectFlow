@@ -34,6 +34,12 @@ export const COLUMNS = {
     ...text('projectId', 'id', 'packageCode', 'type', 'title', 'description', 'severity', 'area', 'owner'), ...date('raisedDate', 'dueDate'),
     ...text('status', 'action', 'source', 'sourceRef'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
   ],
+  issues: [
+    ...text('projectId', 'id', 'title', 'description', 'priority', 'discipline', 'status'), ...date('startDate', 'dueDate', 'completedDate'), ...text('nextAction', 'remarks', 'pics', 'source'),
+    ...date('lastRemindedOn'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
+  ],
+  issueSubtasks: [...text('projectId', 'id', 'issueId', 'title', 'pic'), ...date('dueDate'), ...text('done'), ...num('position'), ...date('lastRemindedOn'), ...stamp('updatedAt')],
+  issueLog: [...text('projectId', 'id', 'issueId'), ...stamp('at'), ...text('actor', 'action', 'field', 'fromValue', 'toValue', 'note')],
   phaseProgress: [...text('projectId', 'id', 'phase'), ...num('plan', 'actual'), ...date('reportDate'), ...stamp('updatedAt')],
   procCurves: [...text('projectId', 'id', 'facility', 'scope'), ...date('start'), ...text('plan', 'forecast', 'actual'), ...stamp('updatedAt')],
   budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt')],
@@ -93,6 +99,9 @@ export const SHEET = {
   procCurves: 'EPCIC - Procurement S-curves',
   phaseProgress: 'EPCIC - Phase progress',
   risks: 'Governance - Risks',
+  issues: 'Governance - Issues',
+  issueSubtasks: 'Governance - Issue sub-tasks',
+  issueLog: 'Governance - Issue log',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
   knowledge: 'Reports - Knowledge',
@@ -117,10 +126,10 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'phaseProgress', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
-export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
+export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
 export type SnapshotDataset = (typeof SNAPSHOT_DATASETS)[number];
 export const SNAPSHOT_KEY_OF_SHEET: Record<string, SnapshotDataset> = Object.fromEntries(SNAPSHOT_DATASETS.map(k => [SHEET[k], k]));
 
@@ -138,6 +147,7 @@ export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[
   'procurement.concerns': { sheet: SHEET.procConcerns, columns: COLUMNS.procConcerns },
   ...Object.fromEntries(['overview', 'engineering', 'procurement', 'services', 'quality', 'hse', 'construction', 'precom', 'ti', 'huc'].map(d => [`knowledge.${d}`, { sheet: SHEET.knowledge, columns: COLUMNS.knowledge }])),
   'management.risks': { sheet: SHEET.risks, columns: COLUMNS.risks },
+  'management.issues': { sheet: SHEET.issues, columns: COLUMNS.issues },
   'interface.register': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
   'interface.matrix': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
   'interface.points': { sheet: SHEET.interfacePoints, columns: COLUMNS.interfacePoints },

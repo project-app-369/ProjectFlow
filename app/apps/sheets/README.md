@@ -33,6 +33,9 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `EPCIC - Procurement S-curves` | EPCIC | Weekly cumulative plan, forecast and actual per facility and LS / PS / overall, as comma-separated percentages from a start date (17 rows) | Procurement dashboard |
 | `EPCIC - Procurement concerns` | EPCIC | Risks, concerns and issues per package with severity, owner, action (22 seeded from expediting and logistics) | Risks & Concerns, Procurement dashboard |
 | `EPCIC - Construction budget` | EPCIC | WBS rows with parent, discipline, manhours, plan start and finish | Construction → Budget |
+| `Governance - Issues` | Governance | Issues with persons in charge (emails), priority, status, dates (38 from the task monitor) | Issues |
+| `Governance - Issue sub-tasks` | Governance | Steps of each issue with a PIC and due date | Issues |
+| `Governance - Issue log` | Governance | History of every change and reminder | Issues |
 | `Governance - Risks` | Governance (amber) | Risk register (inherent and residual likelihood/impact) | Risk register |
 | `Governance - Interfaces` | Governance | Interface register | Interface register and matrix |
 | `Governance - Interface points` | Governance | Points under each interface | Interface points |
@@ -49,10 +52,14 @@ Switching a module on in Settings → Modules generates the sheet behind every e
 
 ## Deploy
 
+### Existing Project Flow spreadsheet
+
+The live [Project Flow — STTP2B data (pre-build)](https://docs.google.com/spreadsheets/d/1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY/edit) already has the dataset tabs. Its bound [Project Flow API Apps Script project](https://script.google.com/u/0/home/projects/1_kxZYQk9dzl1-b0HBHL4xitd2K_qYfS5E23Sued3W6uxMFyPG9cFW20P/edit) contains the generated `Code.js` and manifest. The manifest limits spreadsheet access to this bound spreadsheet. Setup has preserved the existing data and created a script property token. The [version 1 web app](https://script.google.com/macros/s/AKfycbzVp11yLpxjz_gwhm4Q9mhmTnNWe9h9NpaO6nzzfqD7PY58jCjjMNgj8dutl4k47s_H/exec) runs as the Sheet owner with `Anyone` access; data routes require the token. The owner-private [Project Flow v1 Site](https://project-flow-v1.ptsc-7423.chatgpt.site/) holds `SHEETS_URL` and `SHEETS_TOKEN` in its server runtime and proxies `/exec`. Never put the token in a browser build.
+
 ### Fast path with clasp
 
 ```bash
-pnpm build:sheets                        # writes apps/sheets/dist/Code.js and appsscript.json
+pnpm build:sheets                        # writes apps/sheets/dist/Code.js, seed.html and appsscript.json
 cd apps/sheets/dist
 npx @google/clasp login                  # needs the Apps Script API switched on at script.google.com/home/usersettings
 npx @google/clasp create --type sheets --title "Project Flow STTP2B"   # creates the spreadsheet and its bound script
@@ -62,14 +69,14 @@ npx @google/clasp push
 ### By hand
 
 1. Create a blank Google Sheet. **Extensions → Apps Script**.
-2. Replace the editor's code with `dist/Code.js`. Open **Project Settings**, tick *Show appsscript.json*, and paste `dist/appsscript.json` (the time zone and scopes matter).
+2. Replace the editor's code with `dist/Code.js`, and add an HTML file named `seed` (the + next to Files → HTML) containing `dist/seed.html`. The data is not in the code: the script reads it from `seed` only when *Set up sheets* runs, and every other request reads the spreadsheet alone. Open **Project Settings**, tick *Show appsscript.json*, and paste `dist/appsscript.json` (the time zone and scopes matter).
 3. Reload the spreadsheet. A **Project Flow** menu appears.
 
 ### Then
 
 1. **Project Flow → Set up sheets.** Authorise when asked. It creates the sheets, loads the STTP2B reference data and the four demo users, and generates an API token. Running it again changes nothing. A spreadsheet in the older single-project layout (sheets named `Project`, `Modules`, …) must be migrated first; see ADR 0004.
-2. **Deploy → New deployment → Web app.** Execute as *Me*; who has access: *Anyone*. (`ANYONE_ANONYMOUS` is required because the browser calls it from another origin.) After changing the code, deploy a **new version** of the same deployment so the URL stays the same.
-3. **Project Flow → Show API token** shows the web app URL and token. Put them in `apps/web/.env.sheets.local`:
+2. **Deploy → New deployment → Web app.** Execute as *Me*; who has access: *Anyone*. (`ANYONE_ANONYMOUS` lets the private Site's server reach the web app.) After changing the code, deploy a **new version** of the same deployment so the URL stays the same.
+3. **Project Flow → Show API token** shows the web app URL and token. For the private Site, set `SHEETS_URL` and secret `SHEETS_TOKEN` as server runtime variables. For a trusted local browser build only, put them in `apps/web/.env.sheets.local`:
 
    ```
    VITE_SHEETS_URL=https://script.google.com/macros/s/…/exec
@@ -103,18 +110,22 @@ Routes, module guards and error codes match `apps/api` where it has them. The pr
 
 ## Limits and risks
 
-- **Access is a shared secret, not a login.** The web app must be public for a browser to call it, so anyone holding the URL and token can read and change the data. The token ends up in the built web app. The reference data contains vendor contracts and named staff (see `docs/ProjectFlow_reference_data.md`): keep the URL private, host the web build somewhere access-controlled, and treat this as a team pre-build only. Real identity arrives with the full server.
+- **Access is a shared secret, not a login.** Anyone holding the URL and token can read and change the data. The deployed Site keeps the token server-side and limits Site access to its owner. A separately built browser client that embeds `VITE_SHEETS_TOKEN` exposes that token to its viewers; use it only in a trusted environment. The reference data contains vendor contracts and named staff (see `docs/ProjectFlow_reference_data.md`). Real identity arrives with the full server.
 - **Concurrent writes** take the script lock (20 s wait), so they queue rather than collide. Editing the same row by hand in the sheet while the app writes it is last-write-wins.
 - **Speed and quotas.** Each request reads whole sheets (≈ 150 rows each) and takes roughly one to two seconds; the dashboard reads several sheets. Apps Script daily quotas apply. This is fine for a handful of users, not for a site-wide rollout.
 - **Edits made in the sheet** appear on the next request. Invalid values (text in a number column) read as blank.
 - **Demo identity, not authentication.** The client names a user id and the backend believes it. Roles (administrator; Project Manager, Manager, Leader, Team Member, Client per project) are enforced so the permission model can be exercised, but anyone with the token can act as anyone. Four demo users are seeded: Admin, Manager, Team member, Client (all `@example.com`). See ADR 0004.
 - **Several projects are supported.** Project sheets carry `projectId`; only STTP2B (with milestones) is seeded. A project created in the app starts empty with the default modules.
-- **Not tested against live Google.** Automated tests cover the logic in memory, the spreadsheet layer against a fake of the Apps Script API, and the built `Code.js` in a sandbox that has only Apps Script style globals. A first real deployment can still surface differences (authorisation prompts, the `ANYONE_ANONYMOUS` redirect behaviour, quotas).
+- **Live deployment verified for reads.** The deployed web app returned `UNAUTHORIZED` without a token, and the published Site loaded the STTP2B dashboard from the Sheet. Automated tests cover the logic in memory, the spreadsheet layer against a fake of the Apps Script API, and the built `Code.js` in a sandbox that has only Apps Script style globals. Live write routes and quota behavior have not been exercised.
 
 ## Commands
 
 ```bash
 pnpm --filter @projectflow/sheets test        # 101 tests
 pnpm --filter @projectflow/sheets typecheck
-pnpm --filter @projectflow/sheets build       # dist/Code.js (about 600 kB minified, mostly zod and the seed data)
+pnpm --filter @projectflow/sheets build       # dist/Code.js (about 600 kB minified) and dist/seed.html (the reference data, read only by Set up sheets)
 ```
+
+## Issue reminders
+
+The script emails persons in charge (assignments, and a daily reminder of what is due within 3 days or overdue). After deploying, choose **Project Flow → Turn on daily issue reminders** once. The manifest asks for two extra permissions, send email and manage triggers, so Google shows an authorisation prompt after the next deploy. See `docs/ProjectFlow_prebuild_database.md` §4.3.

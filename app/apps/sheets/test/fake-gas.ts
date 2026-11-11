@@ -38,6 +38,8 @@ export class FakeSheet {
     (this.grid[r - 1] ??= [])[c - 1] = v;
   }
   getRange(r: number, c: number, nr = 1, nc = 1) { return new FakeRange(this, r, c, nr, nc); }
+  /** The used area, as one call (the real service answers this faster than getLastRow + getLastColumn + getRange). */
+  getDataRange() { return new FakeRange(this, 1, 1, Math.max(this.getLastRow(), 1), Math.max(this.getLastColumn(), 1)); }
   setFrozenRows(n: number) { this.frozenRows = n; }
   tabColor = '';
   setTabColor(c: string) { this.tabColor = c; }

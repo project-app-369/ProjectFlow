@@ -7,13 +7,14 @@ import { join } from 'node:path';
 import { COLUMNS, SHEET } from '../src/datasets';
 import { MemoryStore } from '../src/memory-store';
 import { seedStore } from '../src/seed';
+import { seedData } from '../src/seed-data';
 
 const out = process.argv[2];
 if (!out) throw new Error('Usage: tsx scripts/export-seed.ts <output-dir>');
 mkdirSync(out, { recursive: true });
 
 const store = new MemoryStore();
-seedStore(store);
+seedStore(store, seedData);
 
 const sheets: [string, string, typeof COLUMNS[keyof typeof COLUMNS]][] = [
   ['projects', SHEET.projects, COLUMNS.projects], ['users', SHEET.users, COLUMNS.users], ['memberships', SHEET.memberships, COLUMNS.memberships],
