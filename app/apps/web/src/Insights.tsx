@@ -45,10 +45,10 @@ export function FilterChips({ chips, onClear }: { chips: [string, string][]; onC
   );
 }
 
-function Boxes({ title, sub, boxes, onFilter, active }: { title: string; sub: string; boxes: InsightBox[]; onFilter?: (f: Record<string, string>) => void; active?: (f: Record<string, string>) => boolean }) {
+function Boxes({ title, sub, boxes, onFilter, active, compact }: { title: string; sub: string; boxes: InsightBox[]; onFilter?: (f: Record<string, string>) => void; active?: (f: Record<string, string>) => boolean; compact?: boolean }) {
   return (
-    <section className="panel ins-panel">
-      <div className="panel-head"><div><h2>{title}</h2><p>{sub}</p></div></div>
+    <section className={`panel ins-panel ${compact ? 'compact' : ''}`}>
+      <div className="panel-head"><div><h2 title={compact ? sub : undefined}>{title}</h2>{!compact && <p>{sub}</p>}</div></div>
       <div className="ins-boxes">
         {boxes.map(b => {
           const body = <><strong className="mono">{b.value.toLocaleString('en-GB')}</strong><span className="ins-label">{b.label}</span><span className="ins-sub">{b.sub}</span></>;
@@ -66,26 +66,30 @@ function Boxes({ title, sub, boxes, onFilter, active }: { title: string; sub: st
  * The summary at the top of a procurement page: six cards in one row, a pipeline or status strip, a look-ahead,
  * and charts. A box or a bar can set a filter on the register below it when the page passes `onFilter`.
  */
-export function InsightsView({ data, error, onFilter, active }: {
+export function InsightsView({ data, error, onFilter, active, compact }: {
   data?: Insights; error?: unknown; onFilter?: (f: Record<string, string>) => void; active?: (f: Record<string, string>) => boolean;
+  /** Saves space: the strip and the look-ahead sit side by side, the boxes are smaller and the charts shorter. */
+  compact?: boolean;
 }): ReactNode {
   if (error) return <section className="panel ins-panel"><div className="panel-head"><div><h2>Summary unavailable</h2><p>The register remains available below.</p></div></div><ErrorBox error={error} /></section>;
   if (!data) return <div className="stats">{Array.from({ length: 6 }, (_, i) => <Stat key={i} label="…" value="—" foot="Loading" icon="chart" />)}</div>;
   return (
     <>
-      <div className="stats">
-        {data.cards.map(c => <Stat key={c.label} label={c.label} value={c.value} icon={c.icon} foot={<span className={c.tone === 'red' ? 'negative' : c.tone === 'amber' ? 'warning' : c.tone === 'green' ? 'positive' : ''}>{c.foot}</span>} />)}
+      <div className={`stats ${compact ? 'compact' : ''}`}>
+        {data.cards.map(c => <Stat key={c.label} label={c.label} value={c.value} icon={c.icon} foot={<span title={c.foot} className={c.tone === 'red' ? 'negative' : c.tone === 'amber' ? 'warning' : c.tone === 'green' ? 'positive' : ''}>{c.foot}</span>} />)}
       </div>
-      {data.strip && <Boxes {...data.strip} onFilter={onFilter} active={active} />}
-      {data.lookAhead && <Boxes {...data.lookAhead} onFilter={onFilter} active={active} />}
+      <div className={compact ? 'ins-pair' : undefined} style={compact ? undefined : { display: 'contents' }}>
+        {data.strip && <Boxes {...data.strip} onFilter={onFilter} active={active} compact={compact} />}
+        {data.lookAhead && <Boxes {...data.lookAhead} onFilter={onFilter} active={active} compact={compact} />}
+      </div>
       {data.charts.length > 0 && (
-        <div className="ins-charts">
+        <div className={`ins-charts ${compact ? 'compact' : ''}`}>
           {data.charts.map(c => (
-            <section key={c.title} className={`panel ins-panel ${c.layout === 'column' && c.categories.length > 8 ? 'wide' : ''}`}>
-              <div className="panel-head"><div><h2>{c.title}</h2><p>{c.sub}</p></div></div>
+            <section key={c.title} className={`panel ins-panel ${compact ? 'compact' : ''} ${c.layout === 'column' && c.categories.length > 8 ? 'wide' : ''}`}>
+              <div className="panel-head"><div><h2 title={compact ? c.sub : undefined}>{c.title}</h2>{!compact && <p>{c.sub}</p>}</div></div>
               {c.categories.length ? (
                 <Suspense fallback={<Loading label="Loading chart…" />}>
-                  <InsightChartView chart={c} onPick={onFilter && c.filterKey ? v => onFilter({ [c.filterKey!]: v }) : undefined} />
+                  <InsightChartView compact={compact} chart={c} onPick={onFilter && c.filterKey ? v => onFilter({ [c.filterKey!]: v }) : undefined} />
                 </Suspense>
               ) : <div className="empty">Nothing to chart yet.</div>}
             </section>

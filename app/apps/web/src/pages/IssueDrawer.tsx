@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { errorText, request, type IssueDetail, type IssueLogEntry } from '../api';
 import { fmtDate } from '../format';
+import { Icon } from '../icons';
 import { useToast } from '../state';
 import { Badge, Btn, Confirm, Field, Modal } from '../ui';
 
@@ -105,12 +106,12 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
       <>
         <Modal title={issue ? `${issue.id} · ${issue.title}` : 'New issue'} size="lg" onClose={onClose}
           actions={<>
-            {issue && canManage && <Btn kind="text" onClick={() => setConfirming(true)}>Delete</Btn>}
-            {issue && canWrite && <Btn onClick={() => { setError(''); act.mutate({ path: '/remind', method: 'POST', msg: 'Reminder emailed.' }); }}>Remind PICs</Btn>}
+            {issue && canManage && <Btn onClick={() => setConfirming(true)}>Delete</Btn>}
+            {issue && canWrite && <Btn iconOnly icon="bell" aria-label="Remind the persons in charge by email" title="Remind the persons in charge by email" onClick={() => { setError(''); act.mutate({ path: '/remind', method: 'POST', msg: 'Reminder emailed.' }); }}>Remind PICs</Btn>}
             <Btn onClick={onClose}>Close</Btn>
             {canWrite && <Btn kind="primary" disabled={save.isPending || !v.title.trim() || !dirty} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save'}</Btn>}
           </>}>
-          <div className="dialog-body">
+          <div className="dialog-body drawer-tight">
             {issue && (
               <div className="drawer-intro">
                 <Badge>{issue.status}</Badge> <Badge tone={issue.priority === 'Critical' || issue.priority === 'High' ? 'red' : 'amber'}>{issue.priority}</Badge>{' '}
@@ -120,11 +121,13 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
             <div className="form-grid">
               <Field label="Title *" full><input value={v.title} maxLength={200} disabled={off} onChange={e => set('title', e.target.value)} /></Field>
               <Field label="Description" full><textarea rows={3} value={v.description} maxLength={2000} disabled={off} onChange={e => set('description', e.target.value)} /></Field>
+              <div className="form-grid three" style={{ gridColumn: '1 / -1' }}>
               <Field label="Priority"><select value={v.priority} disabled={off} onChange={e => set('priority', e.target.value)}>{ISSUE_PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></Field>
               <Field label="Status"><select value={v.status} disabled={off} onChange={e => set('status', e.target.value)}>{ISSUE_STATUSES.map(p => <option key={p}>{p}</option>)}</select></Field>
               <Field label="Responsible team"><input value={v.discipline} maxLength={60} disabled={off} onChange={e => set('discipline', e.target.value)} /></Field>
               <Field label="Start date"><input type="date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></Field>
               <Field label="Due date" hint="The people in charge are emailed when it is within 3 days or passed"><input type="date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></Field>
+              </div>
               <Field label="Persons in charge (by email)" full hint="Up to 10. Each new person is emailed when you save."><PicEditor value={pics} onChange={setPics} suggestions={suggestions} disabled={off} /></Field>
               <Field label="Next action / update" full><textarea rows={2} value={v.nextAction} maxLength={1500} disabled={off} onChange={e => set('nextAction', e.target.value)} /></Field>
               <Field label="Remarks" full><textarea rows={2} value={v.remarks} maxLength={1500} disabled={off} onChange={e => set('remarks', e.target.value)} /></Field>
@@ -132,7 +135,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
 
             {issue && (
               <>
-                <h3 style={{ marginTop: 22 }}>Sub-tasks <span className="tiny muted">{issue.subtasksDone} of {issue.subtasksTotal} done</span></h3>
+                <h3 style={{ marginTop: 16 }}><Icon name="status-completed" /> Sub-tasks <span className="tiny muted">{issue.subtasksDone} of {issue.subtasksTotal} done</span></h3>
                 <div className="subtask-list">
                   {issue.subtasks.map(s => (
                     <div key={s.id} className={`subtask ${s.done ? 'done' : ''}`}>
@@ -152,14 +155,14 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
                   </div>
                 )}
 
-                <h3 style={{ marginTop: 22 }}>History</h3>
+                <h3 style={{ marginTop: 16 }}><Icon name="clock" /> History</h3>
                 {canWrite && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <input placeholder="Add a note to the history" value={note} maxLength={1500} aria-label="Note" onChange={e => setNote(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && note.trim()) { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); } }} />
-                    <Btn kind="small" disabled={!note.trim() || act.isPending} onClick={() => { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); }}>Add note</Btn>
+                    <Btn kind="small" iconOnly icon="plus" aria-label="Add note" disabled={!note.trim() || act.isPending} onClick={() => { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); }}>Add note</Btn>
                   </div>
                 )}
-                <ol className="timeline">
+                <ol className="timeline tight">
                   {issue.log.map(l => (
                     <li key={l.id}>
                       <span className="tiny muted">{when(l.at)} · {l.actor}</span>

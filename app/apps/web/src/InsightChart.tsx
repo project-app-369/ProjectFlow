@@ -13,11 +13,11 @@ const month = (k: string) => new Date(`${k}-15T12:00:00Z`).toLocaleDateString('e
 const fmt = (n: number) => n.toLocaleString('en-GB', { maximumFractionDigits: 1 });
 
 /** Column or bar chart for one summary, stacked or side by side, with totals above stacks and a click that filters the register. */
-export default function InsightChartView({ chart, onPick }: { chart: InsightChart; onPick?: (value: string) => void }) {
+export default function InsightChartView({ chart, onPick, compact }: { chart: InsightChart; onPick?: (value: string) => void; compact?: boolean }) {
   const el = useRef<HTMLDivElement>(null);
   const { dark } = usePrefs();
   const horizontal = chart.layout === 'bar';
-  const height = horizontal ? Math.max(180, chart.categories.length * 30 + 60) : 280;
+  const height = horizontal ? (compact ? Math.max(130, chart.categories.length * 22 + 40) : Math.max(180, chart.categories.length * 30 + 60)) : compact ? 200 : 280;
 
   useEffect(() => {
     if (!el.current) return;
