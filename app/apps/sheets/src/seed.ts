@@ -230,8 +230,12 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.materialSummary, COLUMNS.materialSummary, rows.materialSummary);
     store.appendRows(SHEET.procCurves, COLUMNS.procCurves, rows.procCurves);
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
+    // An issue keeps the number it has in the task monitor ("No."), so ISS-005 is item 5 there; rows without a usable number follow on.
+    const seen = new Set<string>();
+    const numbers = rows.issues.map(i => { const n = /^\d{1,4}$/.test(String(i.ref ?? '')) ? Number(i.ref) : 0; if (n && !seen.has(String(n))) { seen.add(String(n)); return n; } return 0; });
+    let spare = Math.max(0, ...numbers);
     const issueRows = rows.issues.map((i, n) => ({
-      projectId: pid, id: `ISS-${String(n + 1).padStart(3, '0')}`, title: i.title, description: i.description ?? null, priority: i.priority, discipline: i.discipline ?? null, status: i.status,
+      projectId: pid, id: `ISS-${String(numbers[n] || ++spare).padStart(3, '0')}`, title: i.title, description: i.description ?? null, priority: i.priority, discipline: i.discipline ?? null, status: i.status,
       startDate: isoOrNull(i.startDate), dueDate: isoOrNull(i.dueDate), completedDate: i.status === 'Completed' ? isoOrNull(i.raisedDate) ?? String(raw.project.cutoff) : null,
       nextAction: i.nextAction ?? null, remarks: i.remarks ?? null, pics: '', source: 'Task monitor', lastRemindedOn: null, createdAt: now, updatedAt: now, createdBy: ADMIN_ID,
     })) as unknown as Row[];

@@ -39,15 +39,27 @@ const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate'
 
 const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Team'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks']];
 
-const picsOf = (r: Row): string[] => String(r.pics ?? '').split(',').map(s => s.trim()).filter(Boolean);
-const isOpen = (r: Row) => r.status !== 'Completed';
+/**
+ * Cells are edited by hand in the spreadsheet, so what is read is tidied before it is used: a status or priority is matched by
+ * meaning and case ("In Progess", "done", "HIGH"), and PICs may be separated by commas, semicolons or spaces.
+ */
+const STATUS_WORDS: Record<string, (typeof ISSUE_STATUSES)[number]> = {
+  'not started': 'Not started', 'open': 'Not started', 'new': 'Not started', 'backlog': 'Not started', 'to do': 'Not started', 'todo': 'Not started',
+  'in progress': 'In progress', 'in progess': 'In progress', 'ongoing': 'In progress', 'wip': 'In progress', 'started': 'In progress',
+  'pending': 'Pending', 'on hold': 'Pending', 'hold': 'Pending', 'blocked': 'Pending', 'waiting': 'Pending',
+  'completed': 'Completed', 'complete': 'Completed', 'done': 'Completed', 'closed': 'Completed', 'resolved': 'Completed',
+};
+export const normStatus = (v: unknown): (typeof ISSUE_STATUSES)[number] => STATUS_WORDS[String(v ?? '').trim().toLowerCase()] ?? 'Not started';
+export const normPriority = (v: unknown): (typeof ISSUE_PRIORITIES)[number] => ISSUE_PRIORITIES.find(p => p.toLowerCase() === String(v ?? '').trim().toLowerCase()) ?? 'Medium';
+const picsOf = (r: Row): string[] => [...new Set(String(r.pics ?? '').toLowerCase().split(/[\s,;]+/).filter(e => e.includes('@')))];
+const isOpen = (r: Row) => normStatus(r.status) !== 'Completed';
 const clip = (v: unknown) => (v == null || v === '' ? '' : String(v).replace(/\s+/g, ' ').slice(0, 160));
 const nextNo = (prefix: string, rows: Row[], width: number) => `${prefix}-${String(rows.reduce((m, r) => Math.max(m, Number(String(r.id).replace(/^\D+/, '')) || 0), 0) + 1).padStart(width, '0')}`;
 const addDays = (d: string, n: number) => new Date(new Date(`${d}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
 const daysBetween = (a: string, b: string) => Math.round((new Date(`${b}T12:00:00Z`).getTime() - new Date(`${a}T12:00:00Z`).getTime()) / 86_400_000);
 
 export const issueDue = (r: Any) => (r.dueDate ? String(r.dueDate) : null);
-export const issueIsOpen = (r: Any) => r.status !== 'Completed';
+export const issueIsOpen = (r: Any) => normStatus(r.status) !== 'Completed';
 
 /**
  * Issue management: monitor issues, break them into sub-tasks, keep a log of every change, assign several people by
@@ -72,7 +84,7 @@ export class IssuesService {
     const mine = subs.filter(s => s.issueId === r.id);
     const due = r.dueDate ? String(r.dueDate) : null;
     return {
-      ...rest, pics: picsOf(r), priorityRank: PRIORITY_RANK[String(r.priority)] ?? 0,
+      ...rest, status: normStatus(r.status), priority: normPriority(r.priority), pics: picsOf(r), priorityRank: PRIORITY_RANK[normPriority(r.priority)],
       overdue: isOpen(r) && !!due && due < cutoff, daysToDue: isOpen(r) && due ? daysBetween(cutoff, due) : null,
       subtasksTotal: mine.length, subtasksDone: mine.filter(s => s.done === 'Yes').length,
     };

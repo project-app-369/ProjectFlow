@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Api } from '../src/api';
-import { COLUMNS } from '../src/datasets';
+import { COLUMNS, SHEET } from '../src/datasets';
 import { MemoryMailer } from '../src/mailer';
 import { MemoryStore } from '../src/memory-store';
 import { handle, type Envelope } from '../src/router';
@@ -36,6 +36,25 @@ describe('issue management', () => {
     expect(ins.cards[0]).toMatchObject({ label: 'Open issues', value: 37 });
     expect(ins.lookAhead.boxes.map((b: any) => b.label)).toEqual(['Overdue', 'Within 30 days', 'Within 45 days', 'Within 60 days', 'No date']);
     expect(ok(call('GET', `${I}/ISS-001`)).log[0]).toMatchObject({ action: 'Created', actor: 'Import' });
+  });
+
+  it('keeps the numbers of the task monitor: ISS-005 is item 5, and the gaps stay gaps', () => {
+    expect(ok(call('GET', `${I}/ISS-005`)).title).toMatch(/^Subcontractor PPS/);
+    expect(err(call('GET', `${I}/ISS-004`)).status).toBe(404);
+    expect(ok(call('GET', `${I}/ISS-040`)).id).toBe('ISS-040');
+    expect(mk().id).toBe('ISS-041');
+  });
+
+  it('reads cells that were typed by hand in the spreadsheet', () => {
+    const before = ok(call('GET', `${I}/insights`)).cards[0].value;
+    store.updateRow(SHEET.issues, COLUMNS.issues, 'id', 'ISS-002', { status: 'done', priority: 'HIGH', pics: 'Ann@Example.com; bob@example.com  carol@example.com, not-an-email' }, { projectId: 'sttp2b' });
+    store.updateRow(SHEET.issues, COLUMNS.issues, 'id', 'ISS-001', { status: 'In Progess' }, { projectId: 'sttp2b' });
+    const edited = ok(call('GET', `${I}/ISS-002`));
+    expect(edited).toMatchObject({ status: 'Completed', priority: 'High', pics: ['ann@example.com', 'bob@example.com', 'carol@example.com'] });
+    expect(ok(call('GET', `${I}/ISS-001`)).status).toBe('In progress');
+    expect(ok(call('GET', `${I}/insights`)).cards[0].value).toBe(before - 1);
+    expect(ok(call('GET', `${I}?status=Completed`)).total).toBe(2);
+    expect(ok(call('GET', `${I}?pic=bob@example.com`)).total).toBe(1);
   });
 
   it('assigns several people by email, logs each change and tells the new people', () => {
