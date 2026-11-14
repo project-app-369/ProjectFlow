@@ -1,14 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   errorText, PERSONAL_KEY, request, TASK_STATUSES, URGENCIES, type DirectoryUser, type PTask, type TaskInput, type TaskStatus, type Urgency,
 } from '../../api';
 import { fmtDate, localToday, type Tone } from '../../format';
+import { Icon } from '../../icons';
 import { useApp, useToast } from '../../state';
-import { ActualPlanBar, Badge, Btn, Confirm, Field, Modal } from '../../ui';
+import { ActualPlanBar, Btn, Confirm, Modal } from '../../ui';
 
 export const urgencyTone: Record<Urgency, Tone> = { Low: 'indigo', Normal: 'green', High: 'amber', Urgent: 'red' };
 export const statusTone: Record<TaskStatus, Tone> = { Backlog: 'indigo', Planned: 'indigo', Ongoing: 'amber', Completed: 'green' };
+
+const urgencyHint: Record<Urgency, string> = {
+  Low: 'Can wait', Normal: 'Standard priority', High: 'Needs attention', Urgent: 'Act now',
+};
+const statusHint: Record<TaskStatus, string> = {
+  Backlog: 'Not scheduled', Planned: 'Ready to start', Ongoing: 'In progress', Completed: 'Finished',
+};
+
+function TaskField({ icon, label, hint, children, full = false }: { icon: string; label: string; hint?: string; children: ReactNode; full?: boolean }) {
+  return <label className={`field task-field ${full ? 'full' : ''}`}><span className="task-field-label"><Icon name={icon} />{label}</span>{children}{hint && <small className="muted">{hint}</small>}</label>;
+}
 
 /* ---------------- data ---------------- */
 interface TaskList { items: PTask[]; today: string }
@@ -64,12 +76,32 @@ export function useProjectLabels() {
 
 export function ProjectChips({ ids = [] }: { ids?: string[] }) {
   const label = useProjectLabels();
-  if (!ids.length) return <span className="tiny muted">Personal</span>;
-  return <>{ids.map(id => <span key={id} className="chip">{label(id)}</span>)}</>;
+  if (!ids.length) return <span className="task-meta-item tiny muted" title="Personal task"><Icon name="user" />Personal</span>;
+  return <>{ids.map(id => <span key={id} className="chip task-project-chip"><Icon name="layers" />{label(id)}</span>)}</>;
+}
+
+export function UrgencyBadge({ urgency }: { urgency: Urgency }) {
+  return <span className={`task-symbol urgency-${urgency.toLowerCase()}`} role="img" aria-label={`Urgency: ${urgency}`} title={`Urgency: ${urgency}`}><Icon name={`urgency-${urgency.toLowerCase()}`} /></span>;
 }
 
 export function StatusBadges({ task }: { task: PTask }) {
-  return <><Badge tone={statusTone[task.status]}>{task.status}</Badge>{task.overdue && <> <Badge tone="red">Overdue</Badge></>}</>;
+  return <span className="task-symbols"><span className={`task-symbol status-${task.status.toLowerCase()}`} role="img" aria-label={`Status: ${task.status}`} title={`Status: ${task.status}`}><Icon name={`status-${task.status.toLowerCase()}`} /></span>{task.overdue && <span className="task-symbol overdue" role="img" aria-label="Overdue" title="Overdue"><Icon name="clock" /></span>}</span>;
+}
+
+interface IconOption { value: string; label: string; icon: string }
+const urgencyOptions: IconOption[] = [{ value: '', label: 'All urgencies', icon: 'flag' }, ...URGENCIES.map(u => ({ value: u, label: u, icon: `urgency-${u.toLowerCase()}` }))];
+export const statusOptions: IconOption[] = TASK_STATUSES.map(s => ({ value: s, label: s, icon: `status-${s.toLowerCase()}` }));
+const statusFilterOptions: IconOption[] = [{ value: '', label: 'All statuses', icon: 'check' }, ...statusOptions, { value: 'Overdue', label: 'Overdue', icon: 'clock' }];
+
+/** Icon-only selector with named options for hover and assistive technology. */
+export function IconSelect({ value, options, onChange, label, className = '' }: { value: string; options: IconOption[]; onChange: (value: string) => void; label: string; className?: string }) {
+  const selected = options.find(o => o.value === value) ?? options[0];
+  return <details className={`task-icon-select value-${selected.value.toLowerCase()} ${className}`} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) e.currentTarget.open = false; }} onKeyDown={e => { if (e.key === 'Escape') { e.currentTarget.open = false; e.currentTarget.querySelector('summary')?.focus(); } }}>
+    <summary aria-label={`${label}: ${selected.label}`} title={`${label}: ${selected.label}`}><Icon name={selected.icon} /></summary>
+    <div className="task-icon-select-menu" role="group" aria-label={label}>
+      {options.map(o => <button key={o.value} type="button" className={value === o.value ? 'selected' : ''} aria-label={o.label} title={o.label} aria-pressed={value === o.value} onClick={e => { onChange(o.value); e.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name={o.icon} /></button>)}
+    </div>
+  </details>;
 }
 
 export function SubtaskProgress({ task }: { task: PTask }) {
@@ -78,7 +110,7 @@ export function SubtaskProgress({ task }: { task: PTask }) {
   return (
     <div className="subprogress" title={`${task.subtasksDone} of ${task.subtasksTotal} sub-tasks done`}>
       <ActualPlanBar actual={pct} plan={null} compact />
-      <span className="tiny muted">{task.subtasksDone}/{task.subtasksTotal} sub-tasks complete</span>
+      <span className="task-meta-item tiny muted" title={`${task.subtasksDone} of ${task.subtasksTotal} subtasks complete`}><Icon name="status-completed" />{task.subtasksDone}/{task.subtasksTotal}</span>
     </div>
   );
 }
@@ -102,20 +134,17 @@ export function TaskFilters({ value, onChange }: { value: TaskFilter; onChange: 
   return (
     <div className="toolbar">
       <label className="search">
+        <Icon name="search" />
         <input placeholder="Search number, title, assigner or sub-task…" value={value.q} onChange={e => set({ q: e.target.value })} aria-label="Search tasks" />
       </label>
       <div className="filter-group">
-        <select className="filter" aria-label="Filter by project" value={value.project} onChange={e => set({ project: e.target.value })}>
+        <label className="task-filter"><Icon name="layers" /><select className="filter" aria-label="Filter by project" value={value.project} onChange={e => set({ project: e.target.value })}>
           <option value="">All projects</option>
           <option value={PERSONAL_KEY}>No project</option>
           {projects.filter(p => p.myRole).map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
-        </select>
-        <select className="filter" aria-label="Filter by urgency" value={value.urgency} onChange={e => set({ urgency: e.target.value })}>
-          <option value="">All urgencies</option>{URGENCIES.map(u => <option key={u}>{u}</option>)}
-        </select>
-        <select className="filter" aria-label="Filter by status" value={value.status} onChange={e => set({ status: e.target.value })}>
-          <option value="">All statuses</option>{[...TASK_STATUSES, 'Overdue'].map(s => <option key={s}>{s}</option>)}
-        </select>
+        </select></label>
+        <IconSelect value={value.urgency} options={urgencyOptions} onChange={urgency => set({ urgency })} label="Filter by urgency" />
+        <IconSelect className="status-filter" value={value.status} options={statusFilterOptions} onChange={status => set({ status })} label="Filter by status" />
         <Btn kind="small" onClick={() => onChange(emptyFilter)}>Clear</Btn>
       </div>
     </div>
@@ -156,58 +185,64 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
 
   return (
     <>
-      <Modal title={task ? `${task.taskNo} · Edit task` : 'New task'} onClose={onClose}
+      <Modal title={task ? `${task.taskNo} · Task details` : 'New task'} size="lg" onClose={onClose}
         actions={<>
-          {task && <Btn kind="text" onClick={() => setConfirming(true)}>Delete</Btn>}
-          <Btn onClick={onClose}>Cancel</Btn>
-          <Btn kind="primary" disabled={busy || !v.title.trim() || badRange} onClick={save}>{busy ? 'Saving…' : 'Save'}</Btn>
+          {task && <Btn kind="text task-delete-action" icon="trash" iconOnly aria-label="Delete task" onClick={() => setConfirming(true)} />}
+          <span className="task-action-spacer" />
+          <Btn icon="close" iconOnly aria-label="Cancel editing" onClick={onClose} />
+          <Btn kind="primary" icon="tick" iconOnly aria-label={busy ? 'Saving task' : 'Save task'} disabled={busy || !v.title.trim() || badRange} onClick={save} />
         </>}>
-        <div className="dialog-body">
-          <div className="form-grid">
-            <Field label="Title" full><input value={v.title} maxLength={160} onChange={e => up('title', e.target.value)} autoFocus /></Field>
-            <Field label="Description" full><textarea value={v.description} maxLength={2000} onChange={e => up('description', e.target.value)} /></Field>
-            <Field label="Urgency"><select value={v.urgency} onChange={e => up('urgency', e.target.value as Urgency)}>{URGENCIES.map(u => <option key={u}>{u}</option>)}</select></Field>
-            <Field label="Status" hint={task?.overdue ? 'Overdue: the deadline has passed' : 'Overdue is set automatically from the deadline'}>
-              <select value={v.status} onChange={e => up('status', e.target.value as TaskStatus)}>{TASK_STATUSES.map(s => <option key={s}>{s}</option>)}</select>
-            </Field>
-            <Field label="Assigner" hint="Who gave you this task">
-              <input list="task-assigners" value={v.assigner} maxLength={120} onChange={e => up('assigner', e.target.value)} />
-              <datalist id="task-assigners">{directory.data?.map(u => <option key={u.id} value={u.name} />)}</datalist>
-            </Field>
-            <Field label="Estimated effort (hours)"><input type="number" min={0} step="0.5" value={v.effort} onChange={e => up('effort', e.target.value)} /></Field>
-            <div className="field full">
-              Projects
-              <div className="check-row">
-                {mine.length ? mine.map(p => (
-                  <label key={p.id} className="check-chip">
-                    <input type="checkbox" checked={v.projects.includes(p.id)} onChange={e => up('projects', e.target.checked ? [...v.projects, p.id] : v.projects.filter(x => x !== p.id))} />{p.code}
-                  </label>
-                )) : <span className="tiny muted">You are not a member of any project.</span>}
-              </div>
-              <small className="muted">A personal task can belong to several projects, or none.</small>
+        <div className="dialog-body task-editor">
+          <section className="task-editor-section" aria-label="Task content">
+            <div className="form-grid">
+              <TaskField icon="edit" label="Title" full><input value={v.title} maxLength={160} onChange={e => up('title', e.target.value)} autoFocus /></TaskField>
+              <TaskField icon="doc" label="Description" full><textarea rows={4} value={v.description} maxLength={2000} onChange={e => up('description', e.target.value)} /></TaskField>
             </div>
-            <Field label="Plan start"><input type="date" value={v.planStart} onChange={e => up('planStart', e.target.value)} /></Field>
-            <Field label="Plan finish"><input type="date" value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></Field>
-            <Field label="Due date (deadline)" hint="Plan start, plan finish and deadline together put the task on the Gantt"><input type="date" value={v.due} onChange={e => up('due', e.target.value)} /></Field>
-            {badRange && <p className="negative tiny" style={{ gridColumn: '1/-1' }}>Plan finish cannot be before plan start.</p>}
-            <div className="field full">
-              Sub-tasks {v.subtasks.length > 0 && <span className="tiny muted">{v.subtasks.filter(s => s.done).length}/{v.subtasks.length} done</span>}
-              <div className="subtask-edit">
-                {v.subtasks.map((s, i) => (
-                  <div className="subtask-row" key={s.id ?? `n${i}`}>
-                    <input type="checkbox" className="switch" checked={s.done} aria-label={`Done: ${s.title}`} onChange={e => up('subtasks', v.subtasks.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)))} />
-                    <input value={s.title} maxLength={160} aria-label={`Sub-task ${i + 1}`} className={s.done ? 'done' : ''} onChange={e => up('subtasks', v.subtasks.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-                    <button type="button" className="icon-btn" aria-label={`Remove ${s.title}`} onClick={() => up('subtasks', v.subtasks.filter((_, j) => j !== i))}>×</button>
-                  </div>
-                ))}
-                <div className="subtask-row">
-                  <span />
-                  <input value={newSub} maxLength={160} placeholder="Add a sub-task and press Enter" aria-label="New sub-task" onChange={e => setNewSub(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } }} />
-                  <Btn kind="small" onClick={addSub} disabled={!newSub.trim()}>Add</Btn>
-                </div>
+          </section>
+
+          <div className="task-editor-choices">
+            <fieldset className="task-choice-group"><legend><Icon name="flag" />Urgency</legend>
+              <div className="task-choice-grid">
+                {URGENCIES.map(u => <button key={u} type="button" className={`task-choice urgency-${u.toLowerCase()} ${v.urgency === u ? 'selected' : ''}`} aria-label={u} aria-pressed={v.urgency === u} onClick={() => up('urgency', u)} title={`${u} · ${urgencyHint[u]}`}><Icon name={`urgency-${u.toLowerCase()}`} /></button>)}
+              </div>
+            </fieldset>
+            <fieldset className="task-choice-group"><legend><Icon name="check" />Status</legend>
+              <div className="task-choice-grid">
+                {TASK_STATUSES.map(s => <button key={s} type="button" className={`task-choice status-${s.toLowerCase()} ${v.status === s ? 'selected' : ''}`} aria-label={s} aria-pressed={v.status === s} onClick={() => up('status', s)} title={`${s} · ${statusHint[s]}`}><Icon name={`status-${s.toLowerCase()}`} /></button>)}
+              </div>
+              {task?.overdue && <small className="negative">Overdue until completed or rescheduled.</small>}
+            </fieldset>
+          </div>
+
+          <section className="task-editor-section" aria-label="Plan and deadline">
+            <div className="task-date-grid">
+              <TaskField icon="calendar" label="Start"><input type="date" value={v.planStart} onChange={e => up('planStart', e.target.value)} /></TaskField>
+              <TaskField icon="calendar" label="Finish"><input type="date" value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></TaskField>
+              <TaskField icon="clock" label="Due"><input type="date" value={v.due} onChange={e => up('due', e.target.value)} /></TaskField>
+            </div>
+            {badRange && <p className="negative tiny" role="alert">Plan finish cannot be before plan start.</p>}
+          </section>
+
+          <section className="task-editor-section" aria-label="Ownership and scope">
+            <div className="form-grid task-context-grid">
+              <TaskField icon="user" label="Assigned by"><input list="task-assigners" value={v.assigner} maxLength={120} onChange={e => up('assigner', e.target.value)} /><datalist id="task-assigners">{directory.data?.map(u => <option key={u.id} value={u.name} />)}</datalist></TaskField>
+              <TaskField icon="clock" label="Effort (hours)"><input type="number" min={0} step="0.5" value={v.effort} onChange={e => up('effort', e.target.value)} /></TaskField>
+              <div className="field full task-projects"><span className="task-field-label"><Icon name="layers" />Projects</span>
+                <div className="check-row">{mine.length ? mine.map(p => <label key={p.id} className="check-chip"><input type="checkbox" checked={v.projects.includes(p.id)} onChange={e => up('projects', e.target.checked ? [...v.projects, p.id] : v.projects.filter(x => x !== p.id))} />{p.code}</label>) : <span className="tiny muted">No project memberships.</span>}</div>
               </div>
             </div>
-            <Field label="Remarks" full><textarea value={v.remarks} maxLength={2000} onChange={e => up('remarks', e.target.value)} /></Field>
+          </section>
+
+          <div className="task-editor-tail">
+          <section className="task-editor-section" aria-label="Subtasks">
+            <h3><Icon name="check" />Subtasks <span className="task-section-count">{v.subtasks.filter(s => s.done).length}/{v.subtasks.length}</span></h3>
+            <div className="subtask-edit">
+              {v.subtasks.map((s, i) => <div className="subtask-row" key={s.id ?? `n${i}`}><input type="checkbox" className="switch" checked={s.done} aria-label={`Done: ${s.title}`} onChange={e => up('subtasks', v.subtasks.map((x, j) => j === i ? { ...x, done: e.target.checked } : x))} /><input value={s.title} maxLength={160} aria-label={`Subtask ${i + 1}`} className={s.done ? 'done' : ''} onChange={e => up('subtasks', v.subtasks.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} /><Btn kind="text" icon="trash" iconOnly aria-label={`Remove ${s.title}`} onClick={() => up('subtasks', v.subtasks.filter((_, j) => j !== i))} /></div>)}
+              <div className="subtask-row"><span className="subtask-new-icon"><Icon name="plus" /></span><input value={newSub} maxLength={160} placeholder="Add a subtask" aria-label="New subtask" onChange={e => setNewSub(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSub(); } }} /><Btn kind="small" icon="plus" iconOnly aria-label="Add subtask" onClick={addSub} disabled={!newSub.trim()} /></div>
+            </div>
+          </section>
+
+          <section className="task-editor-section" aria-label="Remarks"><TaskField icon="edit" label="Remarks"><textarea rows={3} value={v.remarks} maxLength={2000} onChange={e => up('remarks', e.target.value)} /></TaskField></section>
           </div>
           {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
         </div>

@@ -894,3 +894,22 @@ table.dense td,table.dense th{padding-top:var(--sp-2);padding-bottom:var(--sp-2)
 .stats.compact .stat-value{font-size:var(--fs-2xl);margin:0;line-height:1.2}
 .stats.compact .stat-foot{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stats.compact .stat-foot>span{display:block;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- governance: risks & interfaces ---- */
+.risk-shift{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.plain-fieldset{border:0;padding:0;margin:0;min-width:0}
+.plain-fieldset h3,.dialog-body>section h3{margin:var(--sp-5) 0 var(--sp-3)}
+.rating-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:var(--sp-4)}
+.rating-card{border:1px solid var(--line);border-radius:var(--r);padding:var(--sp-3) var(--sp-4);display:grid;gap:var(--sp-2)}
+.rating-head{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-2)}
+button.heat-cell{border:0;cursor:pointer;width:100%}
+button.heat-cell:disabled{cursor:default}
+button.heat-cell.on{outline:3px solid var(--ink);outline-offset:-3px}
+button.heat-cell:focus-visible{outline:3px solid var(--brand);outline-offset:1px}
+.heatmap.compact .heat-cell{height:2.5rem;font-size:var(--fs-md)}
+table.matrix.resp th[scope=row]{text-align:left;white-space:normal;min-width:18rem;font-weight:500;background:var(--surface)}
+.matrix.resp td{text-align:center;font-weight:600;font-size:var(--fs-sm)}
+table.matrix .matrix-section th{background:var(--soft);text-align:left;font-weight:700;font-size:var(--fs-sm);letter-spacing:.02em}
+.rasci-r{background:#dfe8fb;color:#23407a}.rasci-a{background:#f8dccd;color:#85431f}.rasci-s{background:#dff1e8;color:#216149}
+.rasci-c{background:#fcf0d2;color:#7c5410}.rasci-i{background:var(--soft);color:var(--muted)}
+body.dark .rasci-r{background:#26334f;color:#a9c2f5}body.dark .rasci-a{background:#4b3328;color:#f0b394}body.dark .rasci-s{background:#25423a;color:#8fd6b5}body.dark .rasci-c{background:#4a3f23;color:#e8c77f}

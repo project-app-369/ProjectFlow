@@ -3,7 +3,7 @@
  * function stubs (doGet, doPost, onOpen, setup, showToken) because Apps Script looks them up by name.
  */
 import { Api } from './api';
-import { SHEET } from './datasets';
+import { COLUMNS, SHEET } from './datasets';
 import { handle, handleBatch, type ApiRequest, type Envelope } from './router';
 import { noMailer, type Mailer } from './mailer';
 import { seedStore, type SeedData } from './seed';
@@ -39,11 +39,29 @@ function authorized(token: unknown) {
   return Boolean(expected) && token === expected;
 }
 
+/**
+ * The same idempotent work as the menu's Set up sheets, for an administrator over the API: creates missing sheets and
+ * runs the one-off upgrades (new columns, governance data). It never overwrites rows that are already there.
+ */
+function adminSetup(store: SheetsStore, user: unknown): Envelope {
+  const admin = store.readRows(SHEET.users, [...COLUMNS.users]).find(u => u.id === user && /^(yes|true)$/i.test(String(u.isAdmin)) && u.status !== 'Inactive');
+  if (!admin) return fail(403, 'ADMIN_ONLY', 'Only an administrator can run setup.');
+  try {
+    const seeded = seedStore(store, loadSeed());
+    return { ok: true, status: 200, data: { seeded, sheets: SpreadsheetApp.getActiveSpreadsheet().getSheets().map(s => s.getName()) } };
+  } catch (err) {
+    return fail(500, 'SETUP_FAILED', err instanceof Error ? `${err.message}${err.stack ? `\n${err.stack.split('\n').slice(0, 4).join('\n')}` : ''}` : String(err));
+  }
+}
+
 function respond(request: ApiRequest, token: unknown): Envelope {
   if (!authorized(token)) return fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.');
   const store = openStore();
   if (!store.sheetInfo(SHEET.projects)) return fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.');
-  return handle(new Api(store, () => new Date(), appsScriptMailer), request);
+  if (request.method === 'POST' && request.path === '/admin/setup') return adminSetup(store, request.user);
+  // Public web requests must never send email as the spreadsheet owner.
+  if (/\/remind(?:-due)?$/.test(request.path)) return fail(403, 'OWNER_ONLY', 'Email reminders are available only to the spreadsheet owner.');
+  return handle(new Api(store, () => new Date(), noMailer), request);
 }
 
 export function doGet(e: GoogleAppsScript.Events.DoGet) {
@@ -65,14 +83,14 @@ export function doPost(e: GoogleAppsScript.Events.DoPost) {
     const store = openStore();
     if (!store.sheetInfo(SHEET.projects)) return json(payload.requests.map(() => fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.')));
     const requests = payload.requests.slice(0, 20).map(q => ({ method: 'GET', path: q.path, user: payload.user }));
-    return json(handleBatch(new Api(store, () => new Date(), appsScriptMailer), requests));
+    return json(handleBatch(new Api(store, () => new Date(), noMailer), requests));
   }
   if (!payload.method || !payload.path) return json(fail(400, 'BAD_REQUEST', 'method and path are required.'));
   return json(respond({ method: payload.method, path: payload.path, body: payload.body, user: payload.user }, payload.token));
 }
 
 export function onOpen() {
-  SpreadsheetApp.getUi().createMenu('Project Flow').addItem('Set up sheets', 'setup').addItem('Show API token', 'showToken').addItem('Turn on daily issue reminders', 'installReminders').addToUi();
+  SpreadsheetApp.getUi().createMenu('Project Flow').addItem('Set up sheets', 'setup').addItem('Show API token', 'showToken').addToUi();
 }
 
 /** The daily job (a time trigger runs it): emails each person their issues and sub-tasks that are due soon or overdue. */

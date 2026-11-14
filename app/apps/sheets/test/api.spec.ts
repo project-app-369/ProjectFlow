@@ -26,7 +26,8 @@ describe('setup', () => {
       'Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
       'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
-      'Governance - Risks', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log', 'Governance - Interfaces', 'Governance - Interface points',
+      'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
+      'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
     ]);
   });
@@ -61,7 +62,7 @@ describe('identity and access', () => {
   });
 
   it('lets a client read but not write project records', () => {
-    expect(ok(call('GET', `${P}/risks`, undefined, CLIENT)).total).toBe(0);
+    expect(ok(call('GET', `${P}/risks`, undefined, CLIENT)).total).toBe(90);
     expect(err(call('POST', `${P}/risks`, { title: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
   });
 
@@ -80,8 +81,8 @@ describe('data endpoints match the NestJS API contract', () => {
     expect(d.overallProgress.phases[1]).toMatchObject({ plan: 41.24, actual: 43.65, reportDate: '2026-10-30' });
     expect(d.overallProgress.scurve.at(-1).actual).toBeNull();
     expect(d.milestones.total).toBe(48);
-    expect(d.risks).toMatchObject({ total: 0, active: 0 });
-    expect(d.interfaces).toMatchObject({ total: 0, open: 0 });
+    expect(d.risks).toMatchObject({ total: 90, active: 62, levels: ['High', 'Medium', 'Low'], top: 'High' });
+    expect(d.interfaces).toMatchObject({ total: 0, open: 0, points: 34, pointsOpen: 33 });
   });
 
   it('procurement list filters, sorts, pages and validates', () => {
@@ -120,7 +121,7 @@ describe('module registry and sheet links', () => {
     const by = (k: string) => modules.find((m: any) => m.key === k);
     expect(by('procurement.procurement-plan')).toMatchObject({ sheetCapable: true, sheet: { name: 'EPCIC - Procurement packages' } });
     expect(by('management.risks').sheet.name).toBe('Governance - Risks');
-    expect(by('interface.matrix').sheet.name).toBe('Governance - Interfaces');
+    expect(by('interface.matrix').sheet.name).toBe('Governance - Responsibility matrix');
     expect(by('management.lessons-learned')).toMatchObject({ sheetCapable: true, sheet: null });
     expect(by('management').sheetCapable).toBe(false);
     expect(by('dashboard').sheetCapable).toBe(false);
@@ -212,9 +213,9 @@ describe('projects', () => {
     expect(err(call('DELETE', `/projects/sttp2b`)).error.code).toBe('ARCHIVE_INSTEAD');
     expect(err(call('DELETE', `/projects/${id}`, undefined, MANAGER)).error.code).toBe('ADMIN_REQUIRED');
     ok(call('POST', `/projects/${id}/lifecycle`, { to: 'Draft' }));
-    ok(call('POST', `/projects/${id}/risks`, { title: 'A risk', category: 'Cost', owner: 'Me', likelihood: 2, impact: 2 }));
+    ok(call('POST', `/projects/${id}/risks`, { title: 'A risk', rbs: 'GEN', owner: 'Me' }));
     expect(err(call('DELETE', `/projects/${id}`)).error.code).toBe('PROJECT_HAS_RECORDS');
-    ok(call('DELETE', `/projects/${id}/risks/RSK-001`));
+    ok(call('DELETE', `/projects/${id}/risks/GEN-0001`));
     expect(call('DELETE', `/projects/${id}`)).toMatchObject({ ok: true, status: 204 });
     expect(err(call('GET', `/projects/${id}`)).status).toBe(404);
     expect(store.readRows(SHEET.memberships, COLUMNS.memberships).some(m => m.projectId === id)).toBe(false);
@@ -222,11 +223,12 @@ describe('projects', () => {
 
   it('keeps each project\'s records apart', () => {
     const id = ok(create()).id;
-    const body = { title: 'Same id, other project', category: 'Cost', owner: 'Me', likelihood: 3, impact: 3 };
-    expect(ok(call('POST', `${P}/risks`, body)).id).toBe('RSK-001');
-    expect(ok(call('POST', `/projects/${id}/risks`, body)).id).toBe('RSK-001');
-    ok(call('PATCH', `/projects/${id}/risks/RSK-001`, { status: 'Closed' }));
-    expect(ok(call('GET', `${P}/risks/RSK-001`)).status).toBe('Open');
+    const body = { title: 'Same id, other project', rbs: 'PEP-PRO', owner: 'Me' };
+    expect(ok(call('POST', `${P}/risks`, body)).id).toBe('PEP-PRO-0091');
+    expect(ok(call('POST', `/projects/${id}/risks`, body)).id).toBe('PEP-PRO-0001');
+    ok(call('PATCH', `/projects/${id}/risks/PEP-PRO-0001`, { status: 'Monitor', preProbability: 2, preCost: 2 }));
+    expect(ok(call('GET', `${P}/risks/PEP-PRO-0091`)).status).toBe('New');
+    expect(ok(call('GET', `/projects/${id}/risks/PEP-PRO-0001`)).status).toBe('Monitor');
     expect(ok(call('GET', `/projects/${id}/procurement/packages`)).total).toBe(0);
     expect(ok(call('GET', `/projects/${id}/dashboard`)).milestones.total).toBe(0);
   });
@@ -313,7 +315,7 @@ describe('milestones (reference data)', () => {
 
   it('refuses to delete a milestone a risk is linked to, and is read-only for clients', () => {
     const ms = ok(call('POST', `${P}/milestones`, { description: 'Linked' })).id;
-    ok(call('POST', `${P}/risks`, { title: 'Linked risk', category: 'Cost', owner: 'o', likelihood: 1, impact: 1, milestoneId: ms }));
+    ok(call('POST', `${P}/risks`, { title: 'Linked risk', rbs: 'PEP-PRO', owner: 'o', milestoneId: ms }));
     expect(err(call('DELETE', `${P}/milestones/${ms}`, undefined, MANAGER)).error.code).toBe('IN_USE');
     expect(err(call('POST', `${P}/milestones`, { description: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
   });
@@ -331,57 +333,104 @@ describe('milestones (reference data)', () => {
 });
 
 describe('risk management', () => {
-  const risk = { title: 'Late steel delivery', category: 'Supply chain', cause: 'Mill backlog', event: 'Plate arrives late', effect: 'Fabrication start slips', owner: 'Procurement lead', likelihood: 4, impact: 4, mitigation: 'Air-freight critical plate', trigger: 'No ETD by 15 Nov', reviewDate: '2026-11-20' };
+  const risk = {
+    title: 'Late steel delivery', rbs: 'PEP-PRO', owner: 'Procurement lead / Site manager', cause: 'Mill backlog', effect: 'Fabrication start slips',
+    status: 'Under assessment', preProbability: 3, preSchedule: 4, preCost: 2, planDate: '2026-11-20', mitigationCause: '1. Air-freight plate\n2. Second mill',
+  };
 
-  it('scores risks with the 5x5 matrix and keeps inherent and residual apart', () => {
-    const r = ok(call('POST', `${P}/risks`, { ...risk, residualLikelihood: 2, residualImpact: 3 }));
-    expect(r).toMatchObject({ id: 'RSK-001', status: 'Open', inherentScore: 16, inherentLevel: 'High', residualScore: 6, residualLevel: 'Medium', currentScore: 6, currentLevel: 'Medium', createdBy: ADMIN });
-    expect(ok(call('POST', `${P}/risks`, { ...risk, likelihood: 5, impact: 4 }))).toMatchObject({ id: 'RSK-002', inherentScore: 20, currentLevel: 'Extreme', residualScore: null });
-    expect(ok(call('POST', `${P}/risks`, { ...risk, likelihood: 1, impact: 2 })).currentLevel).toBe('Low');
+  it('loads the project register, its 4 x 4 matrix and RBS from the workbook', () => {
+    const list = ok(call('GET', `${P}/risks?pageSize=200`));
+    expect(list.total).toBe(90);
+    expect(list.facets.levels).toEqual(['High', 'Medium', 'Low']);
+    expect(list.facets.statuses).toEqual(['New', 'Firmed', 'Under assessment', 'Under resolving', 'Monitor', 'Closed']);
+    const first = ok(call('GET', `${P}/risks/PEP-DEN-0001`));
+    // Probable (4) x worst of schedule/cost/scope = Moderate (3) = 12, a red cell; after mitigation Unlikely x Minor = 4, green.
+    expect(first).toMatchObject({ status: 'Closed', category: 'Project Executional', discipline: 'Detail Engineering', preScore: 12, preLevel: 'High', preWorst: ['Schedule', 'Cost', 'Scope'], postScore: 4, postLevel: 'Low', currentLevel: 'Low', owners: ['CV Phong', 'DH Tien'] });
+    expect(first.actions.length).toBe(3);
+    const opts = ok(call('GET', `${P}/risks/options`));
+    expect(opts.matrix).toMatchObject({ version: 'Project matrix (4 x 4)', probabilityLabels: ['Rare', 'Unlikely', 'Possible', 'Probable'], severityLabels: ['Negligible', 'Minor', 'Moderate', 'Major'], levels: ['Low', 'Medium', 'High'] });
+    // The level is the cell's colour, not a score threshold: 4 is green at Unlikely x Minor but yellow at Probable x Negligible.
+    expect(opts.matrix.cells[1][1]).toBe('Low');
+    expect(opts.matrix.cells[3][0]).toBe('Medium');
+    expect(opts.breakdown.find((b: any) => b.code === 'PEP-T&I')).toMatchObject({ categoryName: 'Project Executional', disciplineName: 'Transportation & Installation' });
   });
 
-  it('validates input', () => {
-    expect(err(call('POST', `${P}/risks`, { ...risk, likelihood: 6 })).status).toBe(400);
+  it('rates each impact dimension, takes the worst, and numbers new risks after the register', () => {
+    const r = ok(call('POST', `${P}/risks`, risk));
+    expect(r).toMatchObject({ id: 'PEP-PRO-0091', no: 91, discipline: 'Commercial/ Procurement', preSeverity: 4, preScore: 12, preLevel: 'High', preWorst: ['Schedule'], postLevel: null, currentLevel: 'High', createdBy: ADMIN });
+    expect(r.owners).toEqual(['Procurement lead', 'Site manager']);
+    const after = ok(call('PATCH', `${P}/risks/${r.id}`, { postProbability: 2, postSchedule: 2, status: 'Monitor' }));
+    expect(after).toMatchObject({ status: 'Monitor', postScore: 4, postLevel: 'Low', currentLevel: 'Low', preLevel: 'High' });
+  });
+
+  it('validates the rating, the RBS and the lifecycle conditions', () => {
+    expect(err(call('POST', `${P}/risks`, { ...risk, preProbability: 5 })).error.issues).toMatchObject([{ path: 'preProbability', message: 'Use 1 to 4.' }]);
+    expect(err(call('POST', `${P}/risks`, { ...risk, rbs: 'XXX-YYY' })).error.issues).toMatchObject([{ path: 'rbs' }]);
+    expect(err(call('POST', `${P}/risks`, { ...risk, preSchedule: null, preCost: null })).error.issues[0]).toMatchObject({ path: 'preProbability', message: expect.stringMatching(/at least one impact/) });
+    expect(err(call('POST', `${P}/risks`, { ...risk, preProbability: null, preSchedule: null, preCost: null })).error.issues[0].message).toMatch(/before it moves beyond Firmed/);
+    expect(ok(call('POST', `${P}/risks`, { ...risk, status: 'New', preProbability: null, preSchedule: null, preCost: null })).preLevel).toBeNull();
+    expect(err(call('POST', `${P}/risks`, { ...risk, status: 'Closed' })).error.issues).toMatchObject([{ path: 'remark' }]);
     expect(err(call('POST', `${P}/risks`, { ...risk, title: '' })).status).toBe(400);
-    expect(err(call('POST', `${P}/risks`, { ...risk, category: 'Whatever' })).status).toBe(400);
-    expect(err(call('POST', `${P}/risks`, { ...risk, residualLikelihood: 2 })).error.issues).toMatchObject([{ path: 'residualLikelihood' }]);
     expect(err(call('POST', `${P}/risks`, { ...risk, milestoneId: 'NOPE' })).error.issues).toMatchObject([{ path: 'milestoneId' }]);
   });
 
-  it('links a milestone and flags overdue reviews against the cut-off', () => {
-    const r = ok(call('POST', `${P}/risks`, { ...risk, milestoneId: '03-M-1020', reviewDate: '2026-10-01' }));
-    expect(r.milestone).toBe('First Steel Cut for Jacket');
-    expect(r.reviewOverdue).toBe(true);
-    ok(call('PATCH', `${P}/risks/${r.id}`, { status: 'Closed' }));
-    expect(ok(call('GET', `${P}/risks/${r.id}`)).reviewOverdue).toBe(false);
+  it('flags a late response and an overdue review against the cut-off, and links a milestone', () => {
+    const r = ok(call('POST', `${P}/risks`, { ...risk, planDate: '2026-10-01', reviewDate: '2026-10-15', milestoneId: '03-M-1020' }));
+    expect(r).toMatchObject({ responseOverdue: true, reviewOverdue: true, milestone: 'First Steel Cut for Jacket' });
+    expect(ok(call('PATCH', `${P}/risks/${r.id}`, { actualDate: '2026-10-20', actualActions: 'Plate air-freighted' })).responseOverdue).toBe(false);
+    expect(ok(call('PATCH', `${P}/risks/${r.id}`, { status: 'Closed' })).reviewOverdue).toBe(false);
   });
 
-  it('updates, filters, sorts and summarises with a heatmap', () => {
-    ok(call('POST', `${P}/risks`, { ...risk, residualLikelihood: 2, residualImpact: 3 }));
-    ok(call('POST', `${P}/risks`, { ...risk, title: 'Weather window', category: 'Schedule', likelihood: 5, impact: 4 }));
-    const closed = ok(call('POST', `${P}/risks`, { ...risk, title: 'Old risk', likelihood: 1, impact: 1, status: 'Closed' }));
-    expect(ok(call('PATCH', `${P}/risks/RSK-001`, { status: 'Mitigating', owner: 'Site manager' }))).toMatchObject({ status: 'Mitigating', owner: 'Site manager', likelihood: 4 });
-    expect(err(call('PATCH', `${P}/risks/RSK-001`, { residualImpact: null })).status).toBe(400);
-    expect(ok(call('GET', `${P}/risks?level=Extreme`)).items.map((r: any) => r.title)).toEqual(['Weather window']);
-    expect(ok(call('GET', `${P}/risks?category=Schedule`)).total).toBe(1);
-    expect(ok(call('GET', `${P}/risks?q=steel`)).total).toBe(1);
-    expect(ok(call('GET', `${P}/risks?sort=score&order=desc`)).items[0].title).toBe('Weather window');
-    const s = ok(call('GET', `${P}/risks/summary`));
-    expect(s).toMatchObject({ total: 3, active: 2, byStatus: { Mitigating: 1, Open: 1, Closed: 1 }, byLevel: { Extreme: 1, Medium: 1, High: 0, Low: 0 } });
-    expect(s.heatmap.version).toBe('v1');
-    expect(s.heatmap.inherent[3][3]).toBe(1);
-    expect(s.heatmap.current[1][2]).toBe(1);
-    expect(s.heatmap.current[4][3]).toBe(1);
-    expect(ok(call('GET', `${P}/risks.csv`)).csv).toContain('Weather window');
-    expect(closed.currentLevel).toBe('Low');
+  it('tracks mitigation actions with owners and due dates', () => {
+    const r = ok(call('POST', `${P}/risks`, risk));
+    let d = ok(call('POST', `${P}/risks/${r.id}/actions`, { action: 'Air-freight plate', owner: 'Logistics', dueDate: '2026-11-01' }));
+    expect(d).toMatchObject({ actionsTotal: 1, actionsOverdue: 1, actions: [{ action: 'Air-freight plate', done: false, overdue: true }] });
+    const aid = d.actions[0].id;
+    d = ok(call('PATCH', `${P}/risks/${r.id}/actions/${aid}`, { done: true }));
+    expect(d).toMatchObject({ actionsDone: 1, actionsOverdue: 0, actions: [{ done: true, doneDate: '2026-11-08' }] });
+    expect(ok(call('DELETE', `${P}/risks/${r.id}/actions/${aid}`)).actionsTotal).toBe(0);
+    expect(err(call('POST', `${P}/risks/${r.id}/actions`, { action: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
   });
 
-  it('lets only managers delete', () => {
-    ok(call('POST', `${P}/risks`, risk));
-    expect(err(call('DELETE', `${P}/risks/RSK-001`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
-    expect(ok(call('POST', `${P}/risks`, risk, MEMBER)).createdBy).toBe(MEMBER);
-    expect(call('DELETE', `${P}/risks/RSK-001`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
-    expect(err(call('GET', `${P}/risks/RSK-001`)).status).toBe(404);
+  it('filters by level, owner, flag, heatmap cell and response window, and sorts by level', () => {
+    const high = ok(call('GET', `${P}/risks?level=High&pageSize=200`));
+    expect(high.items.every((r: any) => r.currentLevel === 'High')).toBe(true);
+    expect(ok(call('GET', `${P}/risks?owner=TV Minh&pageSize=200`)).items.every((r: any) => r.owners.includes('TV Minh'))).toBe(true);
+    expect(ok(call('GET', `${P}/risks?flag=unrated&pageSize=200`)).items.every((r: any) => r.active && !r.preLevel)).toBe(true);
+    const hm = ok(call('GET', `${P}/risks/heatmap`));
+    expect(hm.matrix.cells).toHaveLength(4);
+    expect(ok(call('GET', `${P}/risks?cell=3-3`)).total).toBe(hm.current[2][2]);
+    expect(ok(call('GET', `${P}/risks?cell=3-3&basis=pre`)).total).toBe(hm.pre[2][2]);
+    const ins = ok(call('GET', `${P}/risks/insights`));
+    expect(ins.cards.map((c: any) => c.label)).toEqual(['Active risks', 'High now', 'Response overdue', 'Awaiting post-mitigation', 'Not rated', 'Score reduced']);
+    expect(ins.cards[0].value).toBe(62);
+    expect(ins.strip.boxes.map((b: any) => b.value).reduce((a: number, b: number) => a + b, 0)).toBe(90);
+    expect(ok(call('GET', `${P}/risks?within=overdue`)).total).toBe(ins.lookAhead.boxes[0].value);
+    expect(ok(call('GET', `${P}/risks?flag=response-overdue`)).total).toBe(ins.cards[2].value);
+    expect(ok(call('GET', `${P}/risks?sort=currentRank&order=desc`)).items[0].currentLevel).toBe('High');
+    expect(ok(call('GET', `${P}/risks.csv?q=topsides`)).csv).toContain('Raise of Topsides elevation');
+  });
+
+  it('reads hand-edited cells by meaning: status prefixes, rating words, several owners', () => {
+    store.updateRow(SHEET.risks, COLUMNS.risks, 'id', 'PEP-DEN-0001', { status: '5-monitor', preProbability: 'possible' as never, preSchedule: 'MAJOR' as never, owner: 'A Nguyen & B Tran' }, { projectId: 'sttp2b' });
+    expect(ok(call('GET', `${P}/risks/PEP-DEN-0001`))).toMatchObject({ status: 'Monitor', preProbability: 3, preSchedule: 4, preScore: 12, owners: ['A Nguyen', 'B Tran'] });
+  });
+
+  it('falls back to the 5 x 5 matrix v1 for a project without its own', () => {
+    const id = ok(call('POST', '/projects', { code: 'P-V1', name: 'No matrix', lifecycle: 'Active' })).id;
+    const r = ok(call('POST', `/projects/${id}/risks`, { ...risk, rbs: 'ANY', preProbability: 5, preSchedule: 4 }));
+    expect(r).toMatchObject({ id: 'ANY-0001', preScore: 20, preLevel: 'Extreme' });
+    expect(ok(call('GET', `/projects/${id}/risks/options`)).matrix.version).toBe('v1 (5 x 5)');
+  });
+
+  it('lets only managers delete, and removes the actions with the risk', () => {
+    const r = ok(call('POST', `${P}/risks`, risk, MEMBER));
+    expect(r.createdBy).toBe(MEMBER);
+    ok(call('POST', `${P}/risks/${r.id}/actions`, { action: 'x' }));
+    expect(err(call('DELETE', `${P}/risks/${r.id}`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
+    expect(call('DELETE', `${P}/risks/${r.id}`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
+    expect(err(call('GET', `${P}/risks/${r.id}`)).status).toBe(404);
+    expect(store.readRows(SHEET.riskActions, COLUMNS.riskActions).some(a => a.riskId === r.id)).toBe(false);
   });
 
   it('is unavailable when the module is switched off', () => {
@@ -395,6 +444,54 @@ describe('interface management', () => {
   const iface = { title: 'Topside to jacket boundary loads', type: 'Technical', originator: 'Topside fabricator', receiver: 'Jacket fabricator', coordinator: 'Interface lead', discipline: 'Structural', needDate: '2026-11-30' };
   const create = (extra: object = {}) => ok(call('POST', `${P}/interfaces`, { ...iface, ...extra }));
   const move = (id: string, to: string) => call('POST', `${P}/interfaces/${id}/transition`, { to });
+  const point = { description: 'Confirm flange rating at the tie-in', originator: 'TEN', target: 'OIC', discipline: 'DE', targetDate: '2026-11-01' };
+  const movePoint = (id: string, to: string, extra: object = {}) => call('POST', `${P}/interface-points/${encodeURIComponent(id)}/transition`, { to, ...extra });
+
+  it('loads the interface points register, parties and both matrices from the workbooks', () => {
+    const list = ok(call('GET', `${P}/interface-points?pageSize=200`));
+    expect(list.total).toBe(34);
+    expect(ok(call('GET', `${P}/interface-points/IP-T%26I-0001`))).toMatchObject({ discipline: 'T&I', originator: 'TEN', target: 'OIC', status: 'Open', queryDate: '2026-05-06', ageDays: 184 });
+    // The receiving party comes from the IDR number; the subject that was in the target column becomes the title.
+    expect(ok(call('GET', `${P}/interface-points/IP-DE-0026`))).toMatchObject({ target: 'PVEP-CL', title: 'X-Mass Tree Data', status: 'Responded', overdue: true });
+    expect(ok(call('GET', `${P}/interfaces/parties`)).find((p: any) => p.code === 'TEN').name).toBe('Technip Energy');
+    const resp = ok(call('GET', `${P}/interfaces/responsibility`));
+    expect(resp.facilities.map((f: any) => f.facility)).toContain('CGF Jacket');
+    expect(resp.rows[0]).toMatchObject({ section: 'Project Management', level: 1, cells: { 'CGF Platform': 'CTR', 'Brownfield WHP-C Well Tie-in': 'CPY' } });
+    const rasci = ok(call('GET', `${P}/interfaces/rasci`));
+    expect(rasci.matrices.map((m: any) => m.name)).toEqual(['LQ Module #1 & #2', 'CGF Jacket & Link Bridge']);
+    expect(rasci.matrices[0].rows[0]).toMatchObject({ activity: 'Project Management', roles: { CTR: 'R&A', CPY: 'C' } });
+  });
+
+  it('raises points with a register-style number, without needing an interface', () => {
+    const p = ok(call('POST', `${P}/interface-points`, point));
+    expect(p).toMatchObject({ id: 'IP-DE-0035', status: 'Open', overdue: true, queryDate: '2026-11-08', interfaceId: null, title: 'Confirm flange rating at the tie-in', allowedNext: ['Responded', 'Resolved'] });
+    expect(err(call('POST', `${P}/interface-points`, { ...point, target: 'ten' })).error.issues).toMatchObject([{ path: 'target' }]);
+    expect(err(call('POST', `${P}/interface-points`, { ...point, interfaceId: 'INT-999' })).status).toBe(400);
+  });
+
+  it('moves points through their lifecycle only by transition, needing a response', () => {
+    const { id } = ok(call('POST', `${P}/interface-points`, point));
+    expect(ok(call('PATCH', `${P}/interface-points/${id}`, { status: 'Closed', action: 'OIC to confirm' }))).toMatchObject({ status: 'Open', action: 'OIC to confirm' });
+    expect(err(movePoint(id, 'Responded')).error.code).toBe('RESPONSE_REQUIRED');
+    expect(err(movePoint(id, 'Closed')).error.code).toBe('INVALID_TRANSITION');
+    expect(ok(movePoint(id, 'Responded', { resolution: 'Rating is class 600' }))).toMatchObject({ status: 'Responded', resolution: 'Rating is class 600' });
+    expect(ok(movePoint(id, 'Resolved'))).toMatchObject({ status: 'Resolved', resolvedDate: '2026-11-08', settled: true, overdue: false, ageDays: 0 });
+    expect(ok(movePoint(id, 'Open'))).toMatchObject({ status: 'Open', resolvedDate: null });
+  });
+
+  it('summarises points and filters by party, window, age and status', () => {
+    const ins = ok(call('GET', `${P}/interface-points/insights`));
+    expect(ins.cards.map((c: any) => c.label)).toEqual(['Open points', 'Overdue', 'Awaiting response', 'Awaiting acceptance', 'No target date', 'Average age']);
+    expect(ins.cards[0].value).toBe(33);
+    expect(ok(call('GET', `${P}/interface-points?overdue=true`)).total).toBe(ins.cards[1].value);
+    expect(ok(call('GET', `${P}/interface-points?within=overdue`)).total).toBe(ins.lookAhead.boxes[0].value);
+    expect(ok(call('GET', `${P}/interface-points?target=OIC`)).items.every((p: any) => p.target === 'OIC')).toBe(true);
+    const age = ins.charts.find((c: any) => c.filterKey === 'age');
+    const bars = age.series[0].data.map((n: number, i: number) => n + age.series[1].data[i]);
+    expect(ok(call('GET', `${P}/interface-points?age=${age.filterValues[4]}`)).total).toBe(bars[4]);
+    expect(ok(call('GET', `${P}/interface-points?status=Resolved`)).total).toBe(1);
+    expect(ok(call('GET', `${P}/interface-points.csv?q=bridge`)).csv).toContain('IP-T&I-0001');
+  });
 
   it('creates interfaces as Identified with a sequential reference', () => {
     expect(create()).toMatchObject({ id: 'INT-001', status: 'Identified', overdue: false, pointsTotal: 0, allowedNext: ['Assigned'] });
@@ -428,61 +525,60 @@ describe('interface management', () => {
     expect(err(call('POST', `${P}/interfaces/${id}/transition`, { to: 'Nowhere' })).status).toBe(400);
   });
 
-  it('keeps points under their interface and blocks closure while any is unresolved', () => {
+  it('groups points under an interface and blocks its closure while any is unresolved', () => {
     const { id } = create();
     ['Assigned', 'Information requested'].forEach(s => ok(move(id, s)));
     ok(call('PATCH', `${P}/interfaces/${id}`, { response: 'Done' }));
     ['Responded', 'Under review', 'Agreed'].forEach(s => ok(move(id, s)));
-    const pt = ok(call('POST', `${P}/interface-points`, { interfaceId: id, title: 'Confirm flange rating', owner: 'Piping lead', due: '2026-11-01' }));
-    expect(pt).toMatchObject({ id: 'IP-001', status: 'Open', overdue: true });
-    expect(err(move(id, 'Closed')).error).toMatchObject({ code: 'POINTS_UNRESOLVED', message: '1 interface point is not accepted or closed yet.' });
-    expect(ok(call('GET', `${P}/interfaces/${id}`))).toMatchObject({ pointsTotal: 1, pointsOpen: 1, points: [{ id: 'IP-001' }] });
-    ok(call('PATCH', `${P}/interface-points/IP-001`, { status: 'Accepted' }));
+    const pt = ok(call('POST', `${P}/interface-points`, { ...point, interfaceId: id }));
+    expect(pt).toMatchObject({ interfaceId: id, interfaceTitle: iface.title });
+    expect(err(move(id, 'Closed')).error).toMatchObject({ code: 'POINTS_UNRESOLVED', message: '1 interface point is not resolved or closed yet.' });
+    expect(ok(call('GET', `${P}/interfaces/${id}`))).toMatchObject({ pointsTotal: 1, pointsOpen: 1, points: [{ id: pt.id }] });
+    ok(movePoint(pt.id, 'Resolved', { resolution: 'Agreed' }));
     expect(ok(move(id, 'Closed')).status).toBe('Closed');
-    expect(err(call('POST', `${P}/interface-points`, { interfaceId: id, title: 'Late point', owner: 'x' })).error.code).toBe('INTERFACE_CLOSED');
-    expect(err(call('POST', `${P}/interface-points`, { interfaceId: 'INT-999', title: 'x', owner: 'x' })).status).toBe(400);
+    expect(err(call('POST', `${P}/interface-points`, { ...point, interfaceId: id })).error.code).toBe('INTERFACE_CLOSED');
   });
 
-  it('filters the register and lists points across interfaces', () => {
-    const a = create();
+  it('filters the register', () => {
+    create();
     create({ title: 'Other', originator: 'Vendor A', receiver: 'Vendor B', type: 'Physical', needDate: '2026-10-01' });
-    ok(call('POST', `${P}/interface-points`, { interfaceId: a.id, title: 'P1', owner: 'o1' }));
     expect(ok(call('GET', `${P}/interfaces?party=vendor a`)).total).toBe(1);
     expect(ok(call('GET', `${P}/interfaces?type=Physical`)).total).toBe(1);
     expect(ok(call('GET', `${P}/interfaces?overdue=true`)).items.map((i: any) => i.title)).toEqual(['Other']);
     expect(ok(call('GET', `${P}/interfaces?q=boundary`)).total).toBe(1);
     expect(ok(call('GET', `${P}/interfaces`)).facets.parties).toEqual(['Jacket fabricator', 'Topside fabricator', 'Vendor A', 'Vendor B']);
-    expect(ok(call('GET', `${P}/interface-points?interfaceId=${a.id}`)).total).toBe(1);
-    expect(ok(call('GET', `${P}/interface-points?status=Closed`)).total).toBe(0);
     expect(ok(call('GET', `${P}/interfaces.csv`)).csv).toContain('Topside to jacket');
   });
 
-  it('derives the party matrix and summary from the register', () => {
-    create(); create({ title: 'Again' });
-    create({ title: 'Reverse', originator: 'Jacket fabricator', receiver: 'Topside fabricator', needDate: '2026-10-01' });
+  it('derives the party matrix from the points and the register', () => {
+    create({ originator: 'TEN', receiver: 'OIC' });
     const m = ok(call('GET', `${P}/interfaces/matrix`));
-    expect(m.parties).toEqual(['Jacket fabricator', 'Topside fabricator']);
-    expect(m.total).toBe(3);
-    expect(m.cells.find((c: any) => c.originator === 'Topside fabricator')).toMatchObject({ total: 2, open: 2, overdue: 0, settled: 0 });
-    expect(m.cells.find((c: any) => c.originator === 'Jacket fabricator')).toMatchObject({ total: 1, overdue: 1 });
-    expect(ok(call('GET', `${P}/interfaces/summary`))).toMatchObject({ total: 3, open: 3, overdue: 1, pointsOpen: 0 });
+    expect(m.total).toBe(34);
+    expect(m.interfaces).toBe(1);
+    const cell = m.cells.find((c: any) => c.originator === 'TEN' && c.receiver === 'OIC');
+    expect(cell).toMatchObject({ interfaces: 1 });
+    expect(cell.total).toBe(ok(call('GET', `${P}/interface-points?originator=TEN&target=OIC`)).total);
+    expect(m.names.TEN).toBe('Technip Energy');
+    expect(ok(call('GET', `${P}/interfaces/summary`))).toMatchObject({ total: 1, open: 1, points: 34, pointsOpen: 33 });
   });
 
   it('deletes only interfaces without points, and only as a manager', () => {
     const { id } = create();
-    ok(call('POST', `${P}/interface-points`, { interfaceId: id, title: 'P', owner: 'o' }));
+    const pt = ok(call('POST', `${P}/interface-points`, { ...point, interfaceId: id }));
     expect(err(call('DELETE', `${P}/interfaces/${id}`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
     expect(err(call('DELETE', `${P}/interfaces/${id}`)).error.code).toBe('HAS_POINTS');
-    expect(err(call('DELETE', `${P}/interface-points/IP-001`, undefined, MEMBER)).status).toBe(403);
-    ok(call('DELETE', `${P}/interface-points/IP-001`));
+    expect(err(call('DELETE', `${P}/interface-points/${pt.id}`, undefined, MEMBER)).status).toBe(403);
+    ok(call('DELETE', `${P}/interface-points/${pt.id}`));
     expect(call('DELETE', `${P}/interfaces/${id}`)).toMatchObject({ ok: true, status: 204 });
   });
 
-  it('shares one sheet between the register and the matrix', () => {
+  it('links each module to its sheet and guards the matrix module', () => {
     const { modules } = ok(call('GET', `${P}/modules`));
     expect(modules.find((m: any) => m.key === 'interface.points').sheet.name).toBe('Governance - Interface points');
+    expect(modules.find((m: any) => m.key === 'interface.matrix').sheet.name).toBe('Governance - Responsibility matrix');
     ok(call('PUT', `${P}/modules/interface.matrix`, { state: 'Disabled' }));
     expect(err(call('GET', `${P}/interfaces/matrix`)).error.code).toBe('MODULE_DISABLED');
+    expect(err(call('GET', `${P}/interfaces/rasci`)).error.code).toBe('MODULE_DISABLED');
     expect(ok(call('GET', `${P}/interfaces`)).total).toBe(0);
   });
 });
@@ -622,14 +718,15 @@ describe('cut-off snapshots', () => {
   });
 
   it('reads the saved data, not the live data, with ?asOf and reports the snapshot cut-off', () => {
-    ok(call('POST', `${P}/risks`, { title: 'Before', category: 'Cost', owner: 'Me', likelihood: 3, impact: 3 }));
+    ok(call('POST', `${P}/risks`, { title: 'Before', rbs: 'PEP-PRO', owner: 'Me' }));
     ok(save({ cutoff: '2026-10-30' }));
-    ok(call('POST', `${P}/risks`, { title: 'After', category: 'Cost', owner: 'Me', likelihood: 3, impact: 3 }));
+    ok(call('POST', `${P}/risks`, { title: 'After', rbs: 'PEP-PRO', owner: 'Me' }));
     store.updateRow(SHEET.procurement, COLUMNS.procurement, 'id', 'PR-001', { status: 'Changed live' }, { projectId: 'sttp2b' });
 
-    expect(ok(call('GET', `${P}/risks`)).total).toBe(2);
-    expect(ok(call('GET', `${P}/risks?asOf=2026-10-30`)).items.map((r: any) => r.title)).toEqual(['Before']);
-    expect(ok(call('GET', `${P}/risks/summary?asOf=2026-10-30`)).total).toBe(1);
+    expect(ok(call('GET', `${P}/risks`)).total).toBe(92);
+    expect(ok(call('GET', `${P}/risks?asOf=2026-10-30&flag=active&q=e`)).items.map((r: any) => r.title)).toContain('Before');
+    expect(ok(call('GET', `${P}/risks?asOf=2026-10-30&pageSize=200`)).items.map((r: any) => r.title)).not.toContain('After');
+    expect(ok(call('GET', `${P}/risks/summary?asOf=2026-10-30`)).total).toBe(91);
     expect(ok(call('GET', `${P}/procurement/packages?pageSize=200&asOf=2026-10-30`)).items.find((p: any) => p.id === 'PR-001').status).not.toBe('Changed live');
     expect(ok(call('GET', `${P}/procurement/packages?pageSize=200`)).items.find((p: any) => p.id === 'PR-001').status).toBe('Changed live');
 
@@ -654,7 +751,7 @@ describe('cut-off snapshots', () => {
 
   it('is read-only and strict about the date', () => {
     ok(save());
-    expect(err(call('POST', `${P}/risks?asOf=2026-10-30`, { title: 'x', category: 'Cost', owner: 'o', likelihood: 1, impact: 1 })).error.code).toBe('READ_ONLY_SNAPSHOT');
+    expect(err(call('POST', `${P}/risks?asOf=2026-10-30`, { title: 'x', rbs: 'PEP-PRO', owner: 'o' })).error.code).toBe('READ_ONLY_SNAPSHOT');
     expect(err(call('GET', `${P}/risks?asOf=2026-01-01`)).error.code).toBe('SNAPSHOT_NOT_FOUND');
     expect(err(call('GET', `${P}/risks?asOf=yesterday`)).status).toBe(400);
     expect(err(call('GET', `${P}/risks?asOf=2026-10-30`, undefined, 'u-nobody')).status).toBe(401);

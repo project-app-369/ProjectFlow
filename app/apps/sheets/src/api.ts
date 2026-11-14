@@ -1,6 +1,8 @@
 import { isEffective } from '../../api/src/registry/catalog';
 import { AdminService } from './admin-service';
+import { InterfacesService } from './interfaces-service';
 import { RegistersService } from './registers-service';
+import { RisksService } from './risks-service';
 import { Service } from './service';
 import { BudgetService } from './budget-service';
 import { IssuesService } from './issues-service';
@@ -22,6 +24,8 @@ export class Api {
   readonly knowledge: KnowledgeService;
   readonly proc: ProcurementOps;
   readonly issues: IssuesService;
+  readonly risks: RisksService;
+  readonly interfaces: InterfacesService;
 
   constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer) {
     this.svc = new Service(store, clock);
@@ -33,6 +37,8 @@ export class Api {
     this.knowledge = new KnowledgeService(this.svc);
     this.proc = new ProcurementOps(this.svc);
     this.issues = new IssuesService(this.svc, mailer);
+    this.risks = new RisksService(this.svc);
+    this.interfaces = new InterfacesService(this.svc);
   }
 
   /**
@@ -50,8 +56,8 @@ export class Api {
       procurement: on('procurement.procurement-plan') ? this.svc.procurementSummary(projectId) : null,
       expediting: on('procurement.expediting.vendor-overview') ? this.svc.expeditingSummary(projectId) : null,
       milestones: on('planning.milestones') ? this.reg.milestoneSummary(projectId) : null,
-      risks: on('management.risks') ? this.reg.riskSummary(projectId) : null,
-      interfaces: on('interface.register') ? this.reg.interfaceSummary(projectId) : null,
+      risks: on('management.risks') ? this.risks.summary(projectId) : null,
+      interfaces: on('interface.register') ? this.interfaces.interfaceSummary(projectId) : null,
     };
   }
 }

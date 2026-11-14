@@ -68,12 +68,18 @@ Rows are the number the seed loads. “Columns” lists every column in the orde
 | `EPCIC - Procurement concerns` | 22 | `projectId`, `id`, `packageCode`, `type`, `title`, `description`, `severity`, `area`, `owner`, `raisedDate` (date), `dueDate` (date), `status`, `action`, `source`, `sourceRef`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
 | `EPCIC - Procurement S-curves` | 17 | `projectId`, `id`, `facility`, `scope`, `start` (date), `plan`, `forecast`, `actual`, `updatedAt` (datetime) |
 | `EPCIC - Phase progress` | 6 | `projectId`, `id`, `phase`, `plan` (number), `actual` (number), `reportDate` (date), `updatedAt` (datetime) |
-| `Governance - Risks` | 0 | `projectId`, `id`, `title`, `category`, `cause`, `event`, `effect`, `owner`, `likelihood` (number), `impact` (number), `mitigation`, `trigger`, `residualLikelihood` (number), `residualImpact` (number), `reviewDate` (date), `status`, `milestoneId`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
+| `Governance - Risks` | 90 | `projectId`, `id`, `no` (number), `status`, `rbs`, `category`, `discipline`, `title`, `description`, `cause`, `effect`, `owner`, `recordDate` (date), `preProbability`, `preSchedule`, `preCost`, `preScope`, `preQuality`, `strategy`, `mitigationCause`, `mitigationEffect`, `planDate` (date), `actualActions`, `actualDate` (date), `postProbability`, `postSchedule`, `postCost`, `postScope`, `postQuality`, `remark`, `external`, `reviewDate` (date), `milestoneId`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
+| `Governance - Risk actions` | derived | `projectId`, `id`, `riskId`, `action`, `owner`, `dueDate` (date), `doneDate` (date), `createdAt` (datetime), `updatedAt` (datetime) |
+| `Governance - Risk matrix` | 16 | `projectId`, `probability` (number), `probabilityLabel`, `severity` (number), `severityLabel`, `level` |
+| `Governance - Risk breakdown` | 37 | `projectId`, `code`, `category`, `categoryName`, `discipline`, `disciplineName` |
 | `Governance - Issues` | 38 | `projectId`, `id`, `title`, `description`, `priority`, `discipline`, `status`, `startDate` (date), `dueDate` (date), `completedDate` (date), `nextAction`, `remarks`, `pics`, `source`, `lastRemindedOn` (date), `createdAt` (datetime), `updatedAt` (datetime), `createdBy` |
 | `Governance - Issue sub-tasks` | 0 | `projectId`, `id`, `issueId`, `title`, `pic`, `dueDate` (date), `done`, `position` (number), `lastRemindedOn` (date), `updatedAt` (datetime) |
 | `Governance - Issue log` | 38 | `projectId`, `id`, `issueId`, `at` (datetime), `actor`, `action`, `field`, `fromValue`, `toValue`, `note` |
 | `Governance - Interfaces` | 0 | `projectId`, `id`, `title`, `type`, `originator`, `receiver`, `coordinator`, `discipline`, `boundary`, `requiredInput`, `requiredOutput`, `needDate` (date), `response`, `acceptance`, `evidence`, `status`, `milestoneId`, `createdAt` (datetime), `updatedAt` (datetime) |
-| `Governance - Interface points` | 0 | `projectId`, `id`, `interfaceId`, `title`, `owner`, `due` (date), `status`, `response`, `createdAt` (datetime), `updatedAt` (datetime) |
+| `Governance - Interface points` | 34 | `projectId`, `id`, `interfaceId`, `title`, `description`, `owner`, `workPackage`, `discipline`, `originator`, `target`, `action`, `queryDate` (date), `targetDate` (date), `reference`, `status`, `resolution`, `resolvedDate` (date), `resolvedDocument`, `remarks`, `createdAt` (datetime), `updatedAt` (datetime) |
+| `Governance - Interface parties` | 24 | `projectId`, `code`, `name` |
+| `Governance - Responsibility matrix` | 425 | `projectId`, `order` (number), `level` (number), `section`, `ref`, `activity`, `workPackage`, `facility`, `party`, `remark` |
+| `Governance - RASCI` | 340 | `projectId`, `matrix`, `order` (number), `section`, `ref`, `activity`, `phase`, `party`, `role`, `remark` |
 | `Reports - Knowledge` | 4 | `projectId`, `id`, `domain`, `category`, `title`, `summary`, `body`, `tags`, `sources`, `status`, `createdAt` (datetime), `updatedAt` (datetime), `createdBy`, `updatedBy` |
 | `Reports - Cut-off snapshots` | 0 | `projectId`, `cutoff` (date), `createdAt` (datetime), `createdBy`, `note`, `rowCount` (number) |
 | `Reports - Snapshot data` | 0 | `projectId`, `cutoff` (date), `dataset`, `part` (number), `json` |
@@ -141,7 +147,7 @@ Run an extractor with `PYTHONIOENCODING=utf-8 python app/apps/api/seed/<name>.py
 
 ### 5.1 Not loaded
 
-The stock ledger (`Sheet1`, 6,288 rows) and the PTSC-MSV, PTSC-No MSV and HHI sheets of the stock report; the received-shipment lists of the material summary; the item-level expediting sheets (`R1` to `R5`); the weekly and the S-curve data by work package and phase in the progress report; the construction progress monitoring and manpower histogram workbooks; the schedule PDFs. Interface data, risks and the construction budget start empty.
+The stock ledger (`Sheet1`, 6,288 rows) and the PTSC-MSV, PTSC-No MSV and HHI sheets of the stock report; the received-shipment lists of the material summary; the item-level expediting sheets (`R1` to `R5`); the weekly and the S-curve data by work package and phase in the progress report; the construction progress monitoring and manpower histogram workbooks; the schedule PDFs. The construction budget and the formal interface register start empty. Risks, the risk matrix and breakdown (RBS), interface points, interface parties, the responsibility matrix and the RASCI come from the project's Risk and Interface management workbooks (`app/apps/api/seed/extract_governance.py`); risk actions are split from the numbered mitigation lines when the seed is loaded.
 
 ## 6. Editing the spreadsheet by hand
 
@@ -156,7 +162,7 @@ Editing in Sheets is allowed for the registers that the app lets you edit, with 
 
 ## 7. Cut-off reports
 
-Saving a cut-off report copies these datasets into `Reports - Snapshot data` as JSON parts, one row per dataset part, with one summary row in `Reports - Cut-off snapshots`: S-curve, work packages, phase progress, milestones, procurement packages, expediting packages, construction budget, logistics, material balance, material summary, concerns, issues, issue sub-tasks, risks, interfaces and interface points. The issue log is not copied. Procurement S-curves are not copied (they are large and reference-only). Opening a report reads the whole snapshot sheet, so it slows as reports accumulate (about 110 KB per report). Modules and their states, members, personal tasks and Settings are not part of a report.
+Saving a cut-off report copies these datasets into `Reports - Snapshot data` as JSON parts, one row per dataset part, with one summary row in `Reports - Cut-off snapshots`: S-curve, work packages, phase progress, milestones, procurement packages, expediting packages, construction budget, logistics, material balance, material summary, concerns, issues, issue sub-tasks, risks, risk actions, interfaces and interface points. The issue log is not copied. Procurement S-curves are not copied (they are large and reference-only). Opening a report reads the whole snapshot sheet, so it slows as reports accumulate (about 110 KB per report). Modules and their states, members, personal tasks and Settings are not part of a report.
 
 ## 8. Setting up and deploying
 

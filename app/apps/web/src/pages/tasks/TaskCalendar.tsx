@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { PTask } from '../../api';
 import { addDays, addMonths, fmtDate, fmtDay, fmtMonth, fmtShort, hours, monthStart, weekStart } from '../../format';
+import { Icon } from '../../icons';
 import { Btn, ErrorBox, Loading, PageHead } from '../../ui';
-import { applyFilter, emptyFilter, StatusBadges, TaskFilters, TaskForm, urgencyTone, useTasks, type TaskFilter } from './common';
-import { Badge } from '../../ui';
+import { applyFilter, emptyFilter, StatusBadges, TaskFilters, TaskForm, UrgencyBadge, useTasks, type TaskFilter } from './common';
 
 type Mode = 'day' | 'week' | 'month';
 const MODES: [Mode, string][] = [['day', 'Day'], ['week', 'Week'], ['month', 'Month']];
@@ -27,7 +27,7 @@ function Chip({ e, onOpen }: { e: Entry; onOpen: (t: PTask) => void }) {
   return (
     <button type="button" className={`cal-chip u-${t.urgency.toLowerCase()} ${e.kind} ${t.status === 'Completed' ? 'done' : ''} ${t.overdue ? 'late' : ''}`}
       onClick={() => onOpen(t)} title={`${t.taskNo} · ${t.title} · ${e.kind === 'due' ? 'deadline' : 'planned'}`}>
-      {e.kind === 'due' ? '⚑ ' : ''}{t.title}
+      {e.kind === 'due' && <Icon name="flag" />}{t.title}
     </button>
   );
 }
@@ -59,7 +59,7 @@ export default function TaskCalendar() {
   return (
     <>
       <PageHead title="Calendar" desc="Planned spans and deadlines of your tasks by day, week or month."
-        actions={<Btn kind="small primary" icon="plus" onClick={() => setEditing({ due: anchor })}>New task</Btn>} />
+        actions={<Btn kind="small primary" icon="plus" iconOnly aria-label="New task" onClick={() => setEditing({ due: anchor })} />} />
       <div className="panel">
         <div className="panel-head">
           <div><h2>{title}</h2><p>Bars show the plan start–finish; ⚑ marks the deadline</p></div>
@@ -107,13 +107,13 @@ export default function TaskCalendar() {
           <div style={{ padding: '0 22px 22px' }}>
             {dayEntries.length ? (
               <div className="table-wrap"><table>
-                <thead><tr><th>NO</th><th>TASK</th><th>ON THIS DAY</th><th>URGENCY</th><th>STATUS</th><th>EFFORT</th></tr></thead>
+                <thead><tr><th title="Task number"><Icon name="sheet" /><span className="sr-only">Task number</span></th><th title="Task"><Icon name="doc" /><span className="sr-only">Task</span></th><th title="On this day"><Icon name="calendar" /><span className="sr-only">On this day</span></th><th title="Urgency"><Icon name="flag" /><span className="sr-only">Urgency</span></th><th title="Status"><Icon name="check" /><span className="sr-only">Status</span></th><th title="Effort"><Icon name="chart" /><span className="sr-only">Effort</span></th></tr></thead>
                 <tbody>{dayEntries.map(e => (
                   <tr key={e.task.id + e.kind}>
                     <td className="mono">{e.task.taskNo}</td>
                     <td><button className="link-button" onClick={() => open(e.task)}><strong>{e.task.title}</strong></button></td>
-                    <td>{e.kind === 'due' ? 'Deadline' : `Planned ${fmtShort(e.task.planStart ?? anchor)} → ${fmtShort(e.task.planFinish ?? e.task.planStart ?? anchor)}`}</td>
-                    <td><Badge tone={urgencyTone[e.task.urgency]}>{e.task.urgency}</Badge></td>
+                    <td><span className="task-meta-item"><Icon name={e.kind === 'due' ? 'flag' : 'calendar'} />{e.kind === 'due' ? 'Deadline' : `${fmtShort(e.task.planStart ?? anchor)} → ${fmtShort(e.task.planFinish ?? e.task.planStart ?? anchor)}`}</span></td>
+                    <td><UrgencyBadge urgency={e.task.urgency} /></td>
                     <td><StatusBadges task={e.task} /></td>
                     <td>{e.task.effort != null ? hours(e.task.effort) : '—'}</td>
                   </tr>

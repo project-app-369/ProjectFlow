@@ -10,6 +10,11 @@ export interface Store {
   /** Creates the sheet with a header row when it does not exist yet; never alters existing data. */
   /** `tabColor` (CSS hex) is applied only when the sheet is created. */
   ensureSheet(name: string, columns: Column[], tabColor?: string): SheetInfo;
+  /**
+   * Schema upgrade: adds a header cell for every column the sheet does not have yet, after the existing ones. Existing
+   * cells are never moved or changed, so this is safe on a sheet that people edit. Returns the keys that were added.
+   */
+  addMissingColumns(name: string, columns: Column[]): string[];
   sheetInfo(name: string): SheetInfo | null;
   readRows(name: string, columns: Column[]): Row[];
   appendRows(name: string, columns: Column[], rows: Row[]): void;
