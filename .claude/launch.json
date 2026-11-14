@@ -66,6 +66,18 @@
         "5174"
       ],
       "port": 5174
+    },
+    {
+      "name": "app-web-sim",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/web",
+        "dev:sim",
+        "--port",
+        "5174"
+      ],
+      "port": 5174
     }
   ]
 }

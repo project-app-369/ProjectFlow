@@ -55,6 +55,20 @@ export class SheetsStore implements Store {
     return this.info(s);
   }
 
+  addMissingColumns(name: string, columns: Column[]): string[] {
+    const s = this.sheet(name);
+    if (!s) return [];
+    const header = this.header(s).filter(Boolean);
+    const missing = columns.filter(c => !header.includes(c.key));
+    if (!missing.length) return [];
+    const first = header.length + 1;
+    if (first + missing.length - 1 > s.getMaxColumns()) s.insertColumnsAfter(s.getMaxColumns(), first + missing.length - 1 - s.getMaxColumns());
+    missing.forEach((c, i) => { if (c.type !== 'number') s.getRange(1, first + i, s.getMaxRows(), 1).setNumberFormat('@'); });
+    s.getRange(1, first, 1, missing.length).setValues([missing.map(c => c.key)]).setFontWeight('bold').setBackground(HEADER_BG);
+    this.forget(name);
+    return missing.map(c => c.key);
+  }
+
   sheetInfo(name: string) {
     const s = this.sheet(name);
     return s ? this.info(s) : null;

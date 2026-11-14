@@ -36,9 +36,15 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `Governance - Issues` | Governance | Issues with persons in charge (emails), priority, status, dates (38 from the task monitor) | Issues |
 | `Governance - Issue sub-tasks` | Governance | Steps of each issue with a PIC and due date | Issues |
 | `Governance - Issue log` | Governance | History of every change and reminder | Issues |
-| `Governance - Risks` | Governance (amber) | Risk register (inherent and residual likelihood/impact) | Risk register |
+| `Governance - Risks` | Governance (amber) | Risk register: RBS, status, probability and four impacts before and after mitigation, response (90 seeded) | Risk register |
+| `Governance - Risk actions` | Governance | Mitigation actions per risk with owner, due and done dates (split from the seeded mitigation lines) | Risk drawer |
+| `Governance - Risk matrix` | Governance | The project's probability × severity cells and their level (4×4 for STTP2B); edit to change the matrix | Risk register, heatmap |
+| `Governance - Risk breakdown` | Governance | Risk breakdown structure: category and discipline codes (37) | Risk register |
 | `Governance - Interfaces` | Governance | Interface register | Interface register and matrix |
-| `Governance - Interface points` | Governance | Points under each interface | Interface points |
+| `Governance - Interface points` | Governance | Interface points: originator → target query, dates, resolution (34 seeded) | Interface points, matrix |
+| `Governance - Interface parties` | Governance | Party codes and names (24) | Interface pages |
+| `Governance - Responsibility matrix` | Governance | Activity × facility → responsible party (425 cells) | Interface matrix |
+| `Governance - RASCI` | Governance | RASCI role per activity and party/phase (340 cells) | Interface matrix |
 | `Reports - Knowledge` | Reports (red) | General Knowledge articles, all areas | General Knowledge |
 | `Reports - Cut-off snapshots` | Reports (red) | One row per saved cut-off report | cut-off dropdown |
 | `Reports - Snapshot data` | Reports | The report's datasets as JSON parts (40,000 characters per cell) | cut-off dropdown |
@@ -74,7 +80,7 @@ npx @google/clasp push
 
 ### Then
 
-1. **Project Flow → Set up sheets.** Authorise when asked. It creates the sheets, loads the STTP2B reference data and the four demo users, and generates an API token. Running it again changes nothing. A spreadsheet in the older single-project layout (sheets named `Project`, `Modules`, …) must be migrated first; see ADR 0004.
+1. **Project Flow → Set up sheets.** Authorise when asked. It creates the sheets, loads the STTP2B reference data and the four demo users, and generates an API token. Running it again changes nothing, apart from one-off upgrades a new version brings (missing columns, new sheets and their reference data); existing rows are never overwritten. An administrator can run the same setup over the API without opening the spreadsheet: `POST {"method":"POST","path":"/admin/setup","token":"…","user":"<admin user id>"}` returns the sheet list, or the error if setup fails. A spreadsheet in the older single-project layout (sheets named `Project`, `Modules`, …) must be migrated first; see ADR 0004.
 2. **Deploy → New deployment → Web app.** Execute as *Me*; who has access: *Anyone*. (`ANYONE_ANONYMOUS` lets the private Site's server reach the web app.) After changing the code, deploy a **new version** of the same deployment so the URL stays the same.
 3. **Project Flow → Show API token** shows the web app URL and token. For the private Site, set `SHEETS_URL` and secret `SHEETS_TOKEN` as server runtime variables. For a trusted local browser build only, put them in `apps/web/.env.sheets.local`:
 

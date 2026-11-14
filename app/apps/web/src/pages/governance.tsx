@@ -1,0 +1,124 @@
+import { useState, type ReactNode } from 'react';
+import { Icon } from '../icons';
+
+/** A filter that shows only an icon and its current choice; the label is the tooltip and the accessible name. */
+export function IconFilter({ icon, label, value, onChange, children }: { icon: string; label: string; value: string; onChange: (v: string) => void; children: ReactNode }) {
+  return (
+    <label className="task-filter" title={label}>
+      <Icon name={icon} />
+      <select className="filter" aria-label={label} value={value} onChange={e => onChange(e.target.value)}>{children}</select>
+    </label>
+  );
+}
+
+/** A risk level as a coloured pill; the level names come from the project's matrix. */
+export function LevelPill({ level, score, title }: { level: string | null; score?: number | null; title?: string }) {
+  if (!level) return <span className="tiny muted" title={title ?? 'Not rated'}>—</span>;
+  return <span className={`pill level-${level.toLowerCase()}`} title={title}>{level}{score != null ? ` · ${score}` : ''}</span>;
+}
+
+export const initials = (name: string) => name.replace(/@.*/, '').replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+
+/** People as small initials discs, the full names in the tooltip. */
+export function People({ names, empty = 'Nobody assigned' }: { names: string[]; empty?: string }) {
+  if (!names.length) return <span className="tiny warning" title={empty}><Icon name="people" /></span>;
+  return (
+    <span className="avatars" title={names.join('\n')}>
+      {names.slice(0, 3).map(n => <span key={n} className="avatar">{initials(n)}</span>)}
+      {names.length > 3 && <span className="avatar more">+{names.length - 3}</span>}
+    </span>
+  );
+}
+
+/** Read-only text block for drawers: label above, value kept with its line breaks. */
+export function Detail({ label, children, full }: { label: string; children: ReactNode; full?: boolean }) {
+  return <div style={full ? { gridColumn: '1 / -1' } : undefined}><small>{label}</small><strong style={{ fontWeight: 500, whiteSpace: 'pre-wrap' }}>{children || '—'}</strong></div>;
+}
+
+/** A short fixed choice as a row of icon buttons; the label is the tooltip and the accessible name. Choosing the current one clears it when `clearable`. */
+export function IconChoice<T extends string | number>({ label, value, options, onChange, clearable, disabled }: {
+  label: string; value: T | null | ''; options: { value: T; label: string; icon?: string; text?: string }[]; onChange: (v: T | null) => void; clearable?: boolean; disabled?: boolean;
+}) {
+  return (
+    <div className="icon-choice" role="group" aria-label={label}>
+      {options.map(o => (
+        <button key={String(o.value)} type="button" disabled={disabled} className={value === o.value ? 'on' : ''} aria-pressed={value === o.value} title={o.label} aria-label={o.label}
+          onClick={() => onChange(clearable && value === o.value ? null : o.value)}>
+          {o.icon ? <Icon name={o.icon} /> : <span>{o.text ?? o.label}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** A select led by an icon, for long lists that cannot be buttons. The label is the tooltip and the accessible name. */
+export function IconSelect({ icon, label, value, onChange, disabled, children }: { icon: string; label: string; value: string; onChange: (v: string) => void; disabled?: boolean; children: ReactNode }) {
+  return (
+    <label className="icon-select" title={label}>
+      <Icon name={icon} />
+      <select aria-label={label} value={value} disabled={disabled} onChange={e => onChange(e.target.value)}>{children}</select>
+    </label>
+  );
+}
+
+/** One labelled row of a form: a small icon and caption on the left, the control on the right. */
+export function Row({ icon, label, children, hint }: { icon: string; label: string; children: ReactNode; hint?: string }) {
+  return <div className="gov-row" title={hint}><span className="gov-row-label"><Icon name={icon} />{label}</span><div className="gov-row-body">{children}</div></div>;
+}
+
+/** Text kept as one item per line in a single cell. A leading "1." typed in the workbook is dropped: the list numbers itself. */
+export const toItems = (s: string | null | undefined) => String(s ?? '').split(/\r?\n/).map(x => x.trim().replace(/^\d{1,2}[.)]\s+/, '')).filter(Boolean);
+export const fromItems = (items: string[]) => items.join('\n');
+
+/**
+ * A list of text items you can add to, edit, remove and re-order (arrows or drag). Every item shows in full.
+ * The value is stored as one item per line, so it stays readable in the sheet.
+ */
+export function ItemList({ label, icon, value, onChange, disabled, max = 3000, placeholder = 'Add an item' }: { label: string; icon: string; value: string; onChange: (v: string) => void; disabled?: boolean; max?: number; placeholder?: string }) {
+  const items = toItems(value);
+  const [draft, setDraft] = useState('');
+  const [editing, setEditing] = useState<number | null>(null);
+  const [text, setText] = useState('');
+  const [drag, setDrag] = useState<number | null>(null);
+  const commit = (next: string[]) => onChange(fromItems(next));
+  const room = max - fromItems(items).length;
+  const add = () => { const t = draft.trim().replace(/\s*\n\s*/g, ' '); if (!t || t.length + 1 > room) return; commit([...items, t]); setDraft(''); };
+  const move = (from: number, to: number) => { if (to < 0 || to >= items.length || from === to) return; const next = [...items]; next.splice(to, 0, next.splice(from, 1)[0]); commit(next); };
+  const save = () => { if (editing == null) return; const t = text.trim().replace(/\s*\n\s*/g, ' '); commit(t ? items.map((x, i) => (i === editing ? t : x)) : items.filter((_, i) => i !== editing)); setEditing(null); };
+  return (
+    <section className="item-list" aria-label={label}>
+      <h4><Icon name={icon} />{label}<span className="count">{items.length || ''}</span></h4>
+      {items.length > 0 && (
+        <ol>
+          {items.map((it, i) => (
+            <li key={`${i}-${it}`} className={drag === i ? 'dragging' : ''} draggable={!disabled && editing == null}
+              onDragStart={() => setDrag(i)} onDragEnd={() => setDrag(null)} onDragOver={e => { if (drag != null) e.preventDefault(); }} onDrop={() => { if (drag != null) move(drag, i); setDrag(null); }}>
+              <span className="item-no">{i + 1}</span>
+              {editing === i ? (
+                <textarea className="item-edit" autoFocus rows={Math.max(2, Math.ceil(text.length / 70))} value={text} maxLength={max} aria-label={`Edit ${label} ${i + 1}`} onChange={e => setText(e.target.value)} onBlur={save}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); } if (e.key === 'Escape') { e.stopPropagation(); setEditing(null); } }} />
+              ) : (
+                <span className="item-text" onDoubleClick={() => { if (!disabled) { setText(it); setEditing(i); } }}>{it}</span>
+              )}
+              {!disabled && editing !== i && (
+                <span className="item-tools">
+                  <button type="button" className="icon-btn" title="Edit" aria-label={`Edit ${label} ${i + 1}`} onClick={() => { setText(it); setEditing(i); }}><Icon name="edit" /></button>
+                  <button type="button" className="icon-btn" title="Move up" aria-label={`Move ${label} ${i + 1} up`} disabled={i === 0} onClick={() => move(i, i - 1)}><Icon name="chevron-up" /></button>
+                  <button type="button" className="icon-btn" title="Move down" aria-label={`Move ${label} ${i + 1} down`} disabled={i === items.length - 1} onClick={() => move(i, i + 1)}><Icon name="chevron-down" /></button>
+                  <button type="button" className="icon-btn" title="Remove" aria-label={`Remove ${label} ${i + 1}`} onClick={() => commit(items.filter((_, j) => j !== i))}><Icon name="trash" /></button>
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {!items.length && disabled && <p className="tiny muted">None recorded.</p>}
+      {!disabled && (
+        <div className="item-add">
+          <input value={draft} placeholder={placeholder} aria-label={`New ${label}`} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+          <button type="button" className="icon-btn" title="Add" aria-label={`Add ${label}`} disabled={!draft.trim() || draft.trim().length + 1 > room} onClick={add}><Icon name="plus" /></button>
+        </div>
+      )}
+    </section>
+  );
+}

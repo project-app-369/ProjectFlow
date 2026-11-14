@@ -35,8 +35,8 @@ This plan separates what exists today (a *pre-build* on Google Sheets plus a fir
 | Project members and project roles | §2.1, PRJ-07 | Done (5 roles) | **Open** |
 | Users and account states (admin mode) | SET-08, AUTH-02 | Done (no passwords) | **Open** |
 | Milestones (reference data) | PLAN-03 | Sheets-backed create, edit and guarded delete; linked risks and interfaces block deletion | **Open** |
-| Risk register, 5×5 matrix, heatmap | MGT-01, MGT-06 | Done | **Open** |
-| Interface register, points, matrix, transition rules | INT-01…04 | Done | **Open** |
+| Risk register on the project matrix (sheet data, 4×4 for STTP2B), per-impact pre/post ratings, RBS, actions, heatmap, insights | MGT-01, MGT-06 | Done (90 seeded, 16-cell matrix, 37 RBS) | **Open** |
+| Interface points (Open→Responded→Resolved→Closed), interface register (INT-04 workflow), party×party, responsibility and RASCI matrices, insights | INT-01…04 | Done (34 points, 425 responsibility cells, 340 RASCI cells seeded) | **Open** |
 | Authentication, sessions, invitations | AUTH-01…, §2 | Demo identity only | **Open** |
 | Level/person access matrices, restricted domains | §2.6 | Not started | **Open** |
 | Audit log beyond module changes | AUD | Module and nothing else | Module and nothing else |
@@ -86,6 +86,7 @@ The 68-week envelope is not re-estimated here (spec revision 1.2 note).
 3. Start parity items 1–3 in §3; they unblock everything else on the NestJS side.
 4. Extract the remaining workbooks listed as "Not extracted" in the [reference data note](ProjectFlow_reference_data.md) (Logistics, Materials) as P2 datasets are scheduled.
 5. Replace the demo identity before any real data or external user touches the pre-build.
+6. Finish the Lintel UI rollout on branch `try-new-UI` (rules in [ADR 0006](../app/docs/adr/0006-lintel-design-and-layout-rules.md)): check every page at 1440, 1024 and 375 px in light and dark, move any page-level spacing onto the `--gap` / `--card-px` / `--card-py` tokens, then merge. Every new page follows the ADR's checklist.
 
 ## 6. Verification
 

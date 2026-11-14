@@ -23,6 +23,14 @@ export class MemoryStore implements Store {
     return this.info(name, s);
   }
 
+  addMissingColumns(name: string, columns: Column[]): string[] {
+    const s = this.sheets.get(name);
+    if (!s) return [];
+    const missing = columns.map(c => c.key).filter(k => !s.header.includes(k));
+    s.header.push(...missing);
+    return missing;
+  }
+
   sheetInfo(name: string) {
     const s = this.sheets.get(name);
     return s ? this.info(name, s) : null;

@@ -10,6 +10,7 @@ import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead, Pager } from '../ui';
 import { stockFields, weightFields } from './procFields';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const t = (kg: number | null) => (kg == null ? '—' : `${(kg / 1000).toLocaleString('en-GB', { maximumFractionDigits: 1 })} t`);
@@ -21,13 +22,15 @@ export default function Materials() {
   const toast = useToast();
   const list = useListState();
   const [filters, setFilters] = useState({ facility: '', supply: '', category: '', yard: '' });
-  const [stock, setStock] = useState<StockLine | 'new' | null>(null);
+  const [stockId, setStockId] = useDeepLink();
+  const setStock = (v: StockLine | 'new' | null) => setStockId(v === null ? null : v === 'new' ? 'new' : v.id);
   const [weight, setWeight] = useState<MaterialWeight | 'new' | null>(null);
   const base = `/projects/${project.id}/materials`;
 
   const weights = useQuery({ queryKey: ['material-weights', project.id], queryFn: () => request<Page<MaterialWeight>>(`${base}/summary?pageSize=200`) });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...filters });
   const page = useQuery({ queryKey: ['material-balance', project.id, query], queryFn: () => request<Page<StockLine>>(`${base}/balance${query}`), placeholderData: keepPreviousData });
+  const stock: StockLine | 'new' | null = stockId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === stockId) ?? null);
   const facets = page.data?.facets;
 
   const w = weights.data?.items ?? [];

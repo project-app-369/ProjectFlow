@@ -11,6 +11,7 @@ import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -73,7 +74,8 @@ export default function Expediting() {
   const access = useAccess();
   const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
-  const [selected, setSelected] = useState<ExpeditingPackage | null>(null);
+  const [selectedId, setSelectedId] = useDeepLink();
+  const setSelected = (v: ExpeditingPackage | null) => setSelectedId(v === null ? null : v.code);
   const [editing, setEditing] = useState<ExpeditingPackage | 'new' | null>(null);
   const base = `/projects/${project.id}/expediting`;
 
@@ -83,6 +85,7 @@ export default function Expediting() {
   const filter = usePick(list, { within: '' });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, within: filter.extra.within });
   const page = useQuery({ queryKey: ['expediting-packages', project.id, query], queryFn: () => request<Page<ExpeditingPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
+  const selected: ExpeditingPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ExpeditingPackage>[]>(() => [
     {

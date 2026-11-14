@@ -5,9 +5,12 @@ import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useToast } from '../state';
 import { Badge, Btn, Confirm, Field, Modal } from '../ui';
+import { IconChoice } from './governance';
 
 export const ISSUE_STATUSES = ['Not started', 'In progress', 'Pending', 'Completed'] as const;
 export const ISSUE_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'] as const;
+const PRIORITY_ICON: Record<string, string> = { Critical: 'urgency-urgent', High: 'urgency-high', Medium: 'urgency-normal', Low: 'urgency-low' };
+const STATUS_ICON: Record<string, string> = { 'Not started': 'status-backlog', Pending: 'status-planned', 'In progress': 'status-ongoing', Completed: 'status-completed' };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -54,7 +57,7 @@ export function IssueDrawer({ base, id, canWrite, canManage, suggestions, defaul
   const loaded = id ? detail.data : undefined;
 
   if (id && !loaded) {
-    return <Modal title={id} size="lg" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
+    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
   }
   return <IssueForm key={loaded?.updatedAt ?? 'new'} issue={loaded} base={base} canWrite={canWrite} canManage={canManage} suggestions={suggestions} defaults={defaults} onClose={onClose} />;
 }
@@ -104,7 +107,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
 
     return (
       <>
-        <Modal title={issue ? `${issue.id} · ${issue.title}` : 'New issue'} size="lg" onClose={onClose}
+        <Modal title={issue ? `${issue.id} · ${issue.title}` : 'New issue'} size="xl" onClose={onClose}
           actions={<>
             {issue && canManage && <Btn onClick={() => setConfirming(true)}>Delete</Btn>}
             {issue && canWrite && <Btn iconOnly icon="bell" aria-label="Remind the persons in charge by email" title="Remind the persons in charge by email" onClick={() => { setError(''); act.mutate({ path: '/remind', method: 'POST', msg: 'Reminder emailed.' }); }}>Remind PICs</Btn>}
@@ -118,21 +121,26 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
                 {issue.overdue && <Badge tone="red">Overdue</Badge>} <span className="tiny muted">{issue.source ?? ''}{issue.completedDate ? ` · completed ${fmtDate(issue.completedDate)}` : ''}</span>
               </div>
             )}
-            <div className="form-grid">
-              <Field label="Title *" full><input value={v.title} maxLength={200} disabled={off} onChange={e => set('title', e.target.value)} /></Field>
-              <Field label="Description" full><textarea rows={3} value={v.description} maxLength={2000} disabled={off} onChange={e => set('description', e.target.value)} /></Field>
-              <div className="form-grid three" style={{ gridColumn: '1 / -1' }}>
-              <Field label="Priority"><select value={v.priority} disabled={off} onChange={e => set('priority', e.target.value)}>{ISSUE_PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></Field>
-              <Field label="Status"><select value={v.status} disabled={off} onChange={e => set('status', e.target.value)}>{ISSUE_STATUSES.map(p => <option key={p}>{p}</option>)}</select></Field>
-              <Field label="Responsible team"><input value={v.discipline} maxLength={60} disabled={off} onChange={e => set('discipline', e.target.value)} /></Field>
-              <Field label="Start date"><input type="date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></Field>
-              <Field label="Due date" hint="The people in charge are emailed when it is within 3 days or passed"><input type="date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></Field>
-              </div>
-              <Field label="Persons in charge (by email)" full hint="Up to 10. Each new person is emailed when you save."><PicEditor value={pics} onChange={setPics} suggestions={suggestions} disabled={off} /></Field>
-              <Field label="Next action / update" full><textarea rows={2} value={v.nextAction} maxLength={1500} disabled={off} onChange={e => set('nextAction', e.target.value)} /></Field>
-              <Field label="Remarks" full><textarea rows={2} value={v.remarks} maxLength={1500} disabled={off} onChange={e => set('remarks', e.target.value)} /></Field>
+            <Field label="Title *" full><input value={v.title} maxLength={200} disabled={off} onChange={e => set('title', e.target.value)} /></Field>
+            <div className="gov-meta">
+              <span className="meta-item" title="Priority"><IconChoice label="Priority" disabled={off} value={v.priority} options={ISSUE_PRIORITIES.map(p => ({ value: p, label: `${p} priority`, icon: PRIORITY_ICON[p] }))} onChange={x => set('priority', x ?? 'Medium')} /></span>
+              <span className="meta-item" title="Status"><IconChoice label="Status" disabled={off} value={v.status} options={ISSUE_STATUSES.map(p => ({ value: p, label: p, icon: STATUS_ICON[p] }))} onChange={x => set('status', x ?? 'Not started')} /></span>
+              <label className="meta-item" title="Responsible team"><Icon name="layers" /><input className="meta-input" placeholder="Team" aria-label="Responsible team" value={v.discipline} maxLength={60} disabled={off} onChange={e => set('discipline', e.target.value)} /></label>
+              <label className="meta-item" title="Start date"><Icon name="flag" /><input type="date" className="meta-input" aria-label="Start date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></label>
+              <label className="meta-item" title="Due date: the people in charge are emailed when it is within 3 days or passed"><Icon name="calendar" /><input type="date" className="meta-input" aria-label="Due date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></label>
             </div>
-
+            <div className="gov-cols">
+              <div>
+                <h3><Icon name="doc" />Description</h3>
+                <textarea className="gov-text" rows={5} aria-label="Description" value={v.description} maxLength={2000} disabled={off} onChange={e => set('description', e.target.value)} />
+                <h3><Icon name="arrow" />Next action / update</h3>
+                <textarea className="gov-text" rows={3} aria-label="Next action" value={v.nextAction} maxLength={1500} disabled={off} onChange={e => set('nextAction', e.target.value)} />
+                <h3><Icon name="edit" />Remarks</h3>
+                <textarea className="gov-text" rows={3} aria-label="Remarks" value={v.remarks} maxLength={1500} disabled={off} onChange={e => set('remarks', e.target.value)} />
+                <h3><Icon name="people" />Persons in charge <span className="tiny muted">up to 10, each new person is emailed on save</span></h3>
+                <PicEditor value={pics} onChange={setPics} suggestions={suggestions} disabled={off} />
+              </div>
+              <div>
             {issue && (
               <>
                 <h3 style={{ marginTop: 16 }}><Icon name="status-completed" /> Sub-tasks <span className="tiny muted">{issue.subtasksDone} of {issue.subtasksTotal} done</span></h3>
@@ -157,7 +165,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
 
                 <h3 style={{ marginTop: 16 }}><Icon name="clock" /> History</h3>
                 {canWrite && (
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <div className="note-add">
                     <input placeholder="Add a note to the history" value={note} maxLength={1500} aria-label="Note" onChange={e => setNote(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && note.trim()) { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); } }} />
                     <Btn kind="small" iconOnly icon="plus" aria-label="Add note" disabled={!note.trim() || act.isPending} onClick={() => { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); }}>Add note</Btn>
                   </div>
@@ -172,6 +180,8 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
                 </ol>
               </>
             )}
+              </div>
+            </div>
             {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
           </div>
         </Modal>

@@ -205,26 +205,36 @@ export interface MilestoneSummary {
   total: number; done: number; overdue: number; dueSoon: number; planned: number; bySub: Record<string, number>; next: Milestone[]; cutoff: string;
 }
 
-export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Extreme';
-export type RiskStatus = 'Open' | 'Mitigating' | 'Accepted' | 'Closed';
-export const RISK_STATUSES: RiskStatus[] = ['Open', 'Mitigating', 'Accepted', 'Closed'];
-export const RISK_CATEGORIES = ['Schedule', 'Cost', 'Quality', 'HSE', 'Supply chain', 'Contractual', 'Technical', 'Interface', 'Other'];
+/* ---------- risk management (project matrix, MGT-01/06) ---------- */
+export type RiskLevel = string;
+export const RISK_STATUSES = ['New', 'Firmed', 'Under assessment', 'Under resolving', 'Monitor', 'Closed'] as const;
+export type RiskStatus = (typeof RISK_STATUSES)[number];
+export interface RiskMatrix { version: string; probabilityLabels: string[]; severityLabels: string[]; levels: string[]; cells: string[][] }
+export interface RiskAction { id: string; riskId: string; action: string; owner: string | null; dueDate: string | null; doneDate: string | null; done: boolean; overdue: boolean }
 export interface Risk {
-  id: string; title: string; category: string; cause: string | null; event: string | null; effect: string | null; owner: string;
-  likelihood: number; impact: number; mitigation: string | null; trigger: string | null;
-  residualLikelihood: number | null; residualImpact: number | null; reviewDate: string | null; status: RiskStatus; milestoneId: string | null;
-  inherentScore: number | null; inherentLevel: RiskLevel | null; residualScore: number | null; residualLevel: RiskLevel | null;
-  currentScore: number | null; currentLevel: RiskLevel | null; reviewOverdue: boolean; milestone: string | null; createdAt: string; updatedAt: string; createdBy: string | null;
+  id: string; no: number | null; status: RiskStatus; rbs: string | null; category: string | null; discipline: string | null; title: string;
+  description: string | null; cause: string | null; effect: string | null; owner: string | null; owners: string[]; recordDate: string | null;
+  preProbability: number | null; preSchedule: number | null; preCost: number | null; preScope: number | null; preQuality: number | null;
+  postProbability: number | null; postSchedule: number | null; postCost: number | null; postScope: number | null; postQuality: number | null;
+  strategy: string | null; mitigationCause: string | null; mitigationEffect: string | null; planDate: string | null; actualActions: string | null; actualDate: string | null;
+  remark: string | null; external: boolean; reviewDate: string | null; milestoneId: string | null; milestone: string | null; active: boolean;
+  preSeverity: number | null; preScore: number | null; preLevel: string | null; preWorst: string[];
+  postSeverity: number | null; postScore: number | null; postLevel: string | null; postWorst: string[];
+  currentScore: number | null; currentLevel: string | null; responseOverdue: boolean; reviewOverdue: boolean;
+  actionsTotal: number; actionsDone: number; actionsOverdue: number; actions?: RiskAction[]; updatedAt?: string; createdBy?: string | null;
 }
-export interface RiskSummary {
-  total: number; active: number; byStatus: Record<string, number>; byLevel: Record<RiskLevel, number>; reviewOverdue: number;
-  heatmap: { version: string; likelihoodLabels: string[]; impactLabels: string[]; inherent: number[][]; current: number[][] };
+export interface RiskOptions {
+  matrix: RiskMatrix; statuses: string[]; strategies: string[]; dimensions: { key: string; label: string }[];
+  breakdown: { code: string; category: string; categoryName: string; discipline: string; disciplineName: string }[]; owners: string[];
 }
+export interface RiskHeatmap { matrix: RiskMatrix; pre: number[][]; current: number[][]; unrated: number }
+export interface RiskSummary { total: number; active: number; levels: string[]; byLevel: Record<string, number>; top: string; responseOverdue: number; reviewOverdue: number }
 
+/* ---------- interface management (INT-01 to INT-04) ---------- */
 export type InterfaceStatus = 'Identified' | 'Assigned' | 'Information requested' | 'Responded' | 'Under review' | 'Agreed' | 'Closed';
-export type PointStatus = 'Open' | 'In progress' | 'Accepted' | 'Closed';
-export const INTERFACE_TYPES = ['Physical', 'Technical', 'Contractual', 'Operational', 'Schedule'];
-export const POINT_STATUSES: PointStatus[] = ['Open', 'In progress', 'Accepted', 'Closed'];
+export const INTERFACE_TYPES = ['Technical', 'Contractual', 'Physical', 'Organizational', 'Information', 'Schedule'];
+export const POINT_STATUSES = ['Open', 'Responded', 'Resolved', 'Closed'] as const;
+export type PointStatus = (typeof POINT_STATUSES)[number];
 export interface InterfaceRecord {
   id: string; title: string; type: string; originator: string; receiver: string; coordinator: string | null; discipline: string | null;
   boundary: string | null; requiredInput: string | null; requiredOutput: string | null; needDate: string | null;
@@ -232,10 +242,26 @@ export interface InterfaceRecord {
   overdue: boolean; pointsTotal: number; pointsOpen: number; allowedNext: InterfaceStatus[]; milestone: string | null; points?: InterfacePoint[];
 }
 export interface InterfacePoint {
-  id: string; interfaceId: string; title: string; owner: string; due: string | null; status: PointStatus; response: string | null; overdue: boolean; interfaceTitle?: string | null;
+  id: string; interfaceId: string | null; interfaceTitle: string | null; title: string; description: string; owner: string | null; workPackage: string | null; discipline: string | null;
+  originator: string; target: string; action: string | null; queryDate: string | null; targetDate: string | null; reference: string | null; status: PointStatus;
+  resolution: string | null; resolvedDate: string | null; resolvedDocument: string | null; remarks: string | null;
+  settled: boolean; overdue: boolean; daysLate: number | null; ageDays: number | null; allowedNext: PointStatus[]; updatedAt?: string;
 }
-export interface InterfaceSummary { total: number; open: number; overdue: number; pointsOpen: number; byStatus: Record<string, number> }
-export interface InterfaceMatrix { parties: string[]; cells: { originator: string; receiver: string; total: number; open: number; overdue: number; settled: number }[]; total: number }
+export interface InterfaceParty { code: string; name: string }
+export interface InterfaceSummary { total: number; open: number; overdue: number; byStatus: Record<string, number>; points: number; pointsOpen: number; pointsOverdue: number }
+export interface InterfaceMatrix {
+  parties: string[]; names: Record<string, string>; total: number; interfaces: number;
+  cells: { originator: string; receiver: string; total: number; open: number; overdue: number; settled: number; interfaces: number }[];
+}
+export interface ResponsibilityMatrix {
+  facilities: { workPackage: string | null; facility: string }[];
+  rows: { order: number; section: string; ref: string | null; activity: string; level: number; remark: string | null; cells: Record<string, string> }[];
+  parties: { code: string; name: string; cells: number }[];
+}
+export interface RasciMatrices {
+  roles: { code: string; label: string }[];
+  matrices: { name: string; parties: { phase: string | null; party: string }[]; rows: { order: number; section: string; ref: string | null; activity: string; remark: string | null; roles: Record<string, string> }[] }[];
+}
 
 export interface Dashboard {
   project: Project;

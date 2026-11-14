@@ -13,8 +13,8 @@ const SCOPE_LABEL = { OVR: 'All', LS: 'Lump sum', PS: 'Reimbursable' } as const;
 const FACILITY_LABEL = (f: string) => (f === 'OVERALL' ? 'All facilities' : f.replace(/\b([A-Z])([A-Z]+)\b/g, (_, a: string, b: string) => (b.length > 2 ? a + b.toLowerCase() : a + b)).replace('Cgf', 'CGF').replace('Lq', 'LQ'));
 
 const LEVEL_TONE: Record<AttentionItem['level'], Tone> = { Critical: 'red', High: 'amber', Medium: 'indigo' };
-const SEV_COLOR: Record<Severity, string> = { Critical: 'var(--red)', High: 'var(--chart-orange)', Medium: 'var(--amber)', Low: 'var(--green)' };
-const STAGE_COLOR: Record<string, string> = { Planned: 'var(--chart-neutral)', 'In tendering': 'var(--chart-plan)', 'LOA issued': 'var(--amber)', 'PO placed': 'var(--green)' };
+const SEV_COLOR: Record<Severity, string> = { Critical: 'var(--c-critical)', High: 'var(--c-high)', Medium: 'var(--c-warn)', Low: 'var(--c-good)' };
+const STAGE_COLOR: Record<string, string> = { Planned: 'var(--c-neutral)', 'In tendering': 'var(--c-plan)', 'LOA issued': 'var(--c-warn)', 'PO placed': 'var(--c-good)' };
 const kg = (n: number) => `${(n / 1000).toLocaleString('en-GB', { maximumFractionDigits: 0 })} t`;
 
 /** One horizontal bar made of coloured parts. */
@@ -85,7 +85,7 @@ export default function ProcurementDashboard() {
 
       <div className="stats six">
         <Stat label="Procurement progress" value={ov ? `${(ov.actual ?? 0).toFixed(1)}%` : '—'} icon="chart"
-          foot={ov ? <ActualPlanBar actual={ov.actual} plan={ov.plan} compact /> : overall.isPending ? 'Loading…' : 'No S-curve data'} />
+          foot={ov ? <ActualPlanBar actual={ov.actual} plan={ov.plan} compact hideActual /> : overall.isPending ? 'Loading…' : 'No S-curve data'} />
         <Stat label="Packages placed" value={pl ? `${pl.byStatus['PO placed'] ?? 0}/${pl.total}` : '—'} icon="box"
           foot={pl ? <>{pl.placedPct != null ? `${pl.placedPct}% of the weight in PO` : 'PO placed'} · {pl.byStatus['LOA issued'] ?? 0} awaiting PO</> : 'Procurement Plan is off'} />
         <Stat label="Expediting flags" value={flags ?? '—'} icon="risk"
@@ -95,7 +95,7 @@ export default function ProcurementDashboard() {
         <Stat label="Open risks & concerns" value={cn ? cn.open : '—'} icon="flag"
           foot={cn ? <><span className={cn.bySeverity.Critical + cn.bySeverity.High ? 'negative' : ''}>{cn.bySeverity.Critical} critical · {cn.bySeverity.High} high</span> · {cn.overdue} overdue</> : 'Risks & Concerns is off'} />
         <Stat label="Material arrived" value={mt?.totals[0]?.arrivedPct != null ? `${mt.totals[0].arrivedPct}%` : '—'} icon="layers"
-          foot={mt ? <>PTSC MC supply · Client {mt.totals[1]?.arrivedPct != null ? `${mt.totals[1].arrivedPct}%` : '—'} · {mt.stockLines} stock lines</> : 'Materials is off'} />
+          foot={mt ? <>PTSC MC · Client {mt.totals[1]?.arrivedPct != null ? `${mt.totals[1].arrivedPct}%` : '—'} · {mt.stockLines} lines</> : 'Materials is off'} />
       </div>
 
       <div className="dash-grid" style={{ marginTop: 0, marginBottom: 'var(--sp-5)' }}>
@@ -166,12 +166,12 @@ export default function ProcurementDashboard() {
 
         {ex ? (
           <Panel title="Expediting health" sub={`Average progress ${ex.avgActualPct ?? '—'}% against ${ex.avgPlanPct ?? '—'}% planned`} foot={<Link className="btn text" to="/m/procurement.expediting.vendor-overview">Open vendor overview →</Link>}>
-            <Legend items={[{ label: 'Delay', color: 'var(--red)' }, { label: 'High risk', color: 'var(--chart-orange)' }, { label: 'At risk', color: 'var(--amber)' }, { label: 'On track', color: 'var(--green)' }]} />
+            <Legend items={[{ label: 'Delay', color: 'var(--c-critical)' }, { label: 'High risk', color: 'var(--c-high)' }, { label: 'At risk', color: 'var(--c-warn)' }, { label: 'On track', color: 'var(--c-good)' }]} />
             <div className="panel-content">
               {ex.byDiscipline.map(r => (
                 <div className="bar-row" key={r.discipline}>
                   <div className="bar-row-label"><span>{r.discipline}</span><span className="muted">{r.delay + r.highRisk + r.atRisk} of {r.total} flagged{r.avgVariance != null ? ` · ${signed(r.avgVariance)} pp` : ''}</span></div>
-                  <Bar total={r.total} parts={[{ label: 'Delay', color: 'var(--red)', value: r.delay }, { label: 'High risk', color: 'var(--chart-orange)', value: r.highRisk }, { label: 'At risk', color: 'var(--amber)', value: r.atRisk }, { label: 'On track', color: 'var(--green)', value: r.total - r.delay - r.highRisk - r.atRisk }]} />
+                  <Bar total={r.total} parts={[{ label: 'Delay', color: 'var(--c-critical)', value: r.delay }, { label: 'High risk', color: 'var(--c-high)', value: r.highRisk }, { label: 'At risk', color: 'var(--c-warn)', value: r.atRisk }, { label: 'On track', color: 'var(--c-good)', value: r.total - r.delay - r.highRisk - r.atRisk }]} />
                 </div>
               ))}
             </div>
@@ -216,8 +216,8 @@ export default function ProcurementDashboard() {
 
         {lg ? (
           <Panel title="Shipments" sub={`${lg.total} shipments · ${kg(lg.receivedKg)} of ${kg(lg.weightKg)} received`} foot={<Link className="btn text" to="/m/procurement.logistics">Open logistics →</Link>}>
-            <Legend items={Object.entries(lg.byStatus).map(([label, n]) => ({ label: `${label} ${n}`, color: label === 'Received' ? 'var(--green)' : label === 'Planned' ? 'var(--chart-neutral)' : 'var(--amber)' }))} />
-            <div className="panel-content"><Bar height={12} total={lg.total} parts={Object.entries(lg.byStatus).map(([label, value]) => ({ label, value, color: label === 'Received' ? 'var(--green)' : label === 'Planned' ? 'var(--chart-neutral)' : 'var(--amber)' }))} /></div>
+            <Legend items={Object.entries(lg.byStatus).map(([label, n]) => ({ label: `${label} ${n}`, color: label === 'Received' ? 'var(--c-good)' : label === 'Planned' ? 'var(--c-neutral)' : 'var(--c-warn)' }))} />
+            <div className="panel-content"><Bar height={12} total={lg.total} parts={Object.entries(lg.byStatus).map(([label, value]) => ({ label, value, color: label === 'Received' ? 'var(--c-good)' : label === 'Planned' ? 'var(--c-neutral)' : 'var(--c-warn)' }))} /></div>
             {lg.overdue.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span className="negative">{r.daysLate} d late</span>} />)}
             {lg.held.slice(0, 5).map(r => <ShipmentRow key={r.id} r={r} note={<Badge tone="amber">Held</Badge>} />)}
             {lg.soon.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span>{fmtShort(r.forecastOnSite!)}</span>} />)}
@@ -231,7 +231,7 @@ export default function ProcurementDashboard() {
               {mt.totals.map(t => (
                 <div className="bar-row" key={t.supply}>
                   <div className="bar-row-label"><strong>{t.supply} supply</strong><span className="muted">{kg(t.arrivedKg)} of {kg(t.mtoKg)}{t.arrivedPct != null ? ` · ${t.arrivedPct}%` : ''}</span></div>
-                  <Bar height={12} total={Math.max(t.mtoKg, t.arrivedKg, 1)} parts={[{ label: 'Arrived', color: t.arrivedPct != null && t.arrivedPct >= 100 ? 'var(--green)' : 'var(--amber)', value: t.arrivedKg }]} />
+                  <Bar height={12} total={Math.max(t.mtoKg, t.arrivedKg, 1)} parts={[{ label: 'Arrived', color: t.arrivedPct != null && t.arrivedPct >= 100 ? 'var(--c-good)' : 'var(--c-warn)', value: t.arrivedKg }]} />
                 </div>
               ))}
               <div className="detail-grid" style={{ marginBottom: 0 }}>

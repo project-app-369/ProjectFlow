@@ -1,6 +1,7 @@
 import { MANIFESTS, defaultState } from '../../api/src/registry/catalog';
 import { COLUMNS, SHEET, pathOf, tabColorOf } from './datasets';
 import { milestoneFacility } from './registers-service';
+import { splitActions } from './risks-service';
 import { isIsoDate, type Row, type Store } from './store';
 
 export const PROJECT_ID = 'sttp2b';
@@ -197,10 +198,64 @@ export function ensureAllSheets(store: Store) {
     [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
     [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
-    [SHEET.risks, COLUMNS.risks], [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog], [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints],
+    [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
+    [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
+    [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
+}
+
+function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: string) {
+  // Preserve the task monitor number: item 5 is ISS-005.
+  const seen = new Set<string>();
+  const numbers = issues.map(i => { const n = /^\d{1,4}$/.test(String(i.ref ?? '')) ? Number(i.ref) : 0; if (n && !seen.has(String(n))) { seen.add(String(n)); return n; } return 0; });
+  let spare = Math.max(0, ...numbers);
+  const issueRows = issues.map((i, n) => ({
+    projectId: PROJECT_ID, id: `ISS-${String(numbers[n] || ++spare).padStart(3, '0')}`, title: i.title, description: i.description ?? null, priority: i.priority, discipline: i.discipline ?? null, status: i.status,
+    startDate: isoOrNull(i.startDate), dueDate: isoOrNull(i.dueDate), completedDate: i.status === 'Completed' ? isoOrNull(i.raisedDate) ?? cutoff : null,
+    nextAction: i.nextAction ?? null, remarks: i.remarks ?? null, pics: '', source: 'Task monitor', lastRemindedOn: null, createdAt: now, updatedAt: now, createdBy: ADMIN_ID,
+  })) as unknown as Row[];
+  store.appendRows(SHEET.issues, COLUMNS.issues, issueRows);
+  store.appendRows(SHEET.issueLog, COLUMNS.issueLog, issueRows.map((i, n) => ({
+    projectId: PROJECT_ID, id: `LG-${String(n + 1).padStart(5, '0')}`, issueId: i.id, at: now, actor: 'Import', action: 'Created', note: null,
+  })));
+}
+
+/** Governance datasets of the risk register and the interface workbooks (extract_governance.py). */
+export function governanceRows(raw: SeedData) {
+  const g = raw as unknown as Record<string, RawRow[] | undefined>;
+  const pid = PROJECT_ID;
+  const withProject = (rows: RawRow[] | undefined) => (rows ?? []).map(r => ({ projectId: pid, ...r })) as unknown as Row[];
+  const risks = (g.risks ?? []).map(({ riskId, ...r }) => ({ projectId: pid, id: riskId, ...r, createdBy: 'Import' })) as unknown as Row[];
+  // Each numbered line of the response plan becomes a tracked action, due on the plan action date, done once the actions were taken.
+  let n = 0;
+  const riskActions = (g.risks ?? []).flatMap(r => [...splitActions(r.mitigationCause as string | null), ...splitActions(r.mitigationEffect as string | null)].map(action => ({
+    projectId: pid, id: `RA-${String(++n).padStart(4, '0')}`, riskId: r.riskId, action: action.slice(0, 1000), owner: r.owner ?? null, dueDate: r.planDate ?? null, doneDate: r.actualDate ?? null,
+  }))) as unknown as Row[];
+  const interfacePoints = (g.interfacePoints ?? []).map(({ no: _no, subject, ...p }) => ({ projectId: pid, ...p, title: subject ?? null, interfaceId: null })) as unknown as Row[];
+  return {
+    risks, riskActions, riskMatrix: withProject(g.riskMatrix), riskBreakdown: withProject(g.riskBreakdown),
+    interfacePoints, interfaceParties: withProject(g.interfaceParties), responsibility: withProject(g.responsibility), rasci: withProject(g.rasci),
+  };
+}
+
+const GOVERNANCE: [keyof ReturnType<typeof governanceRows>, keyof typeof SHEET][] = [
+  ['risks', 'risks'], ['riskActions', 'riskActions'], ['riskMatrix', 'riskMatrix'], ['riskBreakdown', 'riskBreakdown'],
+  ['interfacePoints', 'interfacePoints'], ['interfaceParties', 'interfaceParties'], ['responsibility', 'responsibility'], ['rasci', 'rasci'],
+];
+
+/**
+ * Loads the governance datasets into sheets that have no rows for the project yet, after adding any column the sheet lacks
+ * (an older workbook may have the risk or point sheet with the earlier columns). Rows already there are never touched.
+ */
+export function appendSeedGovernance(store: Store, raw: SeedData) {
+  const rows = governanceRows(raw);
+  for (const [key, sheet] of GOVERNANCE) {
+    const columns = COLUMNS[sheet as keyof typeof COLUMNS];
+    store.addMissingColumns(SHEET[sheet], columns);
+    if (rows[key].length && !store.readRows(SHEET[sheet], columns).some(r => r.projectId === PROJECT_ID)) store.appendRows(SHEET[sheet], columns, rows[key]);
+  }
 }
 
 /**
@@ -210,8 +265,15 @@ export function ensureAllSheets(store: Store) {
  */
 export function seedStore(store: Store, raw: SeedData, now = new Date().toISOString()) {
   return store.withLock(() => {
+    const hadIssuesSheet = Boolean(store.sheetInfo(SHEET.issues));
+    const hadRiskMatrix = Boolean(store.sheetInfo(SHEET.riskMatrix));
     ensureAllSheets(store);
-    if (store.readRows(SHEET.projects, COLUMNS.projects).length) return false;
+    if (store.readRows(SHEET.projects, COLUMNS.projects).length) {
+      // Upgrade existing workbooks once, without overwriting their project data.
+      if (!hadIssuesSheet) appendSeedIssues(store, seedRows(raw).issues, String(raw.project.cutoff), now);
+      if (!hadRiskMatrix) appendSeedGovernance(store, raw);
+      return false;
+    }
 
     const rows = seedRows(raw);
     const pid = PROJECT_ID;
@@ -230,19 +292,8 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.materialSummary, COLUMNS.materialSummary, rows.materialSummary);
     store.appendRows(SHEET.procCurves, COLUMNS.procCurves, rows.procCurves);
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
-    // An issue keeps the number it has in the task monitor ("No."), so ISS-005 is item 5 there; rows without a usable number follow on.
-    const seen = new Set<string>();
-    const numbers = rows.issues.map(i => { const n = /^\d{1,4}$/.test(String(i.ref ?? '')) ? Number(i.ref) : 0; if (n && !seen.has(String(n))) { seen.add(String(n)); return n; } return 0; });
-    let spare = Math.max(0, ...numbers);
-    const issueRows = rows.issues.map((i, n) => ({
-      projectId: pid, id: `ISS-${String(numbers[n] || ++spare).padStart(3, '0')}`, title: i.title, description: i.description ?? null, priority: i.priority, discipline: i.discipline ?? null, status: i.status,
-      startDate: isoOrNull(i.startDate), dueDate: isoOrNull(i.dueDate), completedDate: i.status === 'Completed' ? isoOrNull(i.raisedDate) ?? String(raw.project.cutoff) : null,
-      nextAction: i.nextAction ?? null, remarks: i.remarks ?? null, pics: '', source: 'Task monitor', lastRemindedOn: null, createdAt: now, updatedAt: now, createdBy: ADMIN_ID,
-    })) as unknown as Row[];
-    store.appendRows(SHEET.issues, COLUMNS.issues, issueRows);
-    store.appendRows(SHEET.issueLog, COLUMNS.issueLog, issueRows.map((i, n) => ({
-      projectId: pid, id: `LG-${String(n + 1).padStart(5, "0")}`, issueId: i.id, at: now, actor: 'Import', action: 'Created', note: 'Loaded from the task monitor workbook (TASK_MONITOR_2026-11-10)',
-    })));
+    appendSeedIssues(store, rows.issues, String(raw.project.cutoff), now);
+    appendSeedGovernance(store, raw);
     store.appendRows(SHEET.procConcerns, COLUMNS.procConcerns, concernsSeed(raw.expediting as RawRow[], raw.procurement as RawRow[], (raw as unknown as { logistics?: RawRow[] }).logistics ?? [], String(raw.project.cutoff), now));
     const cutoff = String(raw.project.cutoff);
     const shift = (n: number | null) => (n === null ? null : new Date(new Date(`${cutoff}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10));

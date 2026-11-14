@@ -7,6 +7,7 @@ import { Icon } from '../icons';
 import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Pager, useDebounced } from '../ui';
 import { ArticleBody } from './knowledgeBody';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 24;
 
@@ -24,7 +25,7 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useDeepLink();
   const [editing, setEditing] = useState<KnowledgeArticle | 'new' | null>(null);
   const debounced = useDebounced(q);
   const base = `/projects/${project.id}/knowledge`;

@@ -2,24 +2,52 @@ import { Component, useContext, useEffect, useId, useRef, useState, type ReactNo
 import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { signed, statusTone, type Tone } from './format';
-import { CrumbContext, SheetContext, useApp } from './state';
+import { CrumbContext, SheetContext } from './state';
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
   return <span className={`pill ${tone ?? statusTone(String(children))}`}>{children}</span>;
+}
+
+/** Runs a number up from 0 (or from its previous value) to the target. Text that is not a plain number is shown as is. */
+function CountUp({ value }: { value: ReactNode }) {
+  const raw = typeof value === 'number' ? String(value) : typeof value === 'string' ? value.trim() : '';
+  const m = /^([+-]?)(\d+(?:\.(\d+))?)$/.exec(raw);
+  const target = m ? Number(m[1] + m[2]) : null;
+  const decimals = m?.[3]?.length ?? 0;
+  const sign = m?.[1] === '+';
+  const [shown, setShown] = useState<number | null>(target == null ? null : 0);
+  const from = useRef(0);
+  useEffect(() => {
+    if (target == null) { setShown(null); return; }
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { from.current = target; setShown(target); return; }
+    const start = from.current, t0 = performance.now(), ms = 900;
+    let id = 0;
+    const tick = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      const v = start + (target - start) * e;
+      from.current = v; setShown(v);
+      if (k < 1) id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [target]);
+  if (target == null || shown == null) return <>{value}</>;
+  const text = shown.toFixed(decimals);
+  return <span aria-label={raw}>{sign && shown > 0 ? '+' : ''}{text}</span>;
 }
 
 export function Stat({ label, value, unit, foot, icon }: { label: string; value: ReactNode; unit?: string; foot: ReactNode; icon: string }) {
   return (
     <div className="stat">
       <div className="stat-label">{label}<Icon name={icon} /></div>
-      <div className="stat-value mono">{value}{unit && <small>{unit}</small>}</div>
-      <div className="stat-foot">{foot}</div>
+      <div className="stat-value mono"><CountUp value={value} />{unit && <small>{unit}</small>}</div>
+      <div className="stat-foot" title={typeof foot === 'string' ? foot : undefined}>{foot}</div>
     </div>
   );
 }
 
 /** A progress bar that shows the actual figure as the fill and the plan as a tick, with both numbers written out. */
-export function ActualPlanBar({ actual, plan, label, compact }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean }) {
+export function ActualPlanBar({ actual, plan, label, compact, hideActual }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean; /** Inside a KPI card the actual is already the big number. */ hideActual?: boolean }) {
   const a = actual != null && Number.isFinite(actual) ? actual : null;
   const p = plan != null && Number.isFinite(plan) ? plan : null;
   const gap = p == null || a == null ? null : a - p;
@@ -29,7 +57,7 @@ export function ActualPlanBar({ actual, plan, label, compact }: { actual: number
     <div className={`apbar ${compact ? 'compact' : ''}`}>
       <div className="apbar-figures">
         {label && <span className="apbar-label">{label}</span>}
-        <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>
+        {!hideActual && <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>}
         <span className="muted">{p == null ? '—' : `${p.toFixed(1)}%`} plan</span>
         {gap != null && <span className={gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}>{signed(gap)} pp</span>}
       </div>
@@ -55,7 +83,6 @@ export function Breadcrumb({ parts }: { parts: string[] }) {
 }
 
 export function PageHead({ title, desc, actions }: { title: string; desc: ReactNode; actions?: ReactNode }) {
-  const { project } = useApp();
   const crumbs = useContext(CrumbContext);
   const sheet = useContext(SheetContext);
   return (
@@ -63,9 +90,7 @@ export function PageHead({ title, desc, actions }: { title: string; desc: ReactN
       <Breadcrumb parts={crumbs} />
       <div className="page-head">
         <div>
-          <div className="eyebrow">{project.code} · {project.contract}</div>
-          <h1>{title}</h1>
-          <p className="page-sub">{desc}</p>
+          <h1 title={typeof desc === 'string' ? desc : undefined}>{title}</h1>
         </div>
         <div className="actions">
           {sheet && <a className="btn small icon-only" href={sheet.url} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`} aria-label={`Open the "${sheet.name}" sheet`}><Icon name="sheet" /></a>}
@@ -116,7 +141,7 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([typ
  * <dialog>, so its position cannot depend on a browser's default dialog styles. It traps focus, closes on Escape or a
  * click on the dimmed page, locks page scrolling while open, and gives focus back when it closes.
  */
-export function Modal({ title, onClose, children, actions, size = 'md' }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' }) {
+export function Modal({ title, onClose, children, actions, size = 'md' }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -134,7 +159,8 @@ export function Modal({ title, onClose, children, actions, size = 'md' }: { titl
       body.style.overflow = 'hidden';
       if (gap > 0) body.style.paddingRight = `${gap}px`;
     }
-    if (!el.contains(document.activeElement)) (el.querySelector<HTMLElement>('input:not([type=hidden]),textarea,select') ?? el.querySelector<HTMLElement>(FOCUSABLE) ?? el).focus({ preventScroll: true });
+    // focus after the slide-in so the first frames are not spent on focus styles and scrolling
+    const focusTimer = window.setTimeout(() => { if (!el.contains(document.activeElement)) (el.querySelector<HTMLElement>('input:not([type=hidden]),textarea,select') ?? el.querySelector<HTMLElement>(FOCUSABLE) ?? el).focus({ preventScroll: true }); }, 240);
 
     const onKey = (e: KeyboardEvent) => {
       if (modalStack[modalStack.length - 1] !== token) return; // only the top-most modal reacts
@@ -149,6 +175,7 @@ export function Modal({ title, onClose, children, actions, size = 'md' }: { titl
     };
     document.addEventListener('keydown', onKey);
     return () => {
+      window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', onKey);
       modalStack.splice(modalStack.indexOf(token), 1);
       if (--modalLocks === 0) { body.style.overflow = saved.overflow; body.style.paddingRight = saved.padding; }

@@ -16,13 +16,10 @@ mkdirSync(out, { recursive: true });
 const store = new MemoryStore();
 seedStore(store, seedData);
 
-const sheets: [string, string, typeof COLUMNS[keyof typeof COLUMNS]][] = [
-  ['projects', SHEET.projects, COLUMNS.projects], ['users', SHEET.users, COLUMNS.users], ['memberships', SHEET.memberships, COLUMNS.memberships],
-  ['modules', SHEET.modules, COLUMNS.modules], ['moduleChanges', SHEET.moduleChanges, COLUMNS.moduleChanges], ['tasks', SHEET.tasks, COLUMNS.tasks], ['subtasks', SHEET.subtasks, COLUMNS.subtasks],
-  ['scurve', SHEET.scurve, COLUMNS.scurve], ['workPackages', SHEET.workPackages, COLUMNS.workPackages], ['milestones', SHEET.milestones, COLUMNS.milestones],
-  ['procurement', SHEET.procurement, COLUMNS.procurement], ['expediting', SHEET.expediting, COLUMNS.expediting],
-  ['logistics', SHEET.logistics, COLUMNS.logistics], ['materialBalance', SHEET.materialBalance, COLUMNS.materialBalance], ['materialSummary', SHEET.materialSummary, COLUMNS.materialSummary], ['procConcerns', SHEET.procConcerns, COLUMNS.procConcerns], ['procCurves', SHEET.procCurves, COLUMNS.procCurves], ['phaseProgress', SHEET.phaseProgress, COLUMNS.phaseProgress], ['budget', SHEET.budget, COLUMNS.budget], ['knowledge', SHEET.knowledge, COLUMNS.knowledge], ['risks', SHEET.risks, COLUMNS.risks], ['snapshots', SHEET.snapshots, COLUMNS.snapshots], ['snapshotData', SHEET.snapshotData, COLUMNS.snapshotData], ['interfaces', SHEET.interfaces, COLUMNS.interfaces], ['interfacePoints', SHEET.interfacePoints, COLUMNS.interfacePoints],
-];
+// Every dataset that has a sheet, so a pre-filled spreadsheet matches what `setup` creates.
+const sheets = (Object.keys(COLUMNS) as (keyof typeof COLUMNS)[])
+  .filter(k => k in SHEET)
+  .map(k => [k, SHEET[k as keyof typeof SHEET], COLUMNS[k]] as const);
 
 for (const [file, name, columns] of sheets) {
   const rows = store.readRows(name, [...columns]).map(r => columns.map(c => r[c.key] ?? null));

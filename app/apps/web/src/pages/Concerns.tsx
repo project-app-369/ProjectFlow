@@ -12,6 +12,7 @@ import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
 import { concernFields } from './procFields';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 25;
 const SEV_TONE: Record<string, Tone> = { Critical: 'red', High: 'red', Medium: 'amber', Low: 'green' };
@@ -25,12 +26,14 @@ export default function Concerns() {
   const pkg = params.get('package') ?? '';
   const list = useListState();
   const [filters, setFilters] = useState({ type: '', severity: '', area: '', owner: '', within: '', activeOnly: true });
-  const [editing, setEditing] = useState<Concern | 'new' | null>(null);
+  const [editingId, setEditingId] = useDeepLink();
+  const setEditing = (v: Concern | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
   const base = `/projects/${project.id}/procurement/concerns`;
 
   const summary = useQuery({ queryKey: ['concern-summary', project.id], queryFn: () => request<ConcernSummary>(`${base}/summary`) });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, type: filters.type, severity: filters.severity, area: filters.area, owner: filters.owner, within: filters.within, packageCode: pkg, active: filters.activeOnly && !list.state.status ? 'true' : undefined });
   const page = useQuery({ queryKey: ['concerns', project.id, query], queryFn: () => request<Page<Concern>>(`${base}${query}`), placeholderData: keepPreviousData });
+  const editing: Concern | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   // codes for the package picker come from the registers themselves
   const codes = useQuery({ queryKey: ['package-codes', project.id], staleTime: 60_000, queryFn: async () => {
     const [a, b] = await Promise.all([

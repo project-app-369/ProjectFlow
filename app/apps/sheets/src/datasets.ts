@@ -63,16 +63,35 @@ export const COLUMNS = {
     ...text('highlight', 'actionPlan', 'remark', 'lsps', 'poNo', 'deliveryDate', 'currentStatusText'),
     ...num('planExw', 'actExw', 'planArrival', 'actArrival'),
   ],
+  /** The project's risk register: ratings are scores on the project's matrix (see riskMatrix), one per impact dimension. */
   risks: [
-    ...text('projectId', 'id', 'title', 'category', 'cause', 'event', 'effect', 'owner'), ...num('likelihood', 'impact'),
-    ...text('mitigation', 'trigger'), ...num('residualLikelihood', 'residualImpact'), ...date('reviewDate'),
-    ...text('status', 'milestoneId'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
+    ...text('projectId', 'id'), ...num('no'), ...text('status', 'rbs', 'category', 'discipline', 'title', 'description', 'cause', 'effect', 'owner'), ...date('recordDate'),
+    // Ratings are text so a word typed in the sheet ("Possible", "Major") is kept and read by meaning, as well as a score.
+    ...text('preProbability', 'preSchedule', 'preCost', 'preScope', 'preQuality'),
+    ...text('strategy', 'mitigationCause', 'mitigationEffect'), ...date('planDate'), ...text('actualActions'), ...date('actualDate'),
+    ...text('postProbability', 'postSchedule', 'postCost', 'postScope', 'postQuality'),
+    ...text('remark', 'external'), ...date('reviewDate'), ...text('milestoneId'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
   ],
+  /** Mitigation actions of a risk, each with an owner and a due date. */
+  riskActions: [...text('projectId', 'id', 'riskId', 'action', 'owner'), ...date('dueDate', 'doneDate'), ...stamp('createdAt', 'updatedAt')],
+  /** The project's risk matrix: one row per probability x severity cell and the level that cell means. */
+  riskMatrix: [...text('projectId'), ...num('probability'), ...text('probabilityLabel'), ...num('severity'), ...text('severityLabel', 'level')],
+  /** Risk breakdown structure: category (level 1) and discipline (level 2); the code is what a risk's RBS holds. */
+  riskBreakdown: text('projectId', 'code', 'category', 'categoryName', 'discipline', 'disciplineName'),
   interfaces: [
     ...text('projectId', 'id', 'title', 'type', 'originator', 'receiver', 'coordinator', 'discipline', 'boundary', 'requiredInput', 'requiredOutput'),
     ...date('needDate'), ...text('response', 'acceptance', 'evidence', 'status', 'milestoneId'), ...stamp('createdAt', 'updatedAt'),
   ],
-  interfacePoints: [...text('projectId', 'id', 'interfaceId', 'title', 'owner'), ...date('due'), ...text('status', 'response'), ...stamp('createdAt', 'updatedAt')],
+  /** Interface points (queries) raised by one party to another; an interface in the register may group them. */
+  interfacePoints: [
+    ...text('projectId', 'id', 'interfaceId', 'title', 'description', 'owner', 'workPackage', 'discipline', 'originator', 'target', 'action'),
+    ...date('queryDate', 'targetDate'), ...text('reference', 'status', 'resolution'), ...date('resolvedDate'), ...text('resolvedDocument', 'remarks'), ...stamp('createdAt', 'updatedAt'),
+  ],
+  interfaceParties: text('projectId', 'code', 'name'),
+  /** Who performs each scope activity, per facility: one row per cell of the responsibility matrix. */
+  responsibility: [...text('projectId'), ...num('order', 'level'), ...text('section', 'ref', 'activity', 'workPackage', 'facility', 'party', 'remark')],
+  /** Each party's RASCI role per scope activity, one row per cell, for each matrix (facility group). */
+  rasci: [...text('projectId', 'matrix'), ...num('order'), ...text('section', 'ref', 'activity', 'phase', 'party', 'role', 'remark')],
   /** Template for modules that have no dedicated schema yet. */
   generic: [...text('projectId', 'id', 'title', 'status', 'owner'), ...date('due'), ...text('notes'), ...stamp('updatedAt')],
 } satisfies Record<string, Column[]>;
@@ -99,11 +118,17 @@ export const SHEET = {
   procCurves: 'EPCIC - Procurement S-curves',
   phaseProgress: 'EPCIC - Phase progress',
   risks: 'Governance - Risks',
+  riskActions: 'Governance - Risk actions',
+  riskMatrix: 'Governance - Risk matrix',
+  riskBreakdown: 'Governance - Risk breakdown',
   issues: 'Governance - Issues',
   issueSubtasks: 'Governance - Issue sub-tasks',
   issueLog: 'Governance - Issue log',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
+  interfaceParties: 'Governance - Interface parties',
+  responsibility: 'Governance - Responsibility matrix',
+  rasci: 'Governance - RASCI',
   knowledge: 'Reports - Knowledge',
   snapshots: 'Reports - Cut-off snapshots',
   snapshotData: 'Reports - Snapshot data',
@@ -126,10 +151,10 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'interfaces', 'interfacePoints', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
-export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
+export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'riskActions', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
 export type SnapshotDataset = (typeof SNAPSHOT_DATASETS)[number];
 export const SNAPSHOT_KEY_OF_SHEET: Record<string, SnapshotDataset> = Object.fromEntries(SNAPSHOT_DATASETS.map(k => [SHEET[k], k]));
 
@@ -149,7 +174,7 @@ export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[
   'management.risks': { sheet: SHEET.risks, columns: COLUMNS.risks },
   'management.issues': { sheet: SHEET.issues, columns: COLUMNS.issues },
   'interface.register': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
-  'interface.matrix': { sheet: SHEET.interfaces, columns: COLUMNS.interfaces },
+  'interface.matrix': { sheet: SHEET.responsibility, columns: COLUMNS.responsibility },
   'interface.points': { sheet: SHEET.interfacePoints, columns: COLUMNS.interfacePoints },
 };
 

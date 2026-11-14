@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDeepLinkItem } from '../../deepLink';
 import type { PTask } from '../../api';
 import { hours } from '../../format';
+import { Icon } from '../../icons';
 import { Btn, ErrorBox, Loading, PageHead, Stat } from '../../ui';
 import { applyFilter, emptyFilter, TaskFilters, TaskForm, useTasks, type TaskFilter } from './common';
 import { TaskCards, TaskGantt, TaskKanban, TaskList } from './TaskViews';
 
-const VIEWS = [['list', 'List'], ['card', 'Card'], ['kanban', 'Kanban'], ['gantt', 'Gantt']] as const;
+const VIEWS = [['list', 'List', 'sheet'], ['card', 'Card', 'grid'], ['kanban', 'Kanban', 'panel'], ['gantt', 'Gantt', 'chart']] as const;
 type View = (typeof VIEWS)[number][0];
 
 /** Personal → Task Management → Tasks: one task set, four views (list, card, kanban, gantt). */
@@ -15,7 +17,7 @@ export default function TaskManagement() {
   const [params, setParams] = useSearchParams();
   const view = (VIEWS.find(([id]) => id === params.get('view'))?.[0] ?? 'list') as View;
   const [filter, setFilter] = useState<TaskFilter>(emptyFilter);
-  const [editing, setEditing] = useState<PTask | 'new' | null>(null);
+  const [editing, setEditing] = useDeepLinkItem(tasks, t => t.id);
 
   const shown = useMemo(() => applyFilter(tasks, filter), [tasks, filter]);
   const stats = useMemo(() => {
@@ -30,7 +32,7 @@ export default function TaskManagement() {
   return (
     <>
       <PageHead title="Tasks" desc="Your personal tasks across projects — switch between list, cards, kanban and gantt."
-        actions={<Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New task</Btn>} />
+        actions={<Btn kind="small primary" icon="plus" iconOnly aria-label="New task" onClick={() => setEditing('new')} />} />
       <div className="stats">
         <Stat label="Open tasks" value={stats.open} foot="Backlog, planned and ongoing" icon="check" />
         <Stat label="Overdue" value={stats.overdue} foot={<span className={stats.overdue ? 'negative' : ''}>Deadline passed, not completed</span>} icon="clock" />
@@ -40,8 +42,8 @@ export default function TaskManagement() {
         <Stat label="Completion" value={tasks.length ? Math.round(stats.done / tasks.length * 100) : 0} unit="%" foot="Share of all tasks completed" icon="chart" />
       </div>
       <div className="tabs" role="tablist" aria-label="Task views">
-        {VIEWS.map(([id, label]) => (
-          <button key={id} className={`tab ${view === id ? 'active' : ''}`} role="tab" aria-selected={view === id} onClick={() => setParams(id === 'list' ? {} : { view: id }, { replace: true })}>{label}</button>
+        {VIEWS.map(([id, label, icon]) => (
+          <button key={id} className={`tab task-view-tab ${view === id ? 'active' : ''}`} role="tab" aria-label={`${label} view`} title={`${label} view`} aria-selected={view === id} onClick={() => setParams(id === 'list' ? {} : { view: id }, { replace: true })}><Icon name={icon} /></button>
         ))}
       </div>
       <div className="panel">

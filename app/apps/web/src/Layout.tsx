@@ -7,6 +7,7 @@ import { fmtDate, initials } from './format';
 import { Icon } from './icons';
 import { defaultKey, kidsOf, landing, within } from './nav';
 import { useAccess, useApp, usePrefs } from './state';
+import { startMobileTables } from './mobileTables';
 import { Btn, ErrorBoundary, Modal } from './ui';
 
 const WS_ICON: Record<WorkspaceId, string> = { personal: 'user', epcic: 'building', governance: 'shield', reports: 'book' };
@@ -45,6 +46,7 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const mods = modules.modules;
+  const ws = mods.find(m => m.key === current)?.workspace ?? prefs.workspace;
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   // arriving at a page opens the menus above it, even if they were closed by hand
   useEffect(() => {
@@ -68,14 +70,14 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
     close();
   };
 
-  const tops = mods.filter(m => m.workspace === prefs.workspace && !m.parent && m.effective);
+  const tops = mods.filter(m => m.workspace === ws && !m.parent && m.effective);
   let lastGroup: string | undefined;
   const items = tops.map(m => {
     const header = m.group && m.group !== lastGroup ? <div key={`g-${m.group}`} className="side-label">{m.group}</div> : null;
     lastGroup = m.group;
     return [header, <NavNode key={m.key} m={m} depth={0} current={current} go={goModule} ctl={ctl} />];
   });
-  const wsLabel = modules.workspaces.find(w => w.id === prefs.workspace)?.label;
+  const wsLabel = modules.workspaces.find(w => w.id === ws)?.label;
   const noProject = !project.id;
 
   return (
@@ -83,7 +85,7 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
       <div className="brand"><span className="brandmark" /><span className="brand-text">Project Flow</span></div>
       {!noProject && <div className="workspace-switch" role="tablist">
         {modules.workspaces.map(w => (
-          <button key={w.id} className={`ws-tab ${prefs.workspace === w.id ? 'active' : ''}`} role="tab" aria-selected={prefs.workspace === w.id} title={w.label} aria-label={w.label} onClick={() => goWorkspace(w.id)}><Icon name={WS_ICON[w.id]} /><span className="ws-label">{w.label}</span></button>
+          <button key={w.id} className={`ws-tab ${ws === w.id ? 'active' : ''}`} role="tab" aria-selected={ws === w.id} title={w.label} aria-label={w.label} onClick={() => goWorkspace(w.id)}><Icon name={WS_ICON[w.id]} /><span className="ws-label">{w.label}</span></button>
         ))}
       </div>}
       <nav className="side-nav" aria-label={`${wsLabel} modules`}>
@@ -110,7 +112,7 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
   const flags = summary.data ? summary.data.delayed + summary.data.atRisk : 0;
 
   return (
-    <header id="header" className="topbar">
+    <header id="header" className="topbar glass-top">
       <div className="project-switch">
         <button className="icon-btn nav-toggle" aria-controls="sidebar" aria-expanded={isDesktop() ? !prefs.navCollapsed : menuOpen}
           aria-label={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} title={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} onClick={toggleMenu}><Icon name="panel" /></button>
@@ -127,15 +129,15 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
       </div>
       <CutoffControl />
       <div className="top-actions">
-        <span className="tag">{apiMode === 'sheets' ? 'PRE-BUILD · SHEETS' : 'DEMO WORKSPACE'}</span>
-        <button className="icon-btn bell" aria-label="Notifications" onClick={() => setOpen(true)}><Icon name="bell" /></button>
+        <button className="icon-btn round" aria-label={prefs.dark ? 'Switch to light mode' : 'Switch to dark mode'} title={prefs.dark ? 'Light mode' : 'Dark mode'} onClick={() => prefs.setDark(!prefs.dark)}><Icon name={prefs.dark ? 'sun' : 'moon'} /></button>
+        <button className="icon-btn round bell" aria-label="Notifications" onClick={() => setOpen(true)}><Icon name="bell" />{flags > 0 && <b className="bell-dot">{flags}</b>}</button>
         <div className="identity">
           <span className="avatar teal" title={me?.name ?? 'Project team'}>{initials(me?.name ?? 'Project Team')}</span>
           <div className="identity-text">
             <strong>{me?.name ?? 'Project team'}</strong>
             <span className="muted">{me ? `${me.isAdmin ? 'Administrator · ' : ''}${access.role ?? 'No project role'}` : expediting ? `${flags} open flags` : 'Demo user'}</span>
           </div>
-          {me && <button className="icon-btn" onClick={signOut} aria-label="Switch user" title="Switch user (sign out)"><Icon name="switch" /></button>}
+          {me && <button className="icon-btn round" onClick={signOut} aria-label="Switch user" title="Switch user (sign out)"><Icon name="switch" /></button>}
         </div>
       </div>
       {open && (
@@ -176,6 +178,7 @@ function NotMember() {
 export function Layout() {
   const [menu, setMenu] = useState(false);
   const prefs = usePrefs();
+  useEffect(() => { const main = document.getElementById('main'); return main ? startMobileTables(main) : undefined; }, []);
   useEffect(() => {
     if (!menu) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
@@ -188,10 +191,9 @@ export function Layout() {
     <>
       <Sidebar current={current} open={menu} close={() => setMenu(false)} />
       {menu && <div className="scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
-      <div className="workspace">
+      <div className="workspace lintel">
         <Header toggleMenu={() => (isDesktop() ? prefs.setNavCollapsed(!prefs.navCollapsed) : setMenu(m => !m))} menuOpen={menu} />
         <main id="main" tabIndex={-1}><div className="fade" key={pathname}><NotMember /><SnapshotBanner /><ErrorBoundary><Outlet /></ErrorBoundary></div></main>
-        <footer>Project Flow <span>{apiMode === 'sheets' ? 'v0.2 · Google Sheets pre-build · STTP2B reference data' : 'v0.1 · NestJS API · PostgreSQL · STTP2B reference data'}</span></footer>
       </div>
     </>
   );

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dev:sheets": "vite --mode sheets",
+    "dev:sim": "vite --mode sim",
     "build:sheets": "tsc --noEmit && vite build --mode sheets"
   },
   "dependencies": {

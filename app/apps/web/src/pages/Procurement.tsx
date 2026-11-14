@@ -11,6 +11,7 @@ import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 
@@ -20,7 +21,8 @@ export default function Procurement() {
   const access = useAccess();
   const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
-  const [selected, setSelected] = useState<ProcurementPackage | null>(null);
+  const [selectedId, setSelectedId] = useDeepLink();
+  const setSelected = (v: ProcurementPackage | null) => setSelectedId(v === null ? null : v.code);
   const [editing, setEditing] = useState<ProcurementPackage | 'new' | null>(null);
   const base = `/projects/${project.id}/procurement`;
 
@@ -30,6 +32,7 @@ export default function Procurement() {
   const filter = usePick(list, { workPackage: '', buyer: '' });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, workPackage: filter.extra.workPackage, buyer: filter.extra.buyer });
   const page = useQuery({ queryKey: ['procurement-packages', project.id, query], queryFn: () => request<Page<ProcurementPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
+  const selected: ProcurementPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ProcurementPackage>[]>(() => [
     {

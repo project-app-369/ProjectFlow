@@ -6,7 +6,8 @@ import { useApp } from '../../state';
 import { Btn, ErrorBox, Loading, PageHead, Stat } from '../../ui';
 import { useProjectLabels } from './common';
 
-const PALETTE = ['#343c78', '#00877d', '#ad751d', '#bc5660', '#6b7bd6', '#5aa985', '#c58b3a', '#8a5aa8'];
+// Projects are categories with no status meaning: the shared categorical palette (--cat-1..8), themed for light and dark.
+const PALETTE = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `var(--cat-${n})`);
 const PERIODS = { week: 12, month: 9 } as const;
 const STEP = { week: 4, month: 3 } as const;
 
