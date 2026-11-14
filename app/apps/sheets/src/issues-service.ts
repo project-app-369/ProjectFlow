@@ -151,7 +151,7 @@ export class IssuesService {
     return {
       ...this.view(r, this.cutoff(projectId), subs),
       subtasks: subs.filter(s => s.issueId === id).sort((a, b) => Number(a.position) - Number(b.position)).map(s => this.subtaskView(s)),
-      log: this.logRows(projectId).filter(l => l.issueId === id).sort((a, b) => String(b.at).localeCompare(String(a.at)) || String(b.id).localeCompare(String(a.id))).map(({ projectId: _p, ...l }) => l),
+      log: this.logRows(projectId).filter(l => l.issueId === id).sort((a, b) => String(b.at).localeCompare(String(a.at)) || String(b.id).localeCompare(String(a.id))).map(({ projectId: _p, ...l }) => (/^Loaded from the .*workbook/i.test(String(l.note ?? '')) ? { ...l, note: null } : l)),
     };
   }
 

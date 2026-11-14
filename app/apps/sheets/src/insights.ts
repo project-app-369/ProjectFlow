@@ -20,7 +20,12 @@ export interface Insights {
   charts: InsightChart[];
 }
 
-export const COLOR = { done: '#2f9d83', open: '#d6893a', plan: '#aab2d3', actual: '#00877d', red: '#b23a52', amber: '#c98f2c', indigo: '#8d97d6', blue: '#4a76c9', grey: '#c3c9de' };
+/**
+ * Colours are named by meaning, never by hue; the web client resolves them to its themed tokens so every chart agrees.
+ * Time series: plan, forecast, actual. Progress: done, open, wait, neutral. Severity ramp: low, medium, high, critical.
+ * brand is for single-series counts that carry no status.
+ */
+export const COLOR = { plan: 'plan', forecast: 'forecast', actual: 'actual', done: 'done', open: 'open', wait: 'wait', neutral: 'neutral', brand: 'brand', low: 'low', medium: 'medium', high: 'high', critical: 'critical' } as const;
 
 const addDays = (d: string, n: number) => new Date(new Date(`${d}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
 const daysBetween = (a: string, b: string) => Math.round((new Date(`${b}T12:00:00Z`).getTime() - new Date(`${a}T12:00:00Z`).getTime()) / 86_400_000);
@@ -104,7 +109,7 @@ export function logisticsInsights(rows: AnyRow[], cutoff: string): Insights {
         categories: byMonth.keys, filterKey: 'month',
         series: [
           { name: 'Received (actual)', color: COLOR.done, data: byMonth.keys.map(k => kgToT(sum(received(byMonth.get(k)), 'grossWeightKg'))) },
-          { name: 'Open (forecast)', color: COLOR.open, data: byMonth.keys.map(k => kgToT(sum(byMonth.get(k).filter(shipmentOpen), 'grossWeightKg'))) },
+          { name: 'Open (forecast)', color: COLOR.forecast, data: byMonth.keys.map(k => kgToT(sum(byMonth.get(k).filter(shipmentOpen), 'grossWeightKg'))) },
         ],
       },
       {
@@ -136,7 +141,7 @@ export function planInsights(pkgs: AnyRow[], cutoff: string, weightOf: (r: AnyRo
   const buyer = tally(pkgs.filter(r => r.status !== 'PO placed'), r => String(r.buyer ?? 'Unassigned'));
   const buyerKeys = [...buyer.keys].sort((a, b) => buyer.get(b).length - buyer.get(a).length).slice(0, 10);
   const STAGES = ['Planned', 'In tendering', 'LOA issued', 'PO placed'];
-  const STAGE_COLORS = [COLOR.grey, COLOR.indigo, COLOR.open, COLOR.done];
+  const STAGE_COLORS = [COLOR.neutral, COLOR.plan, COLOR.wait, COLOR.done];
 
   return {
     cards: [
@@ -223,7 +228,7 @@ export function expeditingInsights(rows: AnyRow[], cutoff: string): Insights {
       },
       {
         title: 'Flags by discipline', sub: 'Packages that are delayed, at high risk or at risk.', layout: 'bar', stacked: true, unit: 'packages', categories: disc.keys, filterKey: 'discipline',
-        series: [['Delay', COLOR.red], ['At High Risk', '#c2602f'], ['At Risk', COLOR.amber]].map(([s, color]) => ({ name: s, color, data: disc.keys.map(k => disc.get(k).filter(r => r.status === s).length) })),
+        series: [['Delay', COLOR.critical], ['At High Risk', COLOR.high], ['At Risk', COLOR.medium]].map(([s, color]) => ({ name: s, color, data: disc.keys.map(k => disc.get(k).filter(r => r.status === s).length) })),
       },
     ],
   };
@@ -267,8 +272,8 @@ export function materialsInsights(summary: AnyRow[], stock: AnyRow[]): Insights 
         title: 'Needed against arrived by facility (t)', sub: 'Weight needed for purchase and weight arrived, by facility and supply.', layout: 'column', unit: 't', categories: withTarget.map(label),
         series: [{ name: 'Needed', color: COLOR.plan, data: withTarget.map(r => kgToT(Number(r.mtoKg))) }, { name: 'Arrived', color: COLOR.actual, data: withTarget.map(r => kgToT(Number(r.arrivedKg ?? 0))) }],
       },
-      { title: 'Stock lines by yard', sub: 'Lines on hand. Select a yard to filter.', layout: 'bar', unit: 'lines', categories: yardKeys, filterKey: 'yard', filterValues: yardKeys, series: [{ name: 'Lines', color: COLOR.blue, data: yardKeys.map(k => yard.get(k).length) }] },
-      { title: 'Stock lines by category', sub: 'The twelve largest categories. Select one to filter.', layout: 'bar', unit: 'lines', categories: catKeys, filterKey: 'category', series: [{ name: 'Lines', color: COLOR.indigo, data: catKeys.map(k => cat.get(k).length) }] },
+      { title: 'Stock lines by yard', sub: 'Lines on hand. Select a yard to filter.', layout: 'bar', unit: 'lines', categories: yardKeys, filterKey: 'yard', filterValues: yardKeys, series: [{ name: 'Lines', color: COLOR.brand, data: yardKeys.map(k => yard.get(k).length) }] },
+      { title: 'Stock lines by category', sub: 'The twelve largest categories. Select one to filter.', layout: 'bar', unit: 'lines', categories: catKeys, filterKey: 'category', series: [{ name: 'Lines', color: COLOR.brand, data: catKeys.map(k => cat.get(k).length) }] },
     ],
   };
 }
@@ -286,7 +291,7 @@ export function concernsInsights(rows: AnyRow[], active: (r: AnyRow) => boolean,
   const ownerKeys = [...owner.keys].sort((a, b) => owner.get(b).length - owner.get(a).length).slice(0, 10);
   const pkg = tally(open.filter(r => r.packageCode), r => String(r.packageCode));
   const pkgKeys = [...pkg.keys].sort((a, b) => pkg.get(b).length - pkg.get(a).length).slice(0, 8);
-  const SEV = ['Critical', 'High', 'Medium', 'Low'], SEV_COLOR = [COLOR.red, '#c2602f', COLOR.amber, '#5aa985'];
+  const SEV = ['Critical', 'High', 'Medium', 'Low'], SEV_COLOR = [COLOR.critical, COLOR.high, COLOR.medium, COLOR.low];
   const sevSeries = (keys: string[], get: (k: string) => AnyRow[]) => SEV.map((s, i) => ({ name: s, color: SEV_COLOR[i], data: keys.map(k => get(k).filter(r => r.severity === s).length) }));
 
   return {
@@ -326,7 +331,7 @@ export function milestonesInsights(rows: AnyRow[], cutoff: string): Insights {
   const facilities = tally(rows, r => String(r.facility ?? 'Project'));
   const byMonth = tally(rows, r => { const d = r.actual ?? r.forecast ?? r.planBaseline; return d ? String(d).slice(0, 7) : null; });
   const nextOne = [...open].filter(r => milestoneDue(r)).sort((a, b) => String(milestoneDue(a)).localeCompare(String(milestoneDue(b))))[0];
-  const STATUS = ['Done', 'Overdue', 'Due soon', 'Planned'], COLORS = [COLOR.done, COLOR.red, COLOR.open, COLOR.indigo];
+  const STATUS = ['Done', 'Overdue', 'Due soon', 'Planned'], COLORS = [COLOR.done, COLOR.critical, COLOR.wait, COLOR.plan];
 
   return {
     cards: [
@@ -371,7 +376,7 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
   const due30 = open.filter(r => r.dueDate && String(r.dueDate) >= cutoff && String(r.dueDate) <= addDays(cutoff, 30));
   const unassigned = open.filter(r => !r.pics.length);
   const done = subtasks.filter(s => s.done === 'Yes').length;
-  const PRI = ['Critical', 'High', 'Medium', 'Low'], PRI_COLOR = ['#a3243b', '#ec7a2f', '#e8c13a', '#4a8fd0'];
+  const PRI = ['Critical', 'High', 'Medium', 'Low'], PRI_COLOR = [COLOR.critical, COLOR.high, COLOR.medium, COLOR.low];
   const byPic = new Map<string, AnyRow[]>();
   for (const r of open) for (const e of r.pics as string[]) byPic.set(e, [...(byPic.get(e) ?? []), r]);
   const picKeys = [...byPic.keys()].sort((a, b) => byPic.get(b)!.length - byPic.get(a)!.length).slice(0, 10);
@@ -405,8 +410,8 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
 
 /* ============================== risks ============================== */
 /** Colours by level name, so a project matrix with three levels and the 5 x 5 matrix with four read the same way. */
-export const LEVEL_COLOR: Record<string, string> = { Low: '#3f9d6e', Medium: '#e8c13a', High: '#d9534f', Extreme: '#8e1b3a' };
-const levelColor = (l: string) => LEVEL_COLOR[l] ?? COLOR.grey;
+export const LEVEL_COLOR: Record<string, string> = { Low: COLOR.low, Medium: COLOR.medium, High: COLOR.high, Extreme: COLOR.critical };
+const levelColor = (l: string) => LEVEL_COLOR[l] ?? COLOR.neutral;
 const RISK_STATUS_ORDER = ['New', 'Firmed', 'Under assessment', 'Under resolving', 'Monitor', 'Closed'];
 
 /** Risk register summary. `rows` are risk views (with currentLevel, responseOverdue, ...); `levels` runs from least to most severe. */
@@ -432,8 +437,8 @@ export function risksInsights(rows: AnyRow[], cutoff: string, levels: string[]):
   return {
     cards: [
       { label: 'Active risks', value: active.length, foot: `${rows.length} in the register · ${rows.length - active.length} closed`, icon: 'risk' },
-      { label: `${top} now`, value: hot.length, foot: `Current level, active risks · ${active.filter(r => r.preLevel === top).length} before mitigation`, icon: 'flag', tone: hot.length ? 'red' : undefined },
-      { label: 'Response overdue', value: responseOverdue.length, foot: 'Plan action date before the cut-off, not done', icon: 'clock', tone: responseOverdue.length ? 'red' : undefined },
+      { label: `${top} now`, value: hot.length, foot: `Active · ${active.filter(r => r.preLevel === top).length} before mitigation`, icon: 'flag', tone: hot.length ? 'red' : undefined },
+      { label: 'Response overdue', value: responseOverdue.length, foot: 'Action date passed, not done', icon: 'clock', tone: responseOverdue.length ? 'red' : undefined },
       { label: 'Awaiting post-mitigation', value: awaitingPost.length, foot: 'Active, rated before but not after mitigation', icon: 'shield', tone: awaitingPost.length ? 'amber' : undefined },
       { label: 'Not rated', value: unrated.length, foot: 'Active risks without a pre-mitigation rating', icon: 'link', tone: unrated.length ? 'amber' : undefined },
       { label: 'Score reduced', value: reduction == null ? '—' : `${reduction}%`, foot: assessed.length ? `Pre to post score, ${plural(assessed.length, 'risk')} rated both` : 'No post-mitigation ratings yet', icon: 'check', tone: 'green' },
@@ -487,7 +492,7 @@ export function pointsInsights(rows: AnyRow[], cutoff: string): Insights {
   const noDate = open.filter(r => !r.targetDate);
   const ages = open.map(r => r.ageDays).filter((n): n is number => typeof n === 'number');
   const turnaround = rows.filter(r => r.settled && typeof r.ageDays === 'number').map(r => r.ageDays as number);
-  const WAITING: [string, string, string][] = [['Open', 'Awaiting response', COLOR.open], ['Responded', 'Awaiting acceptance', COLOR.indigo]];
+  const WAITING: [string, string, string][] = [['Open', 'Awaiting response', COLOR.wait], ['Responded', 'Awaiting acceptance', COLOR.open]];
   const byStatus = (keys: string[], get: (k: string) => AnyRow[]) => WAITING.map(([s, name, color]) => ({ name, color, data: keys.map(k => get(k).filter(r => r.status === s).length) }));
   const target = tally(open, r => String(r.target ?? 'No target'));
   const targetKeys = [...target.keys].sort((a, b) => target.get(b).length - target.get(a).length).slice(0, 10);
@@ -501,7 +506,7 @@ export function pointsInsights(rows: AnyRow[], cutoff: string): Insights {
       { label: 'Open points', value: open.length, foot: `${rows.length} in the register · ${rows.length - open.length} resolved or closed`, icon: 'link' },
       { label: 'Overdue', value: overdue.length, foot: 'Target date before the cut-off', icon: 'clock', tone: overdue.length ? 'red' : undefined },
       { label: 'Awaiting response', value: st('Open').length, foot: 'Raised, no answer from the target party', icon: 'risk', tone: st('Open').length ? 'amber' : undefined },
-      { label: 'Awaiting acceptance', value: st('Responded').length, foot: 'Answered, not yet accepted by the originator', icon: 'shield' },
+      { label: 'Awaiting acceptance', value: st('Responded').length, foot: 'Answered, awaiting acceptance', icon: 'shield' },
       { label: 'No target date', value: noDate.length, foot: 'Open points nobody has dated', icon: 'calendar', tone: noDate.length ? 'amber' : undefined },
       { label: 'Average age', value: avgAge == null ? '—' : `${Math.round(avgAge)} d`, foot: avgTurn == null ? 'Open points, from the query date' : `Open points · settled ones took ${Math.round(avgTurn)} d`, icon: 'check' },
     ],

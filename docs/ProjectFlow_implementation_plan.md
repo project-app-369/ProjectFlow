@@ -86,6 +86,7 @@ The 68-week envelope is not re-estimated here (spec revision 1.2 note).
 3. Start parity items 1–3 in §3; they unblock everything else on the NestJS side.
 4. Extract the remaining workbooks listed as "Not extracted" in the [reference data note](ProjectFlow_reference_data.md) (Logistics, Materials) as P2 datasets are scheduled.
 5. Replace the demo identity before any real data or external user touches the pre-build.
+6. Finish the Lintel UI rollout on branch `try-new-UI` (rules in [ADR 0006](../app/docs/adr/0006-lintel-design-and-layout-rules.md)): check every page at 1440, 1024 and 375 px in light and dark, move any page-level spacing onto the `--gap` / `--card-px` / `--card-py` tokens, then merge. Every new page follows the ADR's checklist.
 
 ## 6. Verification
 

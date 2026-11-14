@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { downloadCsv, errorText, request, type Insights, type Issue, type Page } from '../api';
 import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
@@ -10,6 +10,7 @@ import { useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, ErrorBox, PageHead, Pager } from '../ui';
 import { IssueDrawer, ISSUE_PRIORITIES, ISSUE_STATUSES } from './IssueDrawer';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const PRIORITY_ICON: Record<string, string> = { Critical: 'urgency-urgent', High: 'urgency-high', Medium: 'urgency-normal', Low: 'urgency-low' };
@@ -38,7 +39,7 @@ export default function Issues() {
   const qc = useQueryClient();
   const list = useListState();
   const filter = usePick(list, { priority: '', pic: '', within: '' });
-  const [open, setOpen] = useState<string | 'new' | null>(null);
+  const [open, setOpen] = useDeepLink();
   const base = `/projects/${project.id}/issues`;
 
   const insights = useQuery({ queryKey: ['insights', 'issues', project.id], queryFn: () => request<Insights>(`${base}/insights`) });

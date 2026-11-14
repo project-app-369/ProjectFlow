@@ -343,6 +343,11 @@ describe('risk management', () => {
     expect(list.total).toBe(90);
     expect(list.facets.levels).toEqual(['High', 'Medium', 'Low']);
     expect(list.facets.statuses).toEqual(['New', 'Firmed', 'Under assessment', 'Under resolving', 'Monitor', 'Closed']);
+    // "Not closed" is the register's starting filter: every status but Closed
+    const closed = ok(call('GET', `${P}/risks?pageSize=200&status=Closed`));
+    const live = ok(call('GET', `${P}/risks?pageSize=200&status=Not+closed`));
+    expect(live.total + closed.total).toBe(90);
+    expect(live.items.some((r: any) => r.status === 'Closed')).toBe(false);
     const first = ok(call('GET', `${P}/risks/PEP-DEN-0001`));
     // Probable (4) x worst of schedule/cost/scope = Moderate (3) = 12, a red cell; after mitigation Unlikely x Minor = 4, green.
     expect(first).toMatchObject({ status: 'Closed', category: 'Project Executional', discipline: 'Detail Engineering', preScore: 12, preLevel: 'High', preWorst: ['Schedule', 'Cost', 'Scope'], postScore: 4, postLevel: 'Low', currentLevel: 'Low', owners: ['CV Phong', 'DH Tien'] });

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDeepLinkItem } from '../../deepLink';
 import type { PTask } from '../../api';
 import { hours } from '../../format';
 import { Icon } from '../../icons';
@@ -16,7 +17,7 @@ export default function TaskManagement() {
   const [params, setParams] = useSearchParams();
   const view = (VIEWS.find(([id]) => id === params.get('view'))?.[0] ?? 'list') as View;
   const [filter, setFilter] = useState<TaskFilter>(emptyFilter);
-  const [editing, setEditing] = useState<PTask | 'new' | null>(null);
+  const [editing, setEditing] = useDeepLinkItem(tasks, t => t.id);
 
   const shown = useMemo(() => applyFilter(tasks, filter), [tasks, filter]);
   const stats = useMemo(() => {

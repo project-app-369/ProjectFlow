@@ -66,10 +66,12 @@ function Boxes({ title, sub, boxes, onFilter, active, compact }: { title: string
  * The summary at the top of a procurement page: six cards in one row, a pipeline or status strip, a look-ahead,
  * and charts. A box or a bar can set a filter on the register below it when the page passes `onFilter`.
  */
-export function InsightsView({ data, error, onFilter, active, compact }: {
+export function InsightsView({ data, error, onFilter, active, compact, extra }: {
   data?: Insights; error?: unknown; onFilter?: (f: Record<string, string>) => void; active?: (f: Record<string, string>) => boolean;
   /** Saves space: the strip and the look-ahead sit side by side, the boxes are smaller and the charts shorter. */
   compact?: boolean;
+  /** Another panel for the chart row, so it can sit beside a wide chart. */
+  extra?: ReactNode;
 }): ReactNode {
   if (error) return <section className="panel ins-panel"><div className="panel-head"><div><h2>Summary unavailable</h2><p>The register remains available below.</p></div></div><ErrorBox error={error} /></section>;
   if (!data) return <div className="stats">{Array.from({ length: 6 }, (_, i) => <Stat key={i} label="…" value="—" foot="Loading" icon="chart" />)}</div>;
@@ -82,7 +84,7 @@ export function InsightsView({ data, error, onFilter, active, compact }: {
         {data.strip && <Boxes {...data.strip} onFilter={onFilter} active={active} compact={compact} />}
         {data.lookAhead && <Boxes {...data.lookAhead} onFilter={onFilter} active={active} compact={compact} />}
       </div>
-      {data.charts.length > 0 && (
+      {(data.charts.length > 0 || extra) && (
         <div className={`ins-charts ${compact ? 'compact' : ''}`}>
           {data.charts.map(c => (
             <section key={c.title} className={`panel ins-panel ${compact ? 'compact' : ''} ${c.layout === 'column' && c.categories.length > 8 ? 'wide' : ''}`}>
@@ -94,6 +96,7 @@ export function InsightsView({ data, error, onFilter, active, compact }: {
               ) : <div className="empty">Nothing to chart yet.</div>}
             </section>
           ))}
+          {extra}
         </div>
       )}
     </>

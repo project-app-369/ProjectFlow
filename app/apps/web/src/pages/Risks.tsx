@@ -9,11 +9,15 @@ import { FilterChips, InsightsView, usePick } from '../Insights';
 import { useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager } from '../ui';
-import { Detail, IconFilter, LevelPill, People } from './governance';
+import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, People } from './governance';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
+/** The register opens on everything that is still live; "All statuses" shows the closed ones too. */
+const NOT_CLOSED = 'Not closed';
 const STATUS_ICON: Record<string, string> = { New: 'status-backlog', Firmed: 'status-planned', 'Under assessment': 'search', 'Under resolving': 'status-ongoing', Monitor: 'shield', Closed: 'status-completed' };
 const FLAGS: [string, string][] = [['active', 'Active only'], ['response-overdue', 'Response overdue'], ['review-overdue', 'Review overdue'], ['awaiting-post', 'Awaiting post-mitigation'], ['unrated', 'Not rated'], ['external', 'External']];
+const STRATEGY_ICON: Record<string, string> = { Avoid: 'close', Mitigate: 'shield', Transfer: 'arrow', Accept: 'tick', Escalate: 'flag' };
 const DIMENSIONS = ['Schedule', 'Cost', 'Scope', 'Quality'] as const;
 
 interface RiskPage extends Page<Risk> { facets: Page<Risk>['facets'] & { levels: string[]; owners: string[]; categories: string[]; strategies: string[] } }
@@ -26,9 +30,9 @@ export default function Risks() {
   const { project } = useApp();
   const access = useAccess();
   const toast = useToast();
-  const list = useListState();
+  const list = useListState({ status: NOT_CLOSED });
   const filter = usePick(list, { level: '', owner: '', flag: '', within: '', cell: '', basis: '', category: '' });
-  const [open, setOpen] = useState<string | 'new' | null>(null);
+  const [open, setOpen] = useDeepLink();
   const [basis, setBasis] = useState<'current' | 'pre'>('current');
   const base = `/projects/${project.id}/risks`;
 
@@ -83,9 +87,9 @@ export default function Risks() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${list.query(extra)}`, 'risk-register.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpen('new')}>New risk</Btn>}
         </>} />
-      <InsightsView compact data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} />
-
-      <section className="panel ins-panel compact">
+      <InsightsView compact data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn}
+        extra={
+      <section className="panel ins-panel compact heat-panel">
         <div className="panel-head">
           <div><h2 title="Active risks by probability and worst impact. Select a cell to filter the register.">Heatmap · {basis === 'current' ? 'now' : 'before mitigation'}</h2></div>
           <div className="seg" role="group" aria-label="Heatmap basis">
@@ -95,13 +99,15 @@ export default function Risks() {
         </div>
         {heat.error ? <ErrorBox error={heat.error} /> : heat.data ? <Heatmap data={heat.data} basis={basis} active={filter.extra.basis === basis ? filter.extra.cell : ''} onPick={pickCell} /> : <div className="empty">Loading…</div>}
       </section>
+        } />
+
 
       <div className="panel">
         <div className="toolbar">
           <label className="search"><Icon name="search" /><input placeholder="Search id, title, cause, effect, owner, mitigation…" value={list.state.q} onChange={e => list.set({ q: e.target.value })} aria-label="Search risks" /></label>
           <div className="filter-group">
             <IconFilter icon={STATUS_ICON[list.state.status] ?? 'status-ongoing'} label="Filter by status" value={list.state.status} onChange={v => list.set({ status: v })}>
-              <option value="">All statuses</option>{RISK_STATUSES.map(s => <option key={s}>{s}</option>)}
+              <option value="">All statuses</option><option value={NOT_CLOSED}>{NOT_CLOSED}</option>{RISK_STATUSES.map(s => <option key={s}>{s}</option>)}
             </IconFilter>
             <IconFilter icon="flag" label="Filter by current level" value={filter.extra.level} onChange={v => setExtra('level', v)}>
               <option value="">All levels</option>{(facets?.levels ?? []).map(l => <option key={l}>{l}</option>)}
@@ -122,7 +128,7 @@ export default function Risks() {
         <FilterChips chips={filter.chips.filter(([k]) => !['level', 'owner', 'flag', 'basis'].includes(k)).map(([k, v]) => (k === 'cell' ? [k, cellLabel(heat.data?.matrix, v, filter.extra.basis)] : [k, v]))} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." rowClassName={r => (r.status === 'Closed' ? 'row-closed' : '')} />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}
@@ -187,7 +193,7 @@ const blank = (r?: Risk): Form => ({
 function RiskDrawer({ base, id, onClose }: { base: string; id: string | null; onClose: () => void }) {
   const detail = useQuery({ queryKey: ['risk', base, id], enabled: !!id, queryFn: () => request<Risk>(`${base}/${id}`) });
   if (id && !detail.data) {
-    return <Modal title={id} size="lg" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
+    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
   }
   return <RiskForm key={detail.data?.updatedAt ?? 'new'} risk={id ? detail.data : undefined} base={base} onClose={onClose} />;
 }
@@ -234,7 +240,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
 
   return (
     <>
-      <Modal title={risk ? `${risk.id} · Risk` : 'New risk'} size="lg" onClose={onClose}
+      <Modal title={risk ? `${risk.id} · Risk` : 'New risk'} size="xl" onClose={onClose}
         actions={<>
           {risk && access.canManage && <Btn kind="text" onClick={() => setRemoving(true)}>Delete</Btn>}
           <Btn onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Btn>
@@ -249,67 +255,66 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
               {' '}<span className="tiny muted">{risk.status}{risk.responseOverdue ? ' · response overdue' : ''}{risk.reviewOverdue ? ' · review overdue' : ''}</span>
             </div>
           )}
-          <fieldset disabled={readOnly} className="plain-fieldset">
-            <h3>Identification</h3>
-            <div className="form-grid">
-              <Field label="Title" full><input value={String(v.title)} maxLength={200} onChange={e => up('title', e.target.value)} autoFocus={!risk} /></Field>
-              <Field label="RBS discipline" hint="Category and discipline of the risk breakdown structure">
-                <select value={String(v.rbs)} onChange={e => up('rbs', e.target.value)}>
-                  <option value="">Choose…</option>
-                  {groups.map(([cat, items]) => <optgroup key={cat} label={cat}>{items.map(b => <option key={b.code} value={b.code}>{b.code} · {b.disciplineName}</option>)}</optgroup>)}
-                  {v.rbs && !opts.data?.breakdown.some(b => b.code === v.rbs) && <option value={String(v.rbs)}>{String(v.rbs)}</option>}
-                </select>
-              </Field>
-              <Field label="Owner" hint="Several owners: separate with /"><input value={String(v.owner)} maxLength={120} list="risk-owners" onChange={e => up('owner', e.target.value)} /><datalist id="risk-owners">{opts.data?.owners.map(o => <option key={o} value={o} />)}</datalist></Field>
-              <Field label="Status"><select value={String(v.status)} onChange={e => up('status', e.target.value)}>{RISK_STATUSES.map(s => <option key={s}>{s}</option>)}</select></Field>
-              <Field label="Record date"><input type="date" value={String(v.recordDate ?? '')} onChange={e => up('recordDate', e.target.value)} /></Field>
-              <Field label="Description" full><textarea value={String(v.description)} maxLength={3000} onChange={e => up('description', e.target.value)} /></Field>
-              <Field label="Possible cause"><textarea value={String(v.cause)} maxLength={3000} onChange={e => up('cause', e.target.value)} /></Field>
-              <Field label="Possible effect"><textarea value={String(v.effect)} maxLength={3000} onChange={e => up('effect', e.target.value)} /></Field>
-              <label className="tiny" style={{ display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!v.external} onChange={e => up('external', e.target.checked)} />External risk (raised to the client)</label>
+          <fieldset disabled={readOnly} className="plain-fieldset gov">
+            <Field label="Title" full><input value={String(v.title)} maxLength={200} onChange={e => up('title', e.target.value)} autoFocus={!risk} /></Field>
+            <div className="gov-meta">
+              <span className="meta-item" title="Status"><IconChoice label="Status" value={String(v.status)} options={RISK_STATUSES.map(s => ({ value: s, label: s, icon: STATUS_ICON[s] }))} onChange={x => up('status', x ?? 'New')} /></span>
+              <span className="meta-item" title="Response strategy"><IconChoice label="Strategy" clearable value={String(v.strategy ?? '')} options={(opts.data?.strategies ?? []).map(s => ({ value: s, label: `Strategy: ${s}`, icon: STRATEGY_ICON[s] ?? 'shield' }))} onChange={x => up('strategy', x ?? '')} /></span>
+              <IconSelect icon="layers" label="RBS discipline" value={String(v.rbs)} onChange={x => up('rbs', x)}>
+                <option value="">RBS discipline…</option>
+                {groups.map(([cat, items]) => <optgroup key={cat} label={cat}>{items.map(b => <option key={b.code} value={b.code}>{b.code} · {b.disciplineName}</option>)}</optgroup>)}
+                {v.rbs && !opts.data?.breakdown.some(b => b.code === v.rbs) && <option value={String(v.rbs)}>{String(v.rbs)}</option>}
+              </IconSelect>
+              <label className="meta-item" title="Owner (several: separate with /)"><Icon name="people" /><input className="meta-input" placeholder="Owner" aria-label="Owner" value={String(v.owner)} maxLength={120} list="risk-owners" onChange={e => up('owner', e.target.value)} /></label>
+              <datalist id="risk-owners">{opts.data?.owners.map(o => <option key={o} value={o} />)}</datalist>
+              <IconSelect icon="flag" label="Linked milestone" value={String(v.milestoneId ?? '')} onChange={x => up('milestoneId', x)}>
+                <option value="">No milestone</option>{milestones.data?.items.map(ms => <option key={ms.id} value={ms.id}>{ms.id} · {ms.description}</option>)}
+              </IconSelect>
+              <button type="button" className={`icon-toggle ${v.external ? 'on' : ''}`} aria-pressed={!!v.external} title="External risk (raised to the client)" aria-label="External risk" onClick={() => up('external', !v.external)}><Icon name="building" /></button>
+              {([['recordDate', 'Record date', 'doc'], ['planDate', 'Plan action date', 'flag'], ['actualDate', 'Actual action date', 'tick'], ['reviewDate', 'Next review', 'clock']] as const).map(([k, label, icon]) => (
+                <label key={k} className="meta-item" title={label}><Icon name={icon} /><input type="date" className="meta-input" aria-label={label} value={String(v[k] ?? '')} onChange={e => up(k, e.target.value)} /></label>
+              ))}
             </div>
 
-            <h3>Assessment</h3>
-            <div className="rating-grid">
-              {(['pre', 'post'] as const).map(p => {
-                const r = rating(p);
-                return (
-                  <div key={p} className="rating-card">
-                    <div className="rating-head"><strong>{p === 'pre' ? 'Before mitigation' : 'After mitigation'}</strong><LevelPill level={r.level} score={r.score} /></div>
-                    <Field label="Probability">
-                      <select value={String(v[`${p}Probability`] ?? '')} onChange={e => up(`${p}Probability`, e.target.value ? Number(e.target.value) : null)}>
-                        <option value="">Not rated</option>{m?.probabilityLabels.map((l, i) => <option key={l} value={i + 1}>{i + 1} · {l}</option>)}
-                      </select>
-                    </Field>
-                    {DIMENSIONS.map(d => (
-                      <Field key={d} label={`${d} impact`}>
-                        <select value={String(v[`${p}${d}`] ?? '')} onChange={e => up(`${p}${d}`, e.target.value ? Number(e.target.value) : null)}>
-                          <option value="">Not rated</option>{m?.severityLabels.map((l, i) => <option key={l} value={i + 1}>{i + 1} · {l}</option>)}
-                        </select>
-                      </Field>
-                    ))}
-                  </div>
-                );
-              })}
+            <div className="gov-cols">
+              <section>
+                <h3><Icon name="doc" />Description</h3>
+                <textarea className="gov-text" rows={4} aria-label="Description" value={String(v.description)} maxLength={3000} onChange={e => up('description', e.target.value)} />
+                <h3><Icon name="edit" />Remark <span className="tiny muted">required to close without recorded actions</span></h3>
+                <textarea className="gov-text" rows={2} aria-label="Remark" value={String(v.remark)} maxLength={2000} onChange={e => up('remark', e.target.value)} />
+              </section>
+              <section>
+                <h3><Icon name="risk" />Assessment <span className="tiny muted">{m?.version ?? 'matrix'}: probability × worst impact</span></h3>
+                <div className="rating-grid">
+                  {(['pre', 'post'] as const).map(p => {
+                    const r = rating(p);
+                    const scale = (key: string, labels: string[] | undefined, name: string) => (
+                      <div className="scale-row" key={key}>
+                        <span className="scale-label">{name}</span>
+                        <IconChoice label={`${p === 'pre' ? 'Before' : 'After'} mitigation: ${name}`} clearable value={(v[key] as number | null) ?? null}
+                          options={(labels ?? []).map((l, i) => ({ value: i + 1, label: `${name}: ${i + 1} · ${l}`, text: String(i + 1) }))} onChange={x => up(key, x)} />
+                      </div>
+                    );
+                    return (
+                      <div key={p} className="rating-card">
+                        <div className="rating-head"><strong>{p === 'pre' ? 'Before mitigation' : 'After mitigation'}</strong><LevelPill level={r.level} score={r.score} /></div>
+                        {scale(`${p}Probability`, m?.probabilityLabels, 'Probability')}
+                        {DIMENSIONS.map(d => scale(`${p}${d}`, m?.severityLabels, d))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             </div>
-            <p className="tiny muted">The worst of the four impacts is the severity; probability × severity places the risk on the {m?.version ?? 'matrix'}.</p>
 
-            <h3>Response</h3>
-            <div className="form-grid">
-              <Field label="Strategy"><select value={String(v.strategy ?? '')} onChange={e => up('strategy', e.target.value)}><option value="">Not chosen</option>{opts.data?.strategies.map(s => <option key={s}>{s}</option>)}</select></Field>
-              <Field label="Plan action date"><input type="date" value={String(v.planDate ?? '')} onChange={e => up('planDate', e.target.value)} /></Field>
-              <Field label="Mitigation of cause"><textarea value={String(v.mitigationCause)} maxLength={3000} onChange={e => up('mitigationCause', e.target.value)} /></Field>
-              <Field label="Mitigation of effect"><textarea value={String(v.mitigationEffect)} maxLength={3000} onChange={e => up('mitigationEffect', e.target.value)} /></Field>
-              <Field label="Actual actions"><textarea value={String(v.actualActions)} maxLength={3000} onChange={e => up('actualActions', e.target.value)} /></Field>
-              <Field label="Actual action date"><input type="date" value={String(v.actualDate ?? '')} onChange={e => up('actualDate', e.target.value)} /></Field>
-              <Field label="Next review"><input type="date" value={String(v.reviewDate ?? '')} onChange={e => up('reviewDate', e.target.value)} /></Field>
-              <Field label="Linked milestone">
-                <select value={String(v.milestoneId ?? '')} onChange={e => up('milestoneId', e.target.value)}>
-                  <option value="">None</option>{milestones.data?.items.map(ms => <option key={ms.id} value={ms.id}>{ms.id} · {ms.description}</option>)}
-                </select>
-              </Field>
-              <Field label="Remark" full hint="Required to close a risk without recorded actions"><textarea value={String(v.remark)} maxLength={2000} onChange={e => up('remark', e.target.value)} /></Field>
+            <div className="gov-cols">
+              <ItemList label="Possible cause" icon="search" value={String(v.cause)} onChange={x => up('cause', x)} disabled={readOnly} placeholder="Add a possible cause" />
+              <ItemList label="Possible effect" icon="risk" value={String(v.effect)} onChange={x => up('effect', x)} disabled={readOnly} placeholder="Add a possible effect" />
+              <ItemList label="Mitigation of cause" icon="shield" value={String(v.mitigationCause)} onChange={x => up('mitigationCause', x)} disabled={readOnly} placeholder="Add a measure that removes the cause" />
+              <ItemList label="Mitigation of effect" icon="shield" value={String(v.mitigationEffect)} onChange={x => up('mitigationEffect', x)} disabled={readOnly} placeholder="Add a measure that limits the effect" />
             </div>
+            <h3><Icon name="status-completed" />Actual actions taken</h3>
+            <textarea className="gov-text" rows={2} aria-label="Actual actions" value={String(v.actualActions)} maxLength={3000} onChange={e => up('actualActions', e.target.value)} />
           </fieldset>
           {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
           {risk && <RiskActions risk={risk} base={base} canWrite={access.canWrite} onChange={refresh} />}

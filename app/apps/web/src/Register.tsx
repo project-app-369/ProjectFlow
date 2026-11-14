@@ -5,12 +5,13 @@ import { Btn, useDebounced } from './ui';
 
 export interface ListState { q: string; discipline: string; status: string; sort?: string; order: 'asc' | 'desc'; page: number }
 
-export function useListState() {
-  const [state, setState] = useState<ListState>({ q: '', discipline: '', status: '', order: 'asc', page: 1 });
+export function useListState(start: Partial<Pick<ListState, 'status' | 'discipline'>> = {}) {
+  const [state, setState] = useState<ListState>({ q: '', discipline: start.discipline ?? '', status: start.status ?? '', order: 'asc', page: 1 });
   const debouncedQ = useDebounced(state.q);
   const set = (patch: Partial<ListState>) => setState(s => ({ ...s, ...patch, page: patch.page ?? 1 }));
   const toggleSort = (key: string) => setState(s => ({ ...s, sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc', page: 1 }));
-  const clear = () => setState(s => ({ ...s, q: '', discipline: '', status: '', page: 1 }));
+  /** Clearing returns to the page's starting filters, not to everything. */
+  const clear = () => setState(s => ({ ...s, q: '', discipline: start.discipline ?? '', status: start.status ?? '', page: 1 }));
   /** Query string for the API; the search term is debounced so typing doesn't fire a request per keystroke. */
   const query = (extra: Record<string, string | number | undefined> = {}) =>
     qs({ q: debouncedQ, discipline: state.discipline, status: state.status, sort: state.sort, order: state.order, ...extra });

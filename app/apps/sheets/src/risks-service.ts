@@ -112,11 +112,11 @@ export class RisksService {
   }
 
   private filter(projectId: string, raw: unknown) {
-    const { category, level, owner, strategy, flag, within, cell, basis, ...f } = parse(riskQuery, raw);
+    const { category, level, owner, strategy, flag, within, cell, basis, status, ...f } = parse(riskQuery, raw);
     const { all, cutoff, m } = this.views(projectId);
     const [cp, cs] = cell ? cell.split('-').map(Number) : [0, 0];
     const kept = all.filter(r =>
-      (!category || r.category === category) && (!level || r.currentLevel === level) && (!strategy || r.strategy === strategy) &&
+      (!status || (status === 'Not closed' ? r.status !== 'Closed' : r.status === status)) && (!category || r.category === category) && (!level || r.currentLevel === level) && (!strategy || r.strategy === strategy) &&
       (!owner || (owner === 'none' ? !r.owners.length : r.owners.includes(owner))) &&
       (!within || responseWithin(r, within, { cutoff })) &&
       (!cell || (r.active && (basis === 'pre' ? r.preProbability === cp && r.preSeverity === cs : (r.postLevel ? r.postProbability === cp && r.postSeverity === cs : r.preProbability === cp && r.preSeverity === cs)))) &&

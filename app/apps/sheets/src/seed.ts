@@ -218,7 +218,7 @@ function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: s
   })) as unknown as Row[];
   store.appendRows(SHEET.issues, COLUMNS.issues, issueRows);
   store.appendRows(SHEET.issueLog, COLUMNS.issueLog, issueRows.map((i, n) => ({
-    projectId: PROJECT_ID, id: `LG-${String(n + 1).padStart(5, '0')}`, issueId: i.id, at: now, actor: 'Import', action: 'Created', note: 'Loaded from the task monitor workbook (TASK_MONITOR_2026-11-10)',
+    projectId: PROJECT_ID, id: `LG-${String(n + 1).padStart(5, '0')}`, issueId: i.id, at: now, actor: 'Import', action: 'Created', note: null,
   })));
 }
 

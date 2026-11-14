@@ -9,6 +9,7 @@ import { FilterChips, InsightsView, usePick } from '../Insights';
 import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const TONE: Record<MilestoneStatus, Tone> = { Done: 'green', Overdue: 'red', 'Due soon': 'amber', Planned: 'indigo' };
@@ -38,7 +39,8 @@ export default function Milestones() {
   const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
   const [group, setGroup] = useState<Group>('none');
-  const [editing, setEditing] = useState<Milestone | 'new' | null>(null);
+  const [editingId, setEditingId] = useDeepLink();
+  const setEditing = (v: Milestone | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
   const filter = usePick(list, { within: '', facility: '' });
   const base = `/projects/${project.id}/milestones`;
 
@@ -47,6 +49,7 @@ export default function Milestones() {
   const extra = { within: filter.extra.within, facility: filter.extra.facility };
   const query = list.query({ page: list.state.page, pageSize: grouped ? 200 : PAGE_SIZE, ...extra });
   const page = useQuery({ queryKey: ['milestones', project.id, query], queryFn: () => request<Page<Milestone>>(`${base}${query}`), placeholderData: keepPreviousData });
+  const editing: Milestone | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   const items = page.data?.items ?? [];
 
   /** The sub filter in the summary is the register's "subcontract area" filter. */

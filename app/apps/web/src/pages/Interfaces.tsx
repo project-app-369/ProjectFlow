@@ -15,6 +15,7 @@ import { useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced } from '../ui';
 import { Detail, IconFilter, People } from './governance';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const STATUS_TONE: Record<InterfaceStatus, Tone> = {
@@ -47,7 +48,7 @@ export function InterfacePointsPage() {
   const [params, setParams] = useSearchParams();
   const list = useListState();
   const filter = usePick(list, { target: params.get('target') ?? '', originator: params.get('originator') ?? '', owner: '', within: '', age: '', flag: '' });
-  const [open, setOpen] = useState<string | 'new' | null>(null);
+  const [open, setOpen] = useDeepLink();
   const parties = useParties(project.id);
   const base = `/projects/${project.id}/interface-points`;
 
@@ -136,7 +137,7 @@ function PointDrawer({ id, onClose, interfaceId }: { id: string | null; onClose:
   const { project } = useApp();
   const detail = useQuery({ queryKey: ['interface-point', project.id, id], enabled: !!id, queryFn: () => request<InterfacePoint>(`/projects/${project.id}/interface-points/${id}`) });
   if (id && !detail.data) {
-    return <Modal title={id} size="lg" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
+    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
   }
   return <PointForm key={detail.data?.updatedAt ?? 'new'} point={id ? detail.data : undefined} interfaceId={interfaceId} onClose={onClose} />;
 }
@@ -180,7 +181,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
 
   return (
     <>
-      <Modal title={point ? `${point.id} · Interface point` : 'New interface point'} size="lg" onClose={onClose}
+      <Modal title={point ? `${point.id} · Interface point` : 'New interface point'} size="xl" onClose={onClose}
         actions={<>
           {point && access.canManage && <Btn kind="text" onClick={() => setRemoving(true)}>Delete</Btn>}
           <Btn onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Btn>
@@ -206,7 +207,8 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
             </div>
           )}
           <fieldset disabled={readOnly} className="plain-fieldset">
-            <h3>Query</h3>
+            <div className="gov-cols"><div>
+            <h3><Icon name="search" />Query</h3>
             <div className="form-grid">
               <Field label="Subject" full hint="Short title; the first line of the description is used when empty"><input value={v.title} maxLength={200} onChange={e => up('title', e.target.value)} autoFocus={!point} /></Field>
               <Field label="Originating party" hint="Who raises the query">
@@ -227,15 +229,17 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
               <Field label="Target date"><input type="date" value={v.targetDate} onChange={e => up('targetDate', e.target.value)} /></Field>
               <Field label="Reference document" full><input value={v.reference} maxLength={500} onChange={e => up('reference', e.target.value)} /></Field>
             </div>
-            {point && <>
-              <h3>Response</h3>
+            </div>
+            {point && <div>
+              <h3><Icon name="arrow" />Response</h3>
               <div className="form-grid">
                 <Field label="Resolution" full hint="Required to mark the point responded or resolved"><textarea value={v.resolution} maxLength={3000} rows={4} onChange={e => up('resolution', e.target.value)} /></Field>
                 <Field label="Resolved document"><input value={v.resolvedDocument} maxLength={300} onChange={e => up('resolvedDocument', e.target.value)} /></Field>
                 <Detail label="Resolved date">{point.resolvedDate ? fmtDate(point.resolvedDate) : null}</Detail>
                 <Field label="Remarks" full><textarea value={v.remarks} maxLength={1500} onChange={e => up('remarks', e.target.value)} /></Field>
               </div>
-            </>}
+            </div>}
+            </div>
           </fieldset>
           {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
         </div>
@@ -304,9 +308,9 @@ function PartyMatrix() {
         </table>
       </div>
       <div className="legend" style={{ padding: '0 22px 18px' }}>
-        <span><span className="dot" style={{ background: 'var(--negative, #b23a52)' }} />Has overdue points</span>
-        <span><span className="dot" style={{ background: '#b9801f' }} />Open points</span>
-        <span><span className="dot" style={{ background: '#3f8f6b' }} />All settled</span>
+        <span><span className="dot" style={{ background: 'var(--c-critical)' }} />Has overdue points</span>
+        <span><span className="dot" style={{ background: 'var(--c-open)' }} />Open points</span>
+        <span><span className="dot" style={{ background: 'var(--c-good)' }} />All settled</span>
       </div>
     </div>
   );
@@ -420,7 +424,7 @@ export function InterfaceRegister() {
   const base = `/projects/${project.id}/interfaces`;
   const [f, setF] = useState<Filters>({ q: '', type: '', status: '', party: '', overdue: false, sort: 'id', order: 'asc', page: 1 });
   const [editing, setEditing] = useState<InterfaceRecord | 'new' | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useDeepLink();
   const q = useDebounced(f.q);
   const set = (patch: Partial<Filters>) => setF(s => ({ ...s, ...patch, page: patch.page ?? 1 }));
   const filterQs = { q, type: f.type, status: f.status, party: f.party, originator, receiver, overdue: f.overdue ? 'true' : undefined };
@@ -559,7 +563,7 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
   const q = useQuery({ queryKey: ['interface', project.id, id], queryFn: () => request<InterfaceRecord>(`${base}/interfaces/${id}`) });
   const [error, setError] = useState('');
   const [removing, setRemoving] = useState(false);
-  const [point, setPoint] = useState<string | 'new' | null>(null);
+  const [point, setPoint] = useDeepLink();
 
   const move = useMutation({
     mutationFn: (to: InterfaceStatus) => request<InterfaceRecord>(`${base}/interfaces/${id}/transition`, { method: 'POST', body: JSON.stringify({ to }) }),
@@ -573,7 +577,7 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
   const i = q.data;
   return (
     <>
-      <Modal title={i ? `${i.id} · Interface` : 'Interface'} size="lg" onClose={onClose} actions={<>
+      <Modal title={i ? `${i.id} · Interface` : 'Interface'} size="xl" onClose={onClose} actions={<>
         {i && access.canManage && <Btn kind="text" onClick={() => setRemoving(true)}>Delete</Btn>}
         {i && access.canWrite && <Btn onClick={() => onEdit(i)}>Edit</Btn>}
         <Btn onClick={onClose}>Close</Btn>

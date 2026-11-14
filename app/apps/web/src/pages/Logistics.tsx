@@ -11,6 +11,7 @@ import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
 import { shipmentFields, SHIPMENT_STATUSES } from './procFields';
+import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
 const NONE = { source: '', deliveryYard: '', yard: '', month: '', within: '', late: false };
@@ -22,12 +23,14 @@ export default function Logistics() {
   const toast = useToast();
   const list = useListState();
   const [filters, setFilters] = useState(NONE);
-  const [editing, setEditing] = useState<Shipment | 'new' | null>(null);
+  const [editingId, setEditingId] = useDeepLink();
+  const setEditing = (v: Shipment | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
   const base = `/projects/${project.id}/logistics/shipments`;
 
   const filterQuery = { source: filters.source, deliveryYard: filters.deliveryYard, yard: filters.yard, month: filters.month, within: filters.within, late: filters.late ? 'true' : undefined };
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...filterQuery });
   const page = useQuery({ queryKey: ['shipments', project.id, query], queryFn: () => request<Page<Shipment>>(`${base}${query}`), placeholderData: keepPreviousData });
+  const editing: Shipment | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   const insights = useInsights('logistics', project.id, `/projects/${project.id}/logistics/insights`);
   const rows = page.data?.items ?? [];
   /** A box or bar in the summary sets one filter on the register: a status, a month, a yard or a look-ahead window. */
