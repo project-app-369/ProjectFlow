@@ -22,7 +22,8 @@ export default function Dashboard() {
   const latest = op?.latest;
   const behind = wp ? wp.items.filter(w => (w.thisWeekActual ?? 0) < (w.thisWeekPlan ?? 0)).length : 0;
   const move = op?.lastWeek ? op.thisWeek.actual - op.lastWeek.actual : null;
-  const ms = data.milestones;
+  const ms = data.milestones, rk = data.risks, itf = data.interfaces;
+  const hot = rk ? rk.byLevel[rk.top] ?? 0 : 0;
 
   return (
     <>
@@ -33,6 +34,8 @@ export default function Dashboard() {
         <Stat label="Progress this period" value={move != null ? `${move > 0 ? '+' : ''}${move.toFixed(1)}` : '—'} unit={move != null ? 'pp' : undefined} foot="Change in actual since last week" icon="calendar" />
         <Stat label="Work packages" value={wp?.items.length ?? '—'} foot={wp ? <span className={behind ? 'warning' : 'positive'}>{behind} behind plan · {wp.items.length - behind} on or ahead</span> : 'Work Packages is off'} icon="layers" />
         <Stat label="Milestones overdue" value={ms?.overdue ?? '—'} foot={ms ? `${ms.dueSoon} due in 30 days · ${ms.done} of ${ms.total} achieved` : 'Milestones are off'} icon="flag" />
+        <Stat label="Active risks" value={rk?.active ?? '—'} foot={rk ? <span className={hot ? 'negative' : ''}>{hot} {rk.top.toLowerCase()} · {rk.responseOverdue} responses overdue</span> : 'Risks are off'} icon="risk" />
+        <Stat label="Open interface points" value={itf?.pointsOpen ?? '—'} foot={itf ? <span className={itf.pointsOverdue ? 'negative' : ''}>{itf.pointsOverdue} overdue · {itf.points} in the register</span> : 'Interfaces are off'} icon="link" />
       </div>
 
       <div className="grid-main">
@@ -81,6 +84,44 @@ export default function Dashboard() {
           </div>
         ) : null}
       </div>
+
+      {(data.milestones !== undefined || data.risks !== undefined || data.interfaces !== undefined) && (
+        <div className="bottom-grid dashboard-registers">
+          {data.milestones === undefined ? null : data.milestones ? (
+            <div className="panel">
+              <div className="panel-head"><div><h2>Milestones</h2><p>{data.milestones.done} of {data.milestones.total} achieved</p></div><Icon name="flag" /></div>
+              {data.milestones.next.slice(0, 3).map(m => (
+                <div className="list-card" key={m.id}><div className="grow"><p>{m.description}</p><small>{m.subName ?? '—'} · {fmtDate(m.forecast ?? m.planBaseline)}</small></div><Badge>{m.status}</Badge></div>
+              ))}
+              <div className="list-card"><div className="grow"><small>{data.milestones.overdue} overdue · {data.milestones.dueSoon} due in 30 days</small></div></div>
+              <div className="panel-foot"><Link className="btn text" to="/m/planning.milestones">Open milestones →</Link></div>
+            </div>
+          ) : <Unavailable label="Milestones" />}
+
+          {data.risks === undefined ? null : data.risks ? (
+            <div className="panel">
+              <div className="panel-head"><div><h2>Risks</h2><p>{data.risks.active} active of {data.risks.total}</p></div><Icon name="risk" /></div>
+              {data.risks.levels.map(l => (
+                <div className="list-card" key={l}><span className={`dot level-${l.toLowerCase()}`} /><div className="grow"><p>{l}</p></div><span className="tiny muted">{data.risks!.byLevel[l]}</span></div>
+              ))}
+              <div className="list-card"><div className="grow"><small>{data.risks.responseOverdue} responses overdue · {data.risks.reviewOverdue} reviews overdue</small></div></div>
+              <div className="panel-foot"><Link className="btn text" to="/m/management.risks">Open risk register →</Link></div>
+            </div>
+          ) : <Unavailable label="Risks" />}
+
+          {data.interfaces === undefined ? null : data.interfaces ? (
+            <div className="panel">
+              <div className="panel-head"><div><h2>Interfaces</h2><p>{data.interfaces.pointsOpen} open points of {data.interfaces.points} · {data.interfaces.open} open interfaces</p></div><Icon name="link" /></div>
+              <div className="list-card"><div className="grow"><p>Points overdue</p></div><span className={`tiny ${data.interfaces.pointsOverdue ? 'negative' : 'muted'}`}>{data.interfaces.pointsOverdue}</span></div>
+              <div className="list-card"><div className="grow"><p>Interfaces overdue</p></div><span className={`tiny ${data.interfaces.overdue ? 'negative' : 'muted'}`}>{data.interfaces.overdue}</span></div>
+              {Object.entries(data.interfaces.byStatus).filter(([, n]) => n > 0).map(([st, n]) => (
+                <div className="list-card" key={st}><div className="grow"><small>{st}</small></div><span className="tiny muted">{n}</span></div>
+              ))}
+              <div className="panel-foot"><Link className="btn text" to="/m/interface.points">Open interface points →</Link></div>
+            </div>
+          ) : <Unavailable label="Interface Management" />}
+        </div>
+      )}
     </>
   );
 }
