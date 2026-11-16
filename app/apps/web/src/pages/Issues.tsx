@@ -6,7 +6,7 @@ import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, ErrorBox, PageHead, Pager } from '../ui';
 import { IssueDrawer, ISSUE_PRIORITIES, ISSUE_STATUSES } from './IssueDrawer';
@@ -16,6 +16,8 @@ const PAGE_SIZE = 50;
 const PRIORITY_ICON: Record<string, string> = { Critical: 'urgency-urgent', High: 'urgency-high', Medium: 'urgency-normal', Low: 'urgency-low' };
 const STATUS_ICON: Record<string, string> = { 'Not started': 'status-backlog', Pending: 'status-planned', 'In progress': 'status-ongoing', Completed: 'status-completed' };
 const WINDOWS: [string, string][] = [['overdue', 'Overdue'], ['30', 'Due within 30 days'], ['45', 'Due within 45 days'], ['60', 'Due within 60 days'], ['none', 'No due date']];
+
+const SORTS: [string, string][] = [['dueDate', 'Due date'], ['startDate', 'Start date'], ['updatedAt', 'Last updated'], ['priorityRank', 'Priority'], ['discipline', 'Team'], ['status', 'Status'], ['title', 'Title'], ['id', 'Issue no.']];
 
 interface IssuePage extends Page<Issue> { facets: Page<Issue>['facets'] & { priorities: string[]; pics: string[] } }
 
@@ -109,6 +111,7 @@ export default function Issues() {
             <IconFilter icon="calendar" label="Filter by due date" value={filter.extra.within} onChange={v => setExtra('within', v)}>
               <option value="">Any due date</option>{WINDOWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </IconFilter>
+            <SortBy options={SORTS} sort={list.state.sort} order={list.state.order} fallback="dueDate" onChange={list.setSort} />
             <Btn kind="small" onClick={filter.reset}>Clear</Btn>
             <span className="tiny muted" aria-live="polite">{page.data?.total ?? '…'} issues</span>
           </div>

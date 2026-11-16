@@ -7,7 +7,7 @@ import { apiMode, getCurrentAsOf, getUserId } from './api';
  * The cache is dropped after a day, when the backend or the user changes, on sign-out, and while a saved cut-off
  * report is open (its data must never be shown as the current data).
  */
-const KEY = 'projectflow.query-cache.v1';
+const KEY = 'projectflow.query-cache.v2';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const MAX_CHARS = 2_500_000;
 const SAVE_DELAY_MS = 1_500;

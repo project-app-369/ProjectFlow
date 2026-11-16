@@ -33,7 +33,7 @@ const subtaskFields = { title: z.string().trim().min(1).max(200), pic: email.nul
 const subtaskCreate = z.object({ ...subtaskFields, done: subtaskFields.done.default(false) });
 const subtaskPatch = z.object(subtaskFields).partial();
 const commentBody = z.object({ note: z.string().trim().min(1).max(1500) });
-const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate', 'updatedAt', 'discipline'] as const).extend({
+const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate', 'startDate', 'updatedAt', 'discipline'] as const).extend({
   priority: z.string().max(20).optional(), pic: z.string().max(120).optional(), within: z.string().max(10).optional(),
 });
 

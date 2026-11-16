@@ -13,12 +13,17 @@ export const MANAGE_ROLES: readonly Role[] = ['Project Manager', 'Manager'];
 
 export const ACCOUNT_STATES = ['Invited', 'Active', 'Suspended', 'Deactivated'] as const;
 
+/** The organisation a person works for on the project. Decides which screens they are shown (Settings -> Party access). */
+export const PARTIES = ['Contractor', 'Client', 'Subcontractor'] as const;
+export type Party = (typeof PARTIES)[number];
+
 export interface Actor {
   id: string;
   name: string;
   email: string | null;
   isAdmin: boolean;
   status: string;
+  party: Party | null;
   /** projectId -> role */
   roles: Record<string, Role>;
 }
@@ -37,7 +42,7 @@ export function resolveActor(store: Store, userId: string | undefined): Actor {
   for (const m of store.readRows(SHEET.memberships, COLUMNS.memberships)) {
     if (m.userId === userId && ROLES.includes(m.role as Role)) roles[String(m.projectId)] = m.role as Role;
   }
-  return { id: String(user.id), name: String(user.name), email: (user.email as string) ?? null, isAdmin: user.isAdmin === 'Yes', status: String(user.status), roles };
+  return { id: String(user.id), name: String(user.name), email: (user.email as string) ?? null, isAdmin: user.isAdmin === 'Yes', status: String(user.status), party: PARTIES.find(p => p === user.party) ?? null, roles };
 }
 
 export const forbidden = (code: string, message: string) => new HttpError(403, { code, message });
@@ -71,4 +76,8 @@ export function requireConfigure(actor: Actor, projectId: string) {
   if (actor.roles[projectId] !== 'Project Manager') throw forbidden('PROJECT_MANAGER_REQUIRED', 'Only an administrator or the Project Manager can configure this project.');
 }
 
-export const userRow = (u: Row) => ({ id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin === 'Yes', status: u.status, createdAt: u.createdAt });
+/** A user as the API shows it: never the password hash. */
+export const userRow = (u: Row) => ({
+  id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin === 'Yes', status: u.status, createdAt: u.createdAt,
+  title: u.title ?? null, company: u.company ?? null, party: u.party ?? null, hasPassword: !!u.passwordHash, passwordChangedAt: u.passwordChangedAt ?? null,
+});

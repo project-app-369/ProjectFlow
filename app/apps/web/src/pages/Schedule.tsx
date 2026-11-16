@@ -1,11 +1,10 @@
-import { lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { request, type OverallProgressResponse, type WorkPackagesResponse } from '../api';
 import { fmtDate, signed } from '../format';
+import { SCurvePanel } from '../SCurvePanel';
 import { useApp } from '../state';
 import { ActualPlanBar, ErrorBox, Loading, PageHead, Stat } from '../ui';
 
-const SCurveChart = lazy(() => import('../SCurveChart'));
 
 function useProgress() {
   const { project } = useApp();
@@ -29,10 +28,7 @@ export function ProgressOverall() {
         <Stat label="Cumulative plan" value={data.latest?.plan ?? '—'} unit="%" foot="At latest reported period" icon="flag" />
         <Stat label="Forecast" value={data.latest?.forecast ?? '—'} unit="%" foot="At latest reported period" icon="clock" />
       </div>
-      <div className="panel">
-        <div className="panel-head"><div><h2>EPCIC S-curve</h2><p>Cumulative weighted progress · monthly cut-offs</p></div></div>
-        <Suspense fallback={<Loading label="Loading chart…" />}><SCurveChart points={data.scurve} /></Suspense>
-      </div>
+      <SCurvePanel points={data.scurve} sub="Cumulative weighted progress · monthly cut-offs, with the major milestones" />
       {data.phases?.length ? (
         <div className="panel" style={{ marginTop: 22 }}>
           <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick)</p></div></div>

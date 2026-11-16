@@ -6,7 +6,7 @@ import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager } from '../ui';
 import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, People } from './governance';
@@ -18,6 +18,7 @@ const NOT_CLOSED = 'Not closed';
 const STATUS_ICON: Record<string, string> = { New: 'status-backlog', Firmed: 'status-planned', 'Under assessment': 'search', 'Under resolving': 'status-ongoing', Monitor: 'shield', Closed: 'status-completed' };
 const FLAGS: [string, string][] = [['active', 'Active only'], ['response-overdue', 'Response overdue'], ['review-overdue', 'Review overdue'], ['awaiting-post', 'Awaiting post-mitigation'], ['unrated', 'Not rated'], ['external', 'External']];
 const STRATEGY_ICON: Record<string, string> = { Avoid: 'close', Mitigate: 'shield', Transfer: 'arrow', Accept: 'tick', Escalate: 'flag' };
+const SORTS: [string, string][] = [['no', 'Risk no.'], ['currentRank', 'Level'], ['currentScore', 'Score now'], ['preScore', 'Score before'], ['planDate', 'Response date'], ['recordDate', 'Date recorded'], ['discipline', 'Discipline'], ['category', 'Category'], ['owner', 'Owner'], ['status', 'Status']];
 const DIMENSIONS = ['Schedule', 'Cost', 'Scope', 'Quality'] as const;
 
 interface RiskPage extends Page<Risk> { facets: Page<Risk>['facets'] & { levels: string[]; owners: string[]; categories: string[]; strategies: string[] } }
@@ -121,6 +122,7 @@ export default function Risks() {
             <IconFilter icon="clock" label="Show risks that need attention" value={filter.extra.flag} onChange={v => setExtra('flag', v)}>
               <option value="">Any</option>{FLAGS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </IconFilter>
+            <SortBy options={SORTS} sort={list.state.sort} order={list.state.order} fallback="no" onChange={list.setSort} />
             <Btn kind="small" onClick={filter.reset}>Clear</Btn>
             <span className="tiny muted" aria-live="polite">{page.data?.total ?? '…'} risks</span>
           </div>

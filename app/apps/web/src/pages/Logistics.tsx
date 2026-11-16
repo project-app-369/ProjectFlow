@@ -6,7 +6,7 @@ import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
@@ -80,6 +80,7 @@ export default function Logistics() {
             <select className="filter" aria-label="Filter by status" value={list.state.status} onChange={e => list.set({ status: e.target.value })}><option value="">All statuses</option>{SHIPMENT_STATUSES.map(s => <option key={s}>{s}</option>)}</select>
             <select className="filter" aria-label="Filter by yard" value={filters.deliveryYard} onChange={e => { setFilters(f => ({ ...f, deliveryYard: e.target.value, yard: '' })); list.set({}); }}><option value="">All yards</option>{yards.map(y => <option key={y}>{y}</option>)}</select>
             <label className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={filters.late} onChange={e => setFilters(f => ({ ...f, late: e.target.checked }))} />Late or held only</label>
+            <SortBy options={[['forecastOnSite', 'Forecast on site'], ['etaPod', 'ETA port'], ['actualOnSite', 'Actual on site'], ['shipmentNo', 'Shipment'], ['packageNo', 'Package'], ['grossWeightKg', 'Weight'], ['status', 'Status']]} sort={list.state.sort} order={list.state.order} fallback="forecastOnSite" onChange={list.setSort} />
             <Btn kind="small" onClick={() => { list.clear(); setFilters(NONE); }}>Clear</Btn>
           </div>
         </div>

@@ -16,6 +16,8 @@ export function errorText(e: unknown): string {
  * backend: a Google Apps Script web app over a spreadsheet, which only accepts simple GET/POST requests and always
  * answers HTTP 200, so the route travels as a parameter and the status inside a JSON envelope.
  */
+/** The exact Google Sheet that holds the data (set per environment, see .env.sheets). */
+export const SPREADSHEET_URL: string = import.meta.env.VITE_SPREADSHEET_URL ?? '';
 export const apiMode: 'rest' | 'sheets' = import.meta.env.VITE_API_MODE === 'sheets' ? 'sheets' : 'rest';
 const sheetsUrl: string = import.meta.env.VITE_SHEETS_URL ?? '';
 const sheetsToken: string = import.meta.env.VITE_SHEETS_TOKEN ?? '';
@@ -125,12 +127,23 @@ export interface Project {
 }
 /** A saved cut-off report: the project's data as it stood at a reporting date. */
 export interface Snapshot { cutoff: string; createdAt: string; createdBy: string; note: string | null; rowCount: number }
-export interface Me { id: string; name: string; email: string | null; isAdmin: boolean; memberships: { projectId: string; role: Role }[] }
-export interface DirectoryUser { id: string; name: string }
+export const PARTIES = ['Contractor', 'Client', 'Subcontractor'] as const;
+export type Party = (typeof PARTIES)[number];
+export interface Me {
+  id: string; name: string; email: string | null; isAdmin: boolean; status: string; party: Party | null; title: string | null; company: string | null;
+  hasPassword: boolean; passwordChangedAt: string | null;
+  /** Modules the person's party does not see. */
+  hiddenModules: string[];
+  memberships: { projectId: string; role: Role }[];
+}
+export interface DirectoryUser { id: string; name: string; party?: Party | null; title?: string | null }
+export interface PartyAccessModule { key: string; label: string; workspace: WorkspaceId; parent: string | null; depth: number; availability: string; visible: Record<Party, boolean> }
+export interface PartyAccess { parties: Party[]; modules: PartyAccessModule[] }
 export type AccountState = 'Invited' | 'Active' | 'Suspended' | 'Deactivated';
 export const ACCOUNT_STATES: AccountState[] = ['Invited', 'Active', 'Suspended', 'Deactivated'];
 export interface UserRow {
   id: string; name: string; email: string; isAdmin: boolean; status: AccountState; createdAt: string | null;
+  title: string | null; company: string | null; party: Party | null; hasPassword: boolean;
   memberships: { projectId: string; projectCode: string; role: Role; title: string | null }[];
 }
 export interface Member { userId: string; name: string; email: string | null; status: string; role: Role; title: string | null }
@@ -195,6 +208,20 @@ export interface OverallProgressResponse {
 }
 export interface PhaseProgress { id: string; phase: string; plan: number | null; actual: number | null; reportDate: string | null }
 
+/* ---------- facilities: schedule and progress per facility (sheets backend) ---------- */
+export interface FacilityPoint { date: string; plan: number | null; forecast: number | null; actual: number | null }
+export interface FacilityStanding { asOf: string | null; plan: number | null; forecast: number | null; actual: number | null; variance: number | null }
+export interface FacilityScope extends FacilityStanding { scope: string; label: string; weight: number | null; headline: boolean; points: FacilityPoint[] }
+export interface FacilityWbsRow { code: string; name: string; level: number; father: string | null; start: string | null; finish: string | null; weight: number | null; plan: number | null; actual: number | null; variance: number | null; shared: boolean }
+export interface FacilityHead {
+  id: string; label: string; later: boolean; start: string | null; finish: string | null; scopeCount: number;
+  headline: (FacilityStanding & { scope: string; label: string }) | null;
+  milestones: { total: number; done: number; overdue: number };
+}
+export interface FacilityList { cutoff: string; facilities: FacilityHead[] }
+export interface FacilityProgress { facility: FacilityHead; cutoff: string; scopes: FacilityScope[]; wbs: FacilityWbsRow[]; milestones: Milestone[] }
+export interface FacilitySchedule { facility: FacilityHead; cutoff: string; wbs: FacilityWbsRow[]; milestones: Milestone[] }
+
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 export interface Milestone {
   id: string; description: string; planBaseline: string | null; planSub: string | null; subName: string | null;
@@ -203,6 +230,8 @@ export interface Milestone {
 }
 export interface MilestoneSummary {
   total: number; done: number; overdue: number; dueSoon: number; planned: number; bySub: Record<string, number>; next: Milestone[]; cutoff: string;
+  /** The major milestones of the scope, in date order (drawn on the S-curve). */
+  major?: Milestone[];
 }
 
 /* ---------- risk management (project matrix, MGT-01/06) ---------- */

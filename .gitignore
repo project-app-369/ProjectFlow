@@ -4,3 +4,9 @@ __pycache__/
 .claude/*.local.*
 .DS_Store
 Thumbs.db
+desktop.ini
+.pnpm-store/
+.tmp/
+.tmp.driveupload/
+sites/
+app/apps/sheets/.vitest/

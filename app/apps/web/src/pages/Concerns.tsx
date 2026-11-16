@@ -7,7 +7,7 @@ import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
@@ -92,6 +92,7 @@ export default function Concerns() {
             <select className="filter" aria-label="Filter by area" value={filters.area} onChange={e => set({ area: e.target.value })}><option value="">All areas</option>{CONCERN_AREAS.map(t => <option key={t}>{t}</option>)}</select>
             <select className="filter" aria-label="Filter by status" value={list.state.status} onChange={e => list.set({ status: e.target.value })}><option value="">All statuses</option>{CONCERN_STATUSES.map(t => <option key={t}>{t}</option>)}</select>
             <label className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={filters.activeOnly && !list.state.status} disabled={!!list.state.status} onChange={e => set({ activeOnly: e.target.checked })} />Open only</label>
+            <SortBy options={[['id', 'ID'], ['dueDate', 'Action due'], ['raisedDate', 'Date raised'], ['severity', 'Severity'], ['status', 'Status'], ['owner', 'Owner'], ['packageCode', 'Package']]} sort={list.state.sort} order={list.state.order} fallback="id" onChange={list.setSort} />
             <Btn kind="small" onClick={() => { list.clear(); setFilters({ type: '', severity: '', area: '', owner: '', within: '', activeOnly: true }); setParams({}); }}>Clear</Btn>
           </div>
         </div>

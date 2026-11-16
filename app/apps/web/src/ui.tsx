@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { signed, statusTone, type Tone } from './format';
 import { CrumbContext, SheetContext } from './state';
+import { sheetHref } from './sheetLinks';
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
   return <span className={`pill ${tone ?? statusTone(String(children))}`}>{children}</span>;
@@ -93,7 +94,7 @@ export function PageHead({ title, desc, actions }: { title: string; desc: ReactN
           <h1 title={typeof desc === 'string' ? desc : undefined}>{title}</h1>
         </div>
         <div className="actions">
-          {sheet && <a className="btn small icon-only" href={sheet.url} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`} aria-label={`Open the "${sheet.name}" sheet`}><Icon name="sheet" /></a>}
+          {sheet && <a className="btn small icon-only" href={sheetHref(sheet)} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`} aria-label={`Open the "${sheet.name}" sheet`}><Icon name="sheet" /></a>}
           {actions}
         </div>
       </div>

@@ -32,7 +32,7 @@ const partiesMessage = { message: 'Originator and receiving party must be differ
 const interfaceCreate = z.object(interfaceFields).refine(differentParties, partiesMessage);
 const interfacePatch = z.object(interfaceFields).partial().refine(differentParties, partiesMessage);
 const transitionBody = z.object({ to: z.enum(INTERFACE_STATUSES) });
-const interfaceQuery = listQuery(['id', 'title', 'status', 'needDate', 'originator', 'receiver'] as const).extend({
+const interfaceQuery = listQuery(['id', 'title', 'status', 'needDate', 'originator', 'receiver', 'createdAt', 'updatedAt'] as const).extend({
   type: z.string().max(40).optional(), party: z.string().max(120).optional(), overdue: z.enum(['true', 'false']).optional(), originator: z.string().max(120).optional(), receiver: z.string().max(120).optional(),
 });
 
@@ -45,7 +45,7 @@ const pointFields = {
 const pointCreate = z.object(pointFields).refine(v => !sameParty(v.originator, v.target), { message: 'Originating and target party must be different.', path: ['target'] });
 const pointPatch = z.object(pointFields).partial();
 const pointMove = z.object({ to: z.enum(POINT_STATUSES), resolvedDate: isoOpt.optional(), resolution: txt(3000).optional() });
-const pointQuery = listQuery(['id', 'title', 'status', 'targetDate', 'queryDate', 'ageDays', 'discipline', 'target', 'originator'] as const).extend({
+const pointQuery = listQuery(['id', 'title', 'status', 'targetDate', 'queryDate', 'ageDays', 'discipline', 'target', 'originator', 'owner', 'createdAt', 'updatedAt'] as const).extend({
   interfaceId: z.string().max(40).optional(), overdue: z.enum(['true', 'false']).optional(), party: z.string().max(120).optional(),
   originator: z.string().max(120).optional(), target: z.string().max(120).optional(), within: z.string().max(10).optional(), age: z.string().regex(/^\d+-\d*$/).optional(),
   open: z.enum(['true', 'false']).optional(), owner: z.string().max(120).optional(),

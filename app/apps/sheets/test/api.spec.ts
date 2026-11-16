@@ -14,18 +14,24 @@ const call = (method: string, path: string, body?: unknown, user: string | null 
 const ok = (e: Envelope) => { expect(e.ok, JSON.stringify(e)).toBe(true); return (e as Extract<Envelope, { ok: true }>).data as any; };
 const err = (e: Envelope) => { expect(e.ok).toBe(false); return e as Extract<Envelope, { ok: false }>; };
 
+/**
+ * The tests run on a fixed reporting week (cut-off 6 Nov 2026, two days before the test clock), whatever cut-off the reference data
+ * currently carries, so refreshing the data from newer workbooks changes counts here but not the dates the tests reason about.
+ */
+const TEST_CUTOFF = '2026-11-06';
+
 beforeEach(() => {
   store = new MemoryStore();
-  seedStore(store, seedData);
+  seedStore(store, { ...seedData, project: { ...seedData.project, cutoff: TEST_CUTOFF } });
   api = new Api(store, () => new Date('2026-11-08T10:00:00Z'));
 });
 
 describe('setup', () => {
   it('generates the worksheets grouped by area: settings first, then each workspace', () => {
     expect(store.sheetNames()).toEqual([
-      'Settings - Projects', 'Settings - Users', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
+      'Settings - Projects', 'Settings - Users', 'Settings - Party access', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
-      'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
+      'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
       'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
@@ -33,12 +39,12 @@ describe('setup', () => {
   });
 
   it('loads the reference data and is idempotent', () => {
-    expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(145);
-    expect(store.readRows(SHEET.expediting, COLUMNS.expediting)).toHaveLength(153);
+    expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(148);
+    expect(store.readRows(SHEET.expediting, COLUMNS.expediting)).toHaveLength(145);
     expect(store.readRows(SHEET.milestones, COLUMNS.milestones)).toHaveLength(48);
     expect(store.readRows(SHEET.users, COLUMNS.users)).toHaveLength(4);
     expect(seedStore(store, seedData)).toBe(false);
-    expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(145);
+    expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(148);
   });
 
   it('keeps project rows tagged with their project', () => {
@@ -71,8 +77,8 @@ describe('identity and access', () => {
 describe('data endpoints match the NestJS API contract', () => {
   it('dashboard aggregates the data modules', () => {
     const d = ok(call('GET', `${P}/dashboard`));
-    expect(d.procurement.total).toBe(145);
-    expect(d.expediting).toMatchObject({ total: 153, delayed: 11, atRisk: 6 });
+    expect(d.procurement.total).toBe(148);
+    expect(d.expediting).toMatchObject({ total: 145, delayed: 12, atRisk: 6 });
     expect(d.workPackages.items).toHaveLength(5);
     expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(27.1, 1);
     expect(d.workPackages.items.map((w: any) => w.code)).toEqual(['WP2', 'WP3', 'WP4', 'WP5', 'WP6']);
@@ -87,7 +93,7 @@ describe('data endpoints match the NestJS API contract', () => {
 
   it('procurement list filters, sorts, pages and validates', () => {
     const r = ok(call('GET', `${P}/procurement/packages?discipline=Piping&pageSize=5&sort=code&order=desc`));
-    expect(r.total).toBe(34);
+    expect(r.total).toBe(36);
     expect(r.items).toHaveLength(5);
     expect(r.items[0].code > r.items[4].code).toBe(true);
     expect(r.items[0]).not.toHaveProperty('projectId');
@@ -747,8 +753,8 @@ describe('cut-off snapshots', () => {
   it('round-trips a large dataset split across several cells', () => {
     ok(save());
     const p = ok(call('GET', `${P}/procurement/packages?pageSize=200&asOf=2026-10-30`));
-    expect(p.total).toBe(145);
-    expect(ok(call('GET', `${P}/expediting/packages?pageSize=200&asOf=2026-10-30`)).total).toBe(153);
+    expect(p.total).toBe(148);
+    expect(ok(call('GET', `${P}/expediting/packages?pageSize=200&asOf=2026-10-30`)).total).toBe(145);
     const chunks = store.readRows(SHEET.snapshotData, COLUMNS.snapshotData).filter(r => r.dataset === 'expediting');
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every(c => String(c.json).length <= 40_000)).toBe(true);
@@ -974,23 +980,23 @@ describe('procurement registers', () => {
 
   it('loads the procurement plan, logistics, material and concern data from the workbooks', () => {
     const pk = ok(call('GET', `${PK}?pageSize=200`));
-    expect(pk.total).toBe(145);
-    expect(pk.items.filter((p: any) => p.status === 'Planned')).toHaveLength(8);
+    expect(pk.total).toBe(148);
+    expect(pk.items.filter((p: any) => p.status === 'Planned')).toHaveLength(9);
     expect(pk.items.filter((p: any) => p.workPackage).length).toBeGreaterThan(130);
     expect(pk.items.find((p: any) => p.code === 'STTP2B-GF-MEC-017')).toMatchObject({ status: 'Planned', workPackage: 'WP2', packageType: 'PS', vendor: null });
-    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(193);
-    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(41);
+    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(200);
+    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(42);
     expect(ok(call('GET', `${MB}?pageSize=200`)).total).toBe(190);
     expect(ok(call('GET', MS)).items).toHaveLength(10);
     const c = ok(call('GET', `${PC}/summary`));
-    expect(c).toMatchObject({ total: 22, open: 22, bySeverity: { High: 5, Medium: 17, Critical: 0, Low: 0 }, byType: { Issue: 5, Risk: 5, Concern: 12 } });
+    expect(c).toMatchObject({ total: 29, open: 29, bySeverity: { High: 5, Medium: 24, Critical: 0, Low: 0 }, byType: { Issue: 5, Risk: 5, Concern: 19 } });
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'procurement.logistics').sheet.name).toBe('EPCIC - Logistics shipments');
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'procurement.concerns').sheet.name).toBe('EPCIC - Procurement concerns');
   });
 
   it('creates and edits procurement packages, deriving the status from what is recorded', () => {
     const a = ok(call('POST', PK, { code: 'STTP2B-GF-TST-001', description: 'Test package', discipline: 'Piping' }, MEMBER));
-    expect(a).toMatchObject({ id: 'PR-146', status: 'Planned', vendor: null });
+    expect(a).toMatchObject({ id: 'PR-149', status: 'Planned', vendor: null });
     expect(ok(call('PATCH', `${PK}/${a.id}`, { vendor: 'Acme Ltd' }, MEMBER)).status).toBe('In tendering');
     expect(ok(call('PATCH', `${PK}/${a.id}`, { loaNo: '001/LOA', loaDate: '2026-10-01' })).status).toBe('LOA issued');
     expect(ok(call('PATCH', `${PK}/${a.id}`, { poNo: '100-2026/PO', poDate: '2026-11-02', buyer: 'Hong' })).status).toBe('PO placed');
@@ -1008,18 +1014,18 @@ describe('procurement registers', () => {
 
   it('creates and edits expediting packages and works out the variance', () => {
     const x = ok(call('POST', EX, { code: 'STTP2B-GF-TST-009', name: 'Test skid', discipline: 'Equipment', status: 'Normal', planPct: 40, actualPct: 35.5, rosDate: '2026-12-01' }, MEMBER));
-    expect(x).toMatchObject({ id: 'EX-154', variance: -4.5, rosDate: '2026-12-01' });
+    expect(x).toMatchObject({ id: 'EX-146', variance: -4.5, rosDate: '2026-12-01' });
     expect(ok(call('PATCH', `${EX}/${x.id}`, { actualPct: 42, status: 'At Risk', highlight: 'Vendor behind', actionPlan: 'Weekly call' }))).toMatchObject({ variance: 2, status: 'At Risk', highlight: 'Vendor behind' });
     expect(ok(call('PATCH', `${EX}/${x.id}`, { planPct: null })).variance).toBeNull();
     expect(err(call('POST', EX, { code: 'STTP2B-GF-TST-009', status: 'Normal' })).error.code).toBe('CODE_TAKEN');
     expect(err(call('POST', EX, { code: 'STTP2B-GF-TST-010', status: 'Normal', actualPct: 120 })).status).toBe(400);
     expect(call('DELETE', `${EX}/${x.id}`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
-    expect(ok(call('GET', `${P}/expediting/summary`)).total).toBe(153);
+    expect(ok(call('GET', `${P}/expediting/summary`)).total).toBe(145);
   });
 
   it('tracks shipments and flags the ones past their forecast date against the cut-off', () => {
     const s = ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', shipmentNo: 'SH-TEST', status: 'On Sailing', forecastOnSite: '2026-11-01', grossWeightKg: 1200 }, MEMBER));
-    expect(s).toMatchObject({ id: 'LG-0194', overdue: true, daysLate: 5, status: 'On Sailing' });
+    expect(s).toMatchObject({ id: 'LG-0201', overdue: true, daysLate: 5, status: 'On Sailing' });
     expect(ok(call('GET', `${LG}?pageSize=200`)).items.filter((r: any) => r.overdue)).toHaveLength(1);
     expect(ok(call('PATCH', `${LG}/${s.id}`, { actualOnSite: '2026-11-05' }))).toMatchObject({ status: 'Received', overdue: false, daysLate: null });
     expect(ok(call('GET', `${LG}.csv?source=PTSC`)).csv).toContain('SH-TEST');
@@ -1043,17 +1049,17 @@ describe('procurement registers', () => {
 
   it('raises, edits, filters and closes risks, concerns and issues against packages', () => {
     const c = ok(call('POST', PC, { packageCode: 'STTP2B-GF-STR-001A', title: 'Mill slot slipping', type: 'Risk', severity: 'Critical', owner: 'Linh', dueDate: '2026-11-01', action: 'Escalate to vendor director' }, MEMBER));
-    expect(c).toMatchObject({ id: 'PC-023', status: 'Open', raisedDate: '2026-11-06', area: 'Delivery', source: 'Manual', overdue: true, ageDays: 0 });
+    expect(c).toMatchObject({ id: 'PC-030', status: 'Open', raisedDate: '2026-11-06', area: 'Delivery', source: 'Manual', overdue: true, ageDays: 0 });
     expect(err(call('POST', PC, { title: 'x', packageCode: 'NO-SUCH-PKG' })).error.issues).toMatchObject([{ path: 'packageCode' }]);
     expect(err(call('POST', PC, { title: '' })).status).toBe(400);
     expect(err(call('POST', PC, { title: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
-    expect(ok(call('GET', `${PC}?severity=Critical`)).items.map((r: any) => r.id)).toEqual(['PC-023']);
-    expect(ok(call('GET', `${PC}?type=Concern`)).total).toBe(12);
+    expect(ok(call('GET', `${PC}?severity=Critical`)).items.map((r: any) => r.id)).toEqual(['PC-030']);
+    expect(ok(call('GET', `${PC}?type=Concern`)).total).toBe(19);
     expect(ok(call('GET', `${PC}?q=slot`)).total).toBe(1);
-    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 23, overdue: 1, bySeverity: { Critical: 1 } });
+    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 30, overdue: 1, bySeverity: { Critical: 1 } });
     expect(ok(call('GET', `${PC}/summary`)).byPackage.find((p: any) => p.code === 'STTP2B-GF-STR-001A')).toMatchObject({ open: 1, worst: 'Critical', score: 4 });
     expect(ok(call('PATCH', `${PC}/${c.id}`, { status: 'Resolved' }))).toMatchObject({ status: 'Resolved', overdue: false });
-    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 22, closed: 1, overdue: 0 });
+    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 29, closed: 1, overdue: 0 });
     expect(err(call('DELETE', `${PC}/${c.id}`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
     expect(call('DELETE', `${PC}/${c.id}`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
     expect(ok(call('GET', `${PC}.csv`)).csv).not.toContain('Mill slot');
@@ -1062,16 +1068,16 @@ describe('procurement registers', () => {
   it('puts the pipeline, expediting, shipments, materials and concerns on one dashboard', () => {
     const d = ok(call('GET', `${P}/procurement/dashboard`));
     expect(d.cutoff).toBe('2026-11-06');
-    expect(d.pipeline).toMatchObject({ total: 145, byStatus: { Planned: 8, 'In tendering': 0, 'LOA issued': 24, 'PO placed': 113 } });
+    expect(d.pipeline).toMatchObject({ total: 148, byStatus: { Planned: 9, 'In tendering': 0, 'LOA issued': 20, 'PO placed': 119 } });
     expect(d.pipeline.placedPct).toBeGreaterThan(70);
-    expect(d.pipeline.byDiscipline.reduce((n: number, x: any) => n + x.total, 0)).toBe(145);
-    expect(d.expediting).toMatchObject({ total: 153, health: { delay: 11, highRisk: 2, atRisk: 6, ok: 134 } });
+    expect(d.pipeline.byDiscipline.reduce((n: number, x: any) => n + x.total, 0)).toBe(148);
+    expect(d.expediting).toMatchObject({ total: 145, health: { delay: 12, highRisk: 3, atRisk: 6, ok: 124 } });
     expect(d.expediting.behind.length).toBe(10);
     expect(d.expediting.behind[0].variance).toBeLessThanOrEqual(d.expediting.behind[9].variance);
-    expect(d.logistics).toMatchObject({ total: 193, byStatus: { Received: 154, 'On Sailing': 25 }, bySource: { PTSC: 152, Client: 41 }, heldCount: 12 });
+    expect(d.logistics).toMatchObject({ total: 200, byStatus: { Received: 162, 'On Sailing': 20, 'Under Customs': 13, 'Inland transportation': 5 }, bySource: { PTSC: 158, Client: 42 }, heldCount: 19 });
     expect(d.materials.totals.map((t: any) => t.supply)).toEqual(['PTSC MC', 'Client']);
-    expect(d.concerns).toMatchObject({ open: 22 });
-    expect(d.attentionCount).toBe(30);
+    expect(d.concerns).toMatchObject({ open: 29 });
+    expect(d.attentionCount).toBe(34);
     const top = d.attention[0];
     expect(top).toMatchObject({ code: 'STTP2B-GF-STR-001L', level: 'Critical' });
     expect(top.reasons).toContain('Expediting: Delay');
@@ -1105,12 +1111,12 @@ describe('procurement registers', () => {
   it('shows procurement progress by work package from the procurement S-curves, apart from project progress, even when Planning is disabled', () => {
     const d = ok(call('GET', `${P}/procurement/dashboard`));
     expect(d.workPackages.items.length).toBe(5);
-    expect(d.workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 47.56 });
-    expect(d.workPackages.overall).toMatchObject({ plan: 43.31, actual: 45.07 });
+    expect(d.workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 48.97 });
+    expect(d.workPackages.overall).toMatchObject({ plan: 43.31, actual: 45.6 });
     ok(call('PUT', `${P}/modules/planning.work-packages`, { state: 'Disabled' }));
     expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages).toEqual(d.workPackages);
     store.updateRow(SHEET.workPackages, COLUMNS.workPackages, 'code', 'WP3', { thisWeekActual: 12, thisWeekPlan: 15 });
-    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 47.56 });
+    expect(ok(call('GET', `${P}/procurement/dashboard`)).workPackages.items.find((w: any) => w.code === 'WP3')).toMatchObject({ plan: 50.04, actual: 48.97 });
   });
 
   it('adds new signals to a package when they are raised and drops sections whose module is off', () => {
@@ -1133,9 +1139,9 @@ describe('procurement registers', () => {
   it('is included in cut-off reports and cannot be changed while one is open', () => {
     ok(call('POST', `${P}/snapshots`, { cutoff: '2026-10-30' }, MANAGER));
     ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', status: 'Planned' }));
-    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(193);
-    expect(ok(call('GET', LG)).total).toBe(194);
-    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(193);
+    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(200);
+    expect(ok(call('GET', LG)).total).toBe(201);
+    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(200);
     expect(err(call('POST', `${PC}?asOf=2026-10-30`, { title: 'x' })).error.code).toBe('READ_ONLY_SNAPSHOT');
   });
 });
@@ -1144,5 +1150,146 @@ describe('routing', () => {
   it('reports unknown routes and projects', () => {
     expect(err(call('GET', '/nowhere')).status).toBe(404);
     expect(err(call('GET', '/projects/nope/modules')).error.code).toBe('PROJECT_NOT_FOUND');
+  });
+});
+
+describe('profile, password and party access', () => {
+  it('shows the person their own profile with party, title and company', () => {
+    const me = ok(call('GET', '/me', undefined, CLIENT));
+    expect(me).toMatchObject({ party: 'Client', title: 'Client representative', company: 'Client X', hiddenModules: [] });
+    expect(me).not.toHaveProperty('passwordHash');
+  });
+
+  it('lets a person edit their name, title and company but not their party', () => {
+    const me = ok(call('PATCH', '/me', { name: 'Anh Nguyen', title: 'Lead expeditor', company: 'PTSC MC', party: 'Client' }, MEMBER));
+    expect(me).toMatchObject({ name: 'Anh Nguyen', title: 'Lead expeditor', company: 'PTSC MC', party: 'Contractor' });
+    expect(err(call('PATCH', '/me', { email: 'admin@example.com' }, MEMBER)).status).toBe(409);
+  });
+
+  it('sets a first password, then needs the current one to change it', () => {
+    expect(err(call('POST', '/me/password', { password: 'short' }, MEMBER)).status).toBe(400);
+    ok(call('POST', '/me/password', { password: 'first-password' }, MEMBER));
+    expect(ok(call('GET', '/me', undefined, MEMBER)).hasPassword).toBe(true);
+    expect(err(call('POST', '/me/password', { current: 'wrong', password: 'second-password' }, MEMBER)).error.code).toBe('WRONG_PASSWORD');
+    ok(call('POST', '/me/password', { current: 'first-password', password: 'second-password' }, MEMBER));
+    const stored = String(store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === MEMBER)!.passwordHash);
+    expect(stored).not.toContain('second-password');
+  });
+
+  it('lets an administrator set title, company and party, and lists them without the hash', () => {
+    const made = ok(call('POST', '/users', { name: 'Sub Lead', email: 'sub@example.com', party: 'Subcontractor', company: 'Fab Co', title: 'Site lead', password: 'initial-password' }));
+    expect(made).toMatchObject({ party: 'Subcontractor', company: 'Fab Co', title: 'Site lead', hasPassword: true });
+    const list = ok(call('GET', '/users')) as any[];
+    expect(list.every(u => !('passwordHash' in u))).toBe(true);
+    expect(ok(call('PATCH', `/users/${made.id}`, { party: 'Client' })).party).toBe('Client');
+    expect(err(call('PATCH', `/users/${made.id}`, { party: 'Vendor' })).status).toBe(400);
+    expect(err(call('GET', '/users', undefined, MEMBER)).status).toBe(403);
+  });
+
+  it('hides a screen from one party only, and its sub-screens with it', () => {
+    const before = ok(call('GET', '/party-access'));
+    expect(before.parties).toEqual(['Contractor', 'Client', 'Subcontractor']);
+    ok(call('PUT', '/party-access', { cells: [{ moduleKey: 'procurement.logistics', party: 'Client', visible: false }, { moduleKey: 'management.risks', party: 'Client', visible: false }] }));
+    expect(ok(call('GET', '/me', undefined, CLIENT)).hiddenModules).toEqual(expect.arrayContaining(['procurement.logistics', 'management.risks']));
+    expect(ok(call('GET', '/me', undefined, MEMBER)).hiddenModules).toEqual([]);
+    expect(ok(call('GET', '/me', undefined, ADMIN)).hiddenModules).toEqual([]);
+    expect(err(call('GET', `${P}/risks`, undefined, CLIENT)).error.code).toBe('NOT_FOR_YOUR_PARTY');
+    expect(err(call('GET', `${P}/logistics/shipments`, undefined, CLIENT)).error.code).toBe('NOT_FOR_YOUR_PARTY');
+    ok(call('GET', `${P}/risks`, undefined, MEMBER));
+    ok(call('PUT', '/party-access', { cells: [{ moduleKey: 'management.risks', party: 'Client', visible: true }] }));
+    ok(call('GET', `${P}/risks`, undefined, CLIENT));
+    expect(err(call('PUT', '/party-access', { cells: [] }, MEMBER)).status).toBe(403);
+    expect(err(call('PUT', '/party-access', { cells: [{ moduleKey: 'nope', party: 'Client', visible: false }] })).error.code).toBe('UNKNOWN_MODULE');
+  });
+});
+
+describe('major milestones for the S-curve', () => {
+  it('lists the project gates in date order, not every component milestone', () => {
+    const s = ok(call('GET', `${P}/milestones/summary`));
+    const names = s.major.map((m: any) => m.description) as string[];
+    expect(names[0]).toBe('Project Effective Date');
+    expect(names).toContain('Final Acceptance');
+    expect(names).toContain('Jacket Ready for Sail-away');
+    expect(names).not.toContain('Stack Up Deck 1 at final location');
+    expect(s.major.length).toBeGreaterThan(5);
+    expect(s.major.length).toBeLessThan(s.total);
+    const dates = s.major.map((m: any) => m.actual ?? m.forecast ?? m.planBaseline) as string[];
+    expect([...dates].sort()).toEqual(dates);
+  });
+
+  it('lets the Major column of the sheet override the rule', () => {
+    store.updateRow(SHEET.milestones, COLUMNS.milestones, 'id', 'M1040', { major: 'Yes' }, { projectId: 'sttp2b' });
+    store.updateRow(SHEET.milestones, COLUMNS.milestones, 'id', '01-M-1350', { major: 'No' }, { projectId: 'sttp2b' });
+    const names = ok(call('GET', `${P}/milestones/summary`)).major.map((m: any) => m.description) as string[];
+    expect(names).toContain('Jacket - Roll up Row 2.1');
+    expect(names).not.toContain('Final Acceptance');
+  });
+});
+
+describe('facility schedule and progress', () => {
+  it('lists the five facilities with data and DSF as later', () => {
+    const r = ok(call('GET', `${P}/facilities`));
+    expect(r.facilities.map((f: any) => f.label)).toEqual(['CGF Topside', 'CGF Jacket', 'Pile & Conductor', 'Bridge', 'LQM#2', 'DSF']);
+    const dsf = r.facilities.find((f: any) => f.id === 'dsf');
+    expect(dsf).toMatchObject({ later: true, headline: null, scopeCount: 0 });
+    for (const f of r.facilities.filter((x: any) => !x.later)) {
+      expect(f.headline, f.id).not.toBeNull();
+      expect(f.headline.actual).toBeGreaterThanOrEqual(0);
+      expect(f.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it('gives each facility its own S-curves, plan reaching 100 percent', () => {
+    for (const id of ['cgf-topsides', 'cgf-jacket', 'pile-conductor', 'bridge', 'lqm2']) {
+      const p = ok(call('GET', `${P}/facilities/${id}/progress`));
+      expect(p.scopes.length, id).toBeGreaterThan(0);
+      const head = p.scopes.find((s: any) => s.headline);
+      expect(head, id).toBeTruthy();
+      expect(head.points[head.points.length - 1].plan).toBeGreaterThan(99);
+      const dates = head.points.map((x: any) => x.date);
+      expect([...dates].sort()).toEqual(dates);
+    }
+  });
+
+  it('shows the overall curve and phases for the jacket, with the actual stopping at the cut-off', () => {
+    const p = ok(call('GET', `${P}/facilities/cgf-jacket/progress`));
+    expect(p.scopes.map((s: any) => s.scope)).toEqual(expect.arrayContaining(['overall', 'engineering', 'procurement', 'construction']));
+    const overall = p.scopes.find((s: any) => s.scope === 'overall');
+    expect(overall.headline).toBe(true);
+    expect(overall.actual).toBeCloseTo(38.73, 1);
+    expect(overall.asOf).toBe('2026-10-30');
+    expect(overall.points.filter((x: any) => x.date > '2026-10-30').every((x: any) => x.actual === null)).toBe(true);
+  });
+
+  it('blends Pile and Conductor into one construction curve and keeps both parts', () => {
+    const p = ok(call('GET', `${P}/facilities/pile-conductor/progress`));
+    expect(p.scopes.map((s: any) => s.scope)).toEqual(['construction', 'pile', 'conductor']);
+    expect(p.scopes[0].headline).toBe(true);
+    expect(p.wbs.map((w: any) => w.name)).toEqual(['PILE', 'CONDUCTOR']);
+  });
+
+  it('sorts the key milestones into their facility', () => {
+    const names = (id: string) => (ok(call('GET', `${P}/facilities/${id}/progress`)).milestones as any[]).map(m => m.description);
+    expect(names('cgf-topsides')).toContain('First Steel Cut for CGF Topsides');
+    expect(names('cgf-jacket')).toContain('Jacket Ready for Sail-away');
+    expect(names('pile-conductor')).toEqual(expect.arrayContaining(['First Steel Cut for Pile', 'Conductor Ready for Load out']));
+    expect(names('bridge')).toContain('Bridge Ready for Load out');
+    expect(names('lqm2')).toContain('LQ Module Ready for Sail-away');
+    expect(names('cgf-jacket')).not.toContain('First Steel Cut for Pile');
+    expect(names('dsf')).toEqual([]);
+  });
+
+  it('returns the WBS schedule with dates, and none for DSF', () => {
+    const s = ok(call('GET', `${P}/facilities/lqm2/schedule`));
+    expect(s.wbs.length).toBeGreaterThan(10);
+    expect(s.wbs.every((w: any) => w.start <= w.finish)).toBe(true);
+    expect(ok(call('GET', `${P}/facilities/dsf/schedule`)).wbs).toEqual([]);
+    expect(err(call('GET', `${P}/facilities/nope/schedule`)).status).toBe(404);
+  });
+
+  it('follows the module switches and the party access', () => {
+    ok(call('PUT', '/party-access', { cells: [{ moduleKey: 'planning.schedule', party: 'Client', visible: false }] }));
+    expect(err(call('GET', `${P}/facilities/lqm2/schedule`, undefined, CLIENT)).error.code).toBe('NOT_FOR_YOUR_PARTY');
+    ok(call('GET', `${P}/facilities/lqm2/progress`, undefined, CLIENT));
   });
 });

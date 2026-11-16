@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiMode, request, type ExpeditingSummary, type ModuleInfo, type WorkspaceId } from './api';
 import { CutoffControl } from './CutoffControl';
-import { fmtDate, initials } from './format';
+import { fmtDate } from './format';
 import { Icon } from './icons';
 import { defaultKey, kidsOf, landing, within } from './nav';
-import { useAccess, useApp, usePrefs } from './state';
+import { useApp, usePrefs } from './state';
 import { startMobileTables } from './mobileTables';
+import { startAutoGrow } from './autoGrow';
+import { ProfileMenu } from './ProfileMenu';
+import { InstallButton } from './pwa';
 import { Btn, ErrorBoundary, Modal } from './ui';
 
 const WS_ICON: Record<WorkspaceId, string> = { personal: 'user', epcic: 'building', governance: 'shield', reports: 'book' };
@@ -103,9 +106,8 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
 }
 
 function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: boolean }) {
-  const { project, modules, me, projects, selectProject, signOut } = useApp();
+  const { project, modules, projects, selectProject } = useApp();
   const prefs = usePrefs();
-  const access = useAccess();
   const [open, setOpen] = useState(false);
   const expediting = modules.modules.find(m => m.key === 'procurement.expediting.vendor-overview')?.effective;
   const summary = useQuery({ queryKey: ['expediting-summary', project.id], queryFn: () => request<ExpeditingSummary>(`/projects/${project.id}/expediting/summary`), enabled: !!expediting });
@@ -129,16 +131,10 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
       </div>
       <CutoffControl />
       <div className="top-actions">
+        <InstallButton />
         <button className="icon-btn round" aria-label={prefs.dark ? 'Switch to light mode' : 'Switch to dark mode'} title={prefs.dark ? 'Light mode' : 'Dark mode'} onClick={() => prefs.setDark(!prefs.dark)}><Icon name={prefs.dark ? 'sun' : 'moon'} /></button>
         <button className="icon-btn round bell" aria-label="Notifications" onClick={() => setOpen(true)}><Icon name="bell" />{flags > 0 && <b className="bell-dot">{flags}</b>}</button>
-        <div className="identity">
-          <span className="avatar teal" title={me?.name ?? 'Project team'}>{initials(me?.name ?? 'Project Team')}</span>
-          <div className="identity-text">
-            <strong>{me?.name ?? 'Project team'}</strong>
-            <span className="muted">{me ? `${me.isAdmin ? 'Administrator · ' : ''}${access.role ?? 'No project role'}` : expediting ? `${flags} open flags` : 'Demo user'}</span>
-          </div>
-          {me && <button className="icon-btn round" onClick={signOut} aria-label="Switch user" title="Switch user (sign out)"><Icon name="switch" /></button>}
-        </div>
+        <ProfileMenu flags={flags} />
       </div>
       {open && (
         <Modal title="Notification center" onClose={() => setOpen(false)} actions={<Btn onClick={() => setOpen(false)}>Close</Btn>}>
@@ -179,6 +175,7 @@ export function Layout() {
   const [menu, setMenu] = useState(false);
   const prefs = usePrefs();
   useEffect(() => { const main = document.getElementById('main'); return main ? startMobileTables(main) : undefined; }, []);
+  useEffect(() => startAutoGrow(), []);
   useEffect(() => {
     if (!menu) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };

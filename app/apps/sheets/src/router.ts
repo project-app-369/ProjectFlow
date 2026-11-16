@@ -35,6 +35,8 @@ const crud = (path: string, res: (c: Ctx) => Resource, module: string): Route[] 
 const OVERALL = 'planning.overall-progress';
 const WORK_PACKAGES = 'planning.work-packages';
 const MILESTONES = 'planning.milestones';
+const FAC_PROGRESS = 'planning.progress';
+const FAC_SCHEDULE = 'planning.schedule';
 const PROCUREMENT = 'procurement.procurement-plan';
 const EXPEDITING = 'procurement.expediting.vendor-overview';
 const RISKS = 'management.risks';
@@ -54,6 +56,10 @@ const ROUTES: Route[] = [
   route('GET', 'health', c => c.api.svc.health(), { access: 'public' }),
   route('GET', 'directory', c => c.api.admin.directory(), { access: 'public' }),
   route('GET', 'me', c => c.api.admin.me(c.actor)),
+  route('PATCH', 'me', c => c.api.admin.updateProfile(c.body, c.actor)),
+  route('POST', 'me/password', c => c.api.admin.changePassword(c.body, c.actor)),
+  route('GET', 'party-access', c => c.api.admin.partyAccess(c.actor)),
+  route('PUT', 'party-access', c => c.api.admin.setPartyAccess(c.body, c.actor)),
 
   // projects and people
   route('GET', 'projects', c => c.api.admin.listProjects(c.actor, c.q)),
@@ -83,6 +89,9 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/schedule/overall-progress`, c => c.api.svc.overall(c.p.pid), { module: OVERALL }),
   route('GET', `${PID}/schedule/work-packages`, c => c.api.svc.workPackages(c.p.pid), { module: WORK_PACKAGES }),
   route('GET', `${PID}/milestones/insights`, c => c.api.reg.milestoneInsights(c.p.pid), { module: MILESTONES }),
+  route('GET', `${PID}/facilities`, c => c.api.facilities.list(c.p.pid), { module: FAC_PROGRESS }),
+  route('GET', `${PID}/facilities/(?<fid>[^/]+)/progress`, c => c.api.facilities.progress(c.p.pid, c.p.fid), { module: FAC_PROGRESS }),
+  route('GET', `${PID}/facilities/(?<fid>[^/]+)/schedule`, c => c.api.facilities.schedule(c.p.pid, c.p.fid), { module: FAC_SCHEDULE }),
   route('GET', `${PID}/milestones/summary`, c => c.api.reg.milestoneSummary(c.p.pid), { module: MILESTONES }),
   route('GET', `${PID}/milestones[.]csv`, c => c.api.reg.milestoneCsv(c.p.pid, c.q), { module: MILESTONES }),
   route('GET', `${PID}/milestones`, c => c.api.reg.milestoneList(c.p.pid, c.q), { module: MILESTONES }),
@@ -234,7 +243,7 @@ export function handle(api: Api, req: ApiRequest): Envelope {
       if (r.access === 'member') requireMember(actor, params.pid);
       if (r.access === 'projectAny' && !actor.isAdmin) requireMember(actor, params.pid);
       const key = typeof r.module === 'function' ? r.module(params) : r.module;
-      if (key) api.svc.assertAccess(params.pid, key, method !== 'GET');
+      if (key) { api.admin.assertParty(actor, key); api.svc.assertAccess(params.pid, key, method !== 'GET'); }
       const ctx = { api, actor, p: params, q: query, body: req.body };
       if (r.hasProject && query.asOf) {
         // ?asOf=<cut-off date> reads the saved snapshot of that date; snapshots are read-only

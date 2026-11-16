@@ -45,6 +45,21 @@ function procurementRows(register: RawRow[], plan: RawRow[]): Row[] {
   return rows as unknown as Row[];
 }
 
+interface FacilityProgressSeed { curves: RawRow[]; scopes: RawRow[]; wbs: RawRow[] }
+const facilityOf = (raw: SeedData): FacilityProgressSeed => ((raw as unknown as { facilityProgress?: FacilityProgressSeed }).facilityProgress ?? { curves: [], scopes: [], wbs: [] });
+
+/** Loads the per-facility progress into sheets that have no rows for the project yet (a workbook made before this module existed). */
+export function appendSeedFacilityProgress(store: Store, raw: SeedData) {
+  const f = facilityOf(raw);
+  const pairs: [keyof typeof COLUMNS & keyof typeof SHEET, RawRow[]][] = [['facilityCurves', f.curves], ['facilityScopes', f.scopes], ['facilityWbs', f.wbs]];
+  for (const [key, rows] of pairs) {
+    const columns = COLUMNS[key];
+    if (rows.length && !store.readRows(SHEET[key], columns).some(r => r.projectId === PROJECT_ID)) {
+      store.appendRows(SHEET[key], columns, rows.map(r => ({ projectId: PROJECT_ID, ...r })) as unknown as Row[]);
+    }
+  }
+}
+
 const RISK_STATUS = /^(Delay|At Risk|At High Risk)$/;
 const firstSentence = (text: string, max: number) => {
   const one = text.replace(/\s+/g, ' ').trim();
@@ -85,10 +100,10 @@ export function concernsSeed(expediting: RawRow[], procurement: RawRow[], logist
 
 /** Demo accounts. Names are descriptive on purpose; replace them in Settings → Users. */
 export const SEED_USERS = [
-  { id: ADMIN_ID, name: 'Admin (demo)', email: 'admin@example.com', isAdmin: 'Yes', role: 'Project Manager', title: 'Project administrator' },
-  { id: 'u-manager', name: 'Manager (demo)', email: 'manager@example.com', isAdmin: 'No', role: 'Manager', title: 'Discipline manager' },
-  { id: 'u-member', name: 'Team member (demo)', email: 'member@example.com', isAdmin: 'No', role: 'Team Member', title: 'Expeditor' },
-  { id: 'u-client', name: 'Client (demo)', email: 'client@example.com', isAdmin: 'No', role: 'Client', title: 'Client representative' },
+  { id: ADMIN_ID, name: 'Admin (demo)', email: 'admin@example.com', isAdmin: 'Yes', role: 'Project Manager', title: 'Project administrator', company: 'PTSC MC', party: 'Contractor' },
+  { id: 'u-manager', name: 'Manager (demo)', email: 'manager@example.com', isAdmin: 'No', role: 'Manager', title: 'Discipline manager', company: 'PTSC MC', party: 'Contractor' },
+  { id: 'u-member', name: 'Team member (demo)', email: 'member@example.com', isAdmin: 'No', role: 'Team Member', title: 'Expeditor', company: 'PTSC MC', party: 'Contractor' },
+  { id: 'u-client', name: 'Client (demo)', email: 'client@example.com', isAdmin: 'No', role: 'Client', title: 'Client representative', company: 'Client X', party: 'Client' },
 ] as const;
 
 /** Reference data extracted from the /data workbooks (the file the NestJS API also seeds from). */
@@ -107,6 +122,9 @@ export function seedRows(raw: SeedData) {
     materialBalance: withProject(((raw as unknown as { materialBalance?: RawRow[] }).materialBalance ?? []).map((r, i) => ({ id: `MB-${String(i + 1).padStart(3, '0')}`, ...r }))),
     issues: (raw as unknown as { issues?: RawRow[] }).issues ?? [],
     phaseProgress: withProject(((raw as unknown as { phaseProgress?: RawRow[] }).phaseProgress ?? []).map((r, i) => ({ id: `PH-${String(i + 1).padStart(2, '0')}`, reportDate: (raw as unknown as { progressCutoff?: string }).progressCutoff ?? null, ...r }))),
+    facilityCurves: withProject(facilityOf(raw).curves),
+    facilityScopes: withProject(facilityOf(raw).scopes),
+    facilityWbs: withProject(facilityOf(raw).wbs),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
     materialSummary: withProject(((raw as unknown as { materialSummary?: RawRow[] }).materialSummary ?? []).map((r, i) => ({ id: `MS-${String(i + 1).padStart(2, '0')}`, ...r }))),
     expediting: withProject(expediting.map(x => ({
@@ -161,7 +179,7 @@ export function knowledgeSeed(milestones: RawRow[], now: string): Row[] {
         'Equipment packages also carry progress by stage: engineering, procurement, fabrication, testing and delivery. Highlights, action plans and remarks explain packages that are late or at risk.',
       ].join('\n'),
       ['status', 'LOA', 'PO', 'expediting'],
-      [{ title: 'STT2B - Expediting Report (cut-off 6 Nov 2026)', ref: 'pgk_gen_info and the discipline summaries', url: null }, { title: 'STTP2B Procurement Plan', ref: 'updated 06-Nov-26', url: null }]),
+      [{ title: 'STT2B - Expediting Report (cut-off 13 Nov 2026)', ref: 'pgk_gen_info and the discipline summaries', url: null }, { title: 'STTP2B Procurement Plan', ref: 'updated 13-Nov-26', url: null }]),
     article(2, 'construction', 'Sequence', 'Fabrication and construction sequence at key-milestone level',
       'The order of the main steel-cut, roll-up, stack-up and load-out dates for the topsides, jacket, piles, conductors, bridge and LQ module (baseline dates).',
       [
@@ -195,8 +213,9 @@ export function knowledgeSeed(milestones: RawRow[], now: string): Row[] {
 /** Creates one sheet per dataset, grouped by area, and returns the sheet names that were not there before. */
 export function ensureAllSheets(store: Store) {
   const sheets: [string, readonly { key: string; type: string }[]][] = [
-    [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
+    [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.partyAccess, COLUMNS.partyAccess], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
+    [SHEET.facilityCurves, COLUMNS.facilityCurves], [SHEET.facilityScopes, COLUMNS.facilityScopes], [SHEET.facilityWbs, COLUMNS.facilityWbs],
     [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
     [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
     [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
@@ -204,6 +223,8 @@ export function ensureAllSheets(store: Store) {
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
+  store.addMissingColumns(SHEET.milestones, COLUMNS.milestones); // the optional Major column
+  store.addMissingColumns(SHEET.users, COLUMNS.users); // workbooks made before profiles lack title, company, party and password columns
 }
 
 function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: string) {
@@ -267,18 +288,20 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
   return store.withLock(() => {
     const hadIssuesSheet = Boolean(store.sheetInfo(SHEET.issues));
     const hadRiskMatrix = Boolean(store.sheetInfo(SHEET.riskMatrix));
+    const hadFacilityCurves = Boolean(store.sheetInfo(SHEET.facilityCurves));
     ensureAllSheets(store);
     if (store.readRows(SHEET.projects, COLUMNS.projects).length) {
       // Upgrade existing workbooks once, without overwriting their project data.
       if (!hadIssuesSheet) appendSeedIssues(store, seedRows(raw).issues, String(raw.project.cutoff), now);
       if (!hadRiskMatrix) appendSeedGovernance(store, raw);
+      if (!hadFacilityCurves) appendSeedFacilityProgress(store, raw);
       return false;
     }
 
     const rows = seedRows(raw);
     const pid = PROJECT_ID;
     store.appendRows(SHEET.projects, COLUMNS.projects, rows.project.map(p => ({ ...p, createdAt: now, updatedAt: now })));
-    store.appendRows(SHEET.users, COLUMNS.users, SEED_USERS.map(u => ({ id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin, status: 'Active', createdAt: now })));
+    store.appendRows(SHEET.users, COLUMNS.users, SEED_USERS.map(u => ({ id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin, status: 'Active', createdAt: now, title: u.title, company: u.company, party: u.party })));
     store.appendRows(SHEET.memberships, COLUMNS.memberships, SEED_USERS.map(u => ({ projectId: pid, userId: u.id, role: u.role, title: u.title })));
     store.appendRows(SHEET.modules, COLUMNS.modules, MANIFESTS.map(m => ({ projectId: pid, moduleKey: m.key, path: pathOf(m.key).join(' / '), state: defaultState(m), updatedAt: now })));
     store.appendRows(SHEET.scurve, COLUMNS.scurve, rows.scurve);
@@ -291,6 +314,9 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.materialBalance, COLUMNS.materialBalance, rows.materialBalance);
     store.appendRows(SHEET.materialSummary, COLUMNS.materialSummary, rows.materialSummary);
     store.appendRows(SHEET.procCurves, COLUMNS.procCurves, rows.procCurves);
+    store.appendRows(SHEET.facilityCurves, COLUMNS.facilityCurves, rows.facilityCurves);
+    store.appendRows(SHEET.facilityScopes, COLUMNS.facilityScopes, rows.facilityScopes);
+    store.appendRows(SHEET.facilityWbs, COLUMNS.facilityWbs, rows.facilityWbs);
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
     appendSeedIssues(store, rows.issues, String(raw.project.cutoff), now);
     appendSeedGovernance(store, raw);

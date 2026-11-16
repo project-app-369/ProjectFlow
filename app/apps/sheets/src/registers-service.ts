@@ -37,6 +37,14 @@ const milestoneFields = {
 const milestoneCreate = z.object({ id: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{1,39}$/, 'Use letters, digits, dots, dashes or underscores (2 to 40 characters).').optional(), ...milestoneFields });
 const milestonePatch = z.object(milestoneFields).partial();
 
+/**
+ * The milestones that mark the course of the EPCIC scope, shown on the S-curve: the project dates, first steel cut of the main
+ * structures, end of detailed engineering, ready for sail-away, installation and mechanical completion, float-over, HUC and acceptance.
+ * Type Yes or No in a milestone's Major column of the sheet to override this for one milestone.
+ */
+const MAJOR = /effective date|first steel cut for (cgf topsides|jacket)\b|complete detailed engineering|ready for sail-?away|installation completion|mechanical completion|float-?over completion|huc start|ready for hydrocarbon|performance test completion|provisional acceptance|final acceptance/i;
+export const isMajorMilestone = (m: Row) => (/^yes$/i.test(String(m.major ?? '')) ? true : /^no$/i.test(String(m.major ?? '')) ? false : MAJOR.test(String(m.description ?? '')));
+
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 const MILESTONE_STATUSES: MilestoneStatus[] = ['Done', 'Overdue', 'Due soon', 'Planned'];
 
@@ -70,7 +78,7 @@ export class RegistersService {
   private milestoneView(m: Row, cutoff: string): Any {
     const status = milestoneStatus(m, cutoff);
     const due = String(m.forecast ?? m.planBaseline ?? '');
-    return { ...strip(m), status, slipDays: m.planBaseline && m.forecast ? daysBetween(String(m.planBaseline), String(m.forecast)) : null, daysToGo: !m.actual && due ? daysBetween(cutoff, due) : null };
+    return { ...strip(m), major: isMajorMilestone(m), status, slipDays: m.planBaseline && m.forecast ? daysBetween(String(m.planBaseline), String(m.forecast)) : null, daysToGo: !m.actual && due ? daysBetween(cutoff, due) : null };
   }
 
   /** Keeps milestones by the look-ahead window: not yet achieved and due (forecast, else baseline) inside it. */
@@ -83,6 +91,12 @@ export class RegistersService {
       if (!d) return false;
       return within === 'overdue' ? d < cutoff : d >= cutoff && d <= addDays(cutoff, Number(within));
     });
+  }
+
+  /** Every milestone with its status against the cut-off (the same rows the register lists). */
+  milestoneViews(projectId: string): Any[] {
+    const cutoff = this.cutoff(projectId);
+    return this.milestones(projectId).map(m => this.milestoneView(m, cutoff));
   }
 
   milestoneInsights(projectId: string) {
@@ -120,7 +134,8 @@ export class RegistersService {
     const count = (s: MilestoneStatus) => all.filter(m => m.status === s).length;
     const bySub = all.reduce<Record<string, number>>((a, m) => { const k = String(m.subName ?? 'Unassigned'); a[k] = (a[k] ?? 0) + 1; return a; }, {});
     const next = all.filter(m => m.status !== 'Done').sort((a, b) => String(a.forecast ?? a.planBaseline).localeCompare(String(b.forecast ?? b.planBaseline))).slice(0, 5);
-    return { total: all.length, done: count('Done'), overdue: count('Overdue'), dueSoon: count('Due soon'), planned: count('Planned'), bySub, next, cutoff };
+    return { total: all.length, done: count('Done'), overdue: count('Overdue'), dueSoon: count('Due soon'), planned: count('Planned'), bySub, next, cutoff,
+      major: all.filter(m => m.major && (m.actual ?? m.forecast ?? m.planBaseline)).sort((a, b) => String(a.actual ?? a.forecast ?? a.planBaseline).localeCompare(String(b.actual ?? b.forecast ?? b.planBaseline))) };
   }
 
   /** Days from the baseline to the actual date, or to the forecast while not done; null when either is missing. */

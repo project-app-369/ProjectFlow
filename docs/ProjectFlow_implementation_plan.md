@@ -88,6 +88,12 @@ The 68-week envelope is not re-estimated here (spec revision 1.2 note).
 5. Replace the demo identity before any real data or external user touches the pre-build.
 6. Finish the Lintel UI rollout on branch `try-new-UI` (rules in [ADR 0006](../app/docs/adr/0006-lintel-design-and-layout-rules.md)): check every page at 1440, 1024 and 375 px in light and dark, move any page-level spacing onto the `--gap` / `--card-px` / `--card-py` tokens, then merge. Every new page follows the ADR's checklist.
 
+7. Profiles and party access (sheets pre-build): header profile menu (profile, switch user type, sign out), `/profile` page (name, title, company, email, password), Settings → Users with title, company and party, and Settings → Party access (module × Contractor / Client / Subcontractor). Hidden screens leave the menu and the API refuses them (`NOT_FOR_YOUR_PARTY`). Still to do: real sign-in that uses the stored password hash, and the same on the NestJS API.
+
+8. Branding and installable app: logo and icon set from the supplied artwork in `apps/web/public` (favicon, 192/512, maskable, Apple touch, Open Graph card), full meta in `index.html`, `manifest.webmanifest`, a service worker (`sw.js`, app shell only, data never cached) and an Install button (header and Settings → General; Safari on iPhone shows the Add to Home Screen steps). Settings → Data sources links the exact Google Sheet from `VITE_SPREADSHEET_URL`.
+
+9. Schedule and Progress per facility (Planning & Progress → Schedule, Progress): CGF Topside, CGF Jacket, Pile & Conductor, Bridge and LQM#2 each have weekly S-curves (plan, forecast, actual; overall and by phase where the facility workbook has them), a WBS schedule from Primavera with progress at the cut-off, and their key milestones. DSF is listed as later. Data comes from `app/apps/api/scripts/extract_facility_progress.py` into the `facilityProgress` key of `sttp2b.json` (cut-off 30 Oct 2026). Still to do: CGF Topside all-phase curve (its workbook table is incomplete), DSF, a forecast for the all-phase curves, and the same on the NestJS API.
+
 ## 6. Verification
 
 - `pnpm typecheck` and `pnpm test` at `app/` run all three workspaces: the sheets backend carries the API contract tests (61), the NestJS API its catalog tests, the web client its navigation tests.

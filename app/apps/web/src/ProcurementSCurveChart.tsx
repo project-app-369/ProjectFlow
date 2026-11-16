@@ -1,13 +1,13 @@
-import { chartTheme } from './chartTheme';
+import { ZOOM_BOTTOM, chartTheme, timeZoom } from './chartTheme';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
+import { DataZoomComponent, GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { useEffect, useRef } from 'react';
 import type { ProcurementCurve } from './api';
 import { usePrefs } from './state';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer]);
+echarts.use([DataZoomComponent, LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer]);
 
 const monthLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
 const dayLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -32,7 +32,8 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
     });
     chart.setOption({
       animation: false,
-      grid: { left: 40, right: 16, top: 28, bottom: 28 },
+      grid: { left: 40, right: 16, top: 28, bottom: ZOOM_BOTTOM },
+      dataZoom: timeZoom(theme),
       legend: { top: 0, right: 0, textStyle: { color: muted, fontSize: 12 }, itemWidth: 14, itemHeight: 6 },
       tooltip: { ...theme.tooltip, trigger: 'axis', valueFormatter: (v: unknown) => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—') },
       xAxis: { type: 'category', data: curve.dates, axisLabel: { color: muted, fontSize: 12, hideOverlap: true, formatter: (v: string) => monthLabel(v) }, axisPointer: { label: { formatter: (p: { value: string | number }) => dayLabel(String(p.value)) } }, axisLine: { lineStyle: { color: line } }, axisTick: { show: false } },
@@ -45,5 +46,5 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
   }, [curve, dark]);
 
   const name = `${curve.facility ?? ''} ${curve.scope ?? ''}`.trim();
-  return <div className="chart"><div ref={el} role="img" aria-label={`Procurement S-curve for ${name}, plan versus forecast and actual`} style={{ height: 300 }} /></div>;
+  return <div className="chart"><div ref={el} role="img" aria-label={`Procurement S-curve for ${name}, plan versus forecast and actual`} style={{ minHeight: 340 }} /></div>;
 }

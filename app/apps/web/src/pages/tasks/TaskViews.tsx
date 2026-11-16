@@ -1,9 +1,10 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { TASK_STATUSES, type PTask, type TaskStatus } from '../../api';
 import { DataTable } from '../../DataTable';
 import { addDays, diffDays, fmtDate, fmtShort, hours, monthStart, addMonths, weekStart } from '../../format';
 import { Icon } from '../../icons';
+import { ZoomSlider, useZoomAnchor } from '../../zoom';
 import { IconSelect, ProjectChips, StatusBadges, statusOptions, SubtaskProgress, UrgencyBadge, useTaskMutations } from './common';
 
 interface ViewProps { tasks: PTask[]; onOpen: (t: PTask) => void; today: string }
@@ -20,7 +21,18 @@ const sortValue: Record<string, (t: PTask) => string | number> = {
   assigner: t => (t.assigner ?? '').toLowerCase(), due: t => t.due ?? '9999', effort: t => t.effort ?? -1, planStart: t => t.planStart ?? '9999',
 };
 
-export function TaskList({ tasks, onOpen }: ViewProps) {
+const PHONE = '(max-width: 720px)';
+/** True on phones, where the list view shows the same cards as the card view instead of a table. */
+function usePhone() {
+  return useSyncExternalStore(
+    cb => { const mq = window.matchMedia(PHONE); mq.addEventListener('change', cb); return () => mq.removeEventListener('change', cb); },
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+}
+
+export function TaskList({ tasks, onOpen, today }: ViewProps) {
+  const phone = usePhone();
   const [sort, setSort] = useState<{ sort?: string; order: 'asc' | 'desc' }>({ sort: 'taskNo', order: 'asc' });
   const rows = useMemo(() => {
     const get = sortValue[sort.sort ?? 'taskNo'];
@@ -41,6 +53,7 @@ export function TaskList({ tasks, onOpen }: ViewProps) {
     { id: 'effort', header: () => <HeaderIcon name="chart" label="Effort" />, meta: { sortKey: 'effort' }, cell: ({ row: { original: t } }) => (t.effort != null ? hours(t.effort) : '—') },
     { id: 'subs', header: () => <HeaderIcon name="status-completed" label="Subtasks" />, cell: ({ row: { original: t } }) => <SubtaskProgress task={t} /> },
   ], [onOpen]);
+  if (phone) return <div className="task-cards-wrap"><TaskCards tasks={rows} onOpen={onOpen} today={today} /></div>;
   return (
     <div className="task-list"><DataTable columns={columns} data={rows} state={sort}
       rowClassName={t => `task-row urgency-${t.urgency.toLowerCase()}`}
@@ -134,12 +147,14 @@ export function TaskKanban({ tasks, onOpen }: ViewProps) {
 
 /* ============================ Gantt ============================ */
 const ZOOM = { Day: 30, Week: 12, Month: 4 } as const;
+const ZOOM_MIN = 1.5, ZOOM_MAX = 48;
 
 export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
-  const [zoom, setZoom] = useState<keyof typeof ZOOM>('Week');
+  const [px, setPx] = useState<number>(ZOOM.Week);
+  const scroller = useRef<HTMLDivElement>(null);
+  const zoomTo = useZoomAnchor(scroller, px, setPx, 240);
   const ready = tasks.filter(t => t.ganttReady);
   const hidden = tasks.length - ready.length;
-  const px = ZOOM[zoom];
 
   const range = useMemo(() => {
     if (!ready.length) return null;
@@ -164,7 +179,7 @@ export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
     months.push({ label: new Date(`${m}T12:00:00Z`).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }), left: x(start), width: (diffDays(start, end < last ? end : last) + 1) * px });
   }
   const ticks: { label: string; left: number }[] = [];
-  const stepDays = zoom === 'Day' ? 1 : zoom === 'Week' ? 7 : 14;
+  const stepDays = px >= 20 ? 1 : px >= 8 ? 7 : 14;
   for (let d = range.min; d <= addDays(range.min, range.days - 1); d = addDays(d, stepDays)) ticks.push({ label: String(Number(d.slice(8))), left: x(d) });
 
   return (
@@ -172,10 +187,11 @@ export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
       <div className="gantt-bar">
         <span className="tiny muted">{ready.length} of {tasks.length} tasks shown{hidden > 0 && ` · ${hidden} need plan start, plan finish and a deadline`}</span>
         <span className="actions">
-          {(Object.keys(ZOOM) as (keyof typeof ZOOM)[]).map(z => <button key={z} type="button" className={`btn small ${zoom === z ? 'primary' : ''}`} onClick={() => setZoom(z)}>{z}</button>)}
+          <ZoomSlider value={px} min={ZOOM_MIN} max={ZOOM_MAX} onChange={zoomTo} />
+          {(Object.entries(ZOOM) as [string, number][]).map(([z, v]) => <button key={z} type="button" className={`btn small ${Math.abs(px - v) < 0.5 ? 'primary' : ''}`} onClick={() => zoomTo(v)}>{z}</button>)}
         </span>
       </div>
-      <div className="gantt-scroll">
+      <div className="gantt-scroll" ref={scroller}>
         <div className="gantt-grid" style={{ width: 240 + width }}>
           <div className="gantt-head">
             <div className="gantt-name gantt-name-head"><Icon name="doc" /><span className="sr-only">Task</span></div>

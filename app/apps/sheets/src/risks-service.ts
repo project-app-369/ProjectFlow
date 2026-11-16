@@ -31,7 +31,7 @@ const riskPatch = z.object(riskFields).partial();
 const actionFields = { action: z.string().trim().min(1).max(1000), owner: txt(120), dueDate: isoOpt, done: z.boolean() };
 const actionCreate = z.object({ ...actionFields, done: actionFields.done.default(false) });
 const actionPatch = z.object(actionFields).partial();
-const riskQuery = listQuery(['id', 'no', 'title', 'currentScore', 'currentRank', 'preScore', 'status', 'planDate', 'recordDate', 'owner'] as const).extend({
+const riskQuery = listQuery(['id', 'no', 'title', 'currentScore', 'currentRank', 'preScore', 'status', 'planDate', 'recordDate', 'owner', 'discipline', 'category'] as const).extend({
   category: z.string().max(60).optional(), level: z.string().max(20).optional(), owner: z.string().max(120).optional(), strategy: z.string().max(20).optional(),
   flag: z.enum(['response-overdue', 'review-overdue', 'unrated', 'awaiting-post', 'external', 'active']).optional(), within: z.string().max(10).optional(),
   cell: z.string().regex(/^\d{1,2}-\d{1,2}$/).optional(), basis: z.enum(['pre', 'current']).optional(),

@@ -10,21 +10,56 @@ export function useListState(start: Partial<Pick<ListState, 'status' | 'discipli
   const debouncedQ = useDebounced(state.q);
   const set = (patch: Partial<ListState>) => setState(s => ({ ...s, ...patch, page: patch.page ?? 1 }));
   const toggleSort = (key: string) => setState(s => ({ ...s, sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc', page: 1 }));
+  const setSort = (sort: string, order: 'asc' | 'desc') => setState(s => ({ ...s, sort, order, page: 1 }));
   /** Clearing returns to the page's starting filters, not to everything. */
   const clear = () => setState(s => ({ ...s, q: '', discipline: start.discipline ?? '', status: start.status ?? '', page: 1 }));
   /** Query string for the API; the search term is debounced so typing doesn't fire a request per keystroke. */
   const query = (extra: Record<string, string | number | undefined> = {}) =>
     qs({ q: debouncedQ, discipline: state.discipline, status: state.status, sort: state.sort, order: state.order, ...extra });
-  return { state, set, toggleSort, clear, query, debouncedQ };
+  return { state, set, toggleSort, setSort, clear, query, debouncedQ };
 }
 
-export function Toolbar({ list, facets, placeholder, label, disciplineLabel = 'disciplines' }: {
+/**
+ * "Sort by" for a register: pick the field and flip the direction. The column headers sort too, but they are not
+ * there on phones (registers become cards) and cover only what is shown, so this lists every useful key (dates,
+ * discipline, category…). `fallback` is the sort the API applies when none is chosen.
+ */
+export function SortBy({ options, sort, order, fallback, onChange }: {
+  options: [key: string, label: string][];
+  sort?: string;
+  order: 'asc' | 'desc';
+  fallback?: string;
+  onChange: (sort: string, order: 'asc' | 'desc') => void;
+}) {
+  const current = sort ?? fallback ?? options[0][0];
+  const label = options.find(([k]) => k === current)?.[1] ?? '';
+  const flip = order === 'asc' ? 'desc' : 'asc';
+  return (
+    <span className="sort-by">
+      <label className="task-filter" title="Sort by">
+        <Icon name="sort" />
+        <select className="filter" aria-label="Sort by" value={current} onChange={e => onChange(e.target.value, order)}>
+          {options.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+      </label>
+      <button type="button" className="icon-btn sort-dir" aria-label={`${label}: ${order === 'asc' ? 'ascending' : 'descending'}. Switch to ${flip === 'asc' ? 'ascending' : 'descending'}`}
+        title={order === 'asc' ? 'Ascending (A→Z, oldest first)' : 'Descending (Z→A, newest first)'} onClick={() => onChange(current, flip)}>
+        <Icon name={order === 'asc' ? 'chevron-up' : 'chevron-down'} />
+      </button>
+    </span>
+  );
+}
+
+export function Toolbar({ list, facets, placeholder, label, disciplineLabel = 'disciplines', sorts, defaultSort }: {
   list: ReturnType<typeof useListState>;
   facets?: { disciplines: string[]; statuses: string[] };
   placeholder: string;
   label: string;
   /** What the first filter groups by, e.g. "subcontract areas". */
   disciplineLabel?: string;
+  /** Fields offered in the Sort by control, and the sort the API applies by default. */
+  sorts?: [string, string][];
+  defaultSort?: string;
 }) {
   const { state, set, clear } = list;
   return (
@@ -42,6 +77,7 @@ export function Toolbar({ list, facets, placeholder, label, disciplineLabel = 'd
           <option value="">All statuses</option>
           {facets?.statuses.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        {sorts && <SortBy options={sorts} sort={state.sort} order={state.order} fallback={defaultSort} onChange={list.setSort} />}
         <Btn kind="small" onClick={clear}>Clear</Btn>
       </div>
     </div>

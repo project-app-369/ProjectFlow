@@ -125,7 +125,7 @@ export default function Expediting() {
       </div>}
       <div className="panel">
         <div className="panel-head"><div><h2>Expediting packages</h2><p>Select a package to review highlights and action plan</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
-        <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, vendor or description…" label="Search expediting packages" />
+        <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, vendor or description…" label="Search expediting packages" defaultSort="code" sorts={[['code', 'Package'], ['actualPct', 'Progress'], ['variance', 'Variance'], ['discipline', 'Discipline'], ['vendor', 'Vendor'], ['status', 'Status']]} />
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>

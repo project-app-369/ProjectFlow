@@ -15,6 +15,7 @@ lists of the Material Summary List. They repeat what the logistics and balance d
 for a spreadsheet-backed pre-build.
 """
 import datetime as dt
+import glob
 import json
 import os
 import re
@@ -24,6 +25,35 @@ import openpyxl
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.normpath(os.path.join(HERE, '..', '..', '..', '..', 'data', 'EPCIC', 'Procurement'))
 OUT = os.path.join(HERE, 'sttp2b.json')
+
+
+MONTHS = {m: i for i, m in enumerate(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], 1)}
+
+
+def name_date(name):
+    """The cut-off written in a file name: 13-Nov-26, 06-Nov-2026, 13-Nov-2026, 07.11.2026 ..."""
+    m = re.search(r'(\d{1,2})[-. ]([A-Za-z]{3})[a-z]*[-. ](\d{2,4})', name)
+    if m:
+        d, mon, y = int(m.group(1)), MONTHS[m.group(2).lower()], int(m.group(3))
+    else:
+        m = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', name)
+        if not m:
+            return None
+        d, mon, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    return dt.date(y + 2000 if y < 100 else y, mon, d)
+
+
+def latest(folder, pattern='*.xls*'):
+    """The workbook of `folder` with the newest cut-off in its file name, as (date, relative path)."""
+    found = []
+    for path in glob.glob(os.path.join(DATA, folder, pattern)):
+        base = os.path.basename(path)
+        when = None if base.startswith('~$') else name_date(base)
+        if when:
+            found.append((when, os.path.join(folder, base)))
+    if not found:
+        raise SystemExit(f'No workbook with a cut-off date in its name under {os.path.join(DATA, folder)}')
+    return max(found)
 
 
 def open_book(rel):
@@ -64,7 +94,7 @@ def _fraction(v):
 
 
 def plan():
-    rows = list(open_book('Procurement Plan/STTP2B-Procurement Plan-updated 06-Nov-26.xlsm')['Package Summary'].iter_rows(values_only=True))
+    rows = list(open_book(latest('Procurement Plan')[1])['Package Summary'].iter_rows(values_only=True))
     head = next(i for i, r in enumerate(rows) if r and r[0] == 'Facility')
     out = []
     for r in rows[head + 1:]:
@@ -78,37 +108,59 @@ def plan():
     return out
 
 
+def _columns(rows, first):
+    """Header row (first cell starts with `first`) and {header text: column}."""
+    i = next(i for i, r in enumerate(rows) if r and r[0] and str(r[0]).strip().lower().startswith(first.lower()))
+    index = {}
+    for j, c in enumerate(rows[i]):
+        if isinstance(c, str) and c.strip() and c.strip().lower() not in index:
+            index[c.strip().lower()] = j
+    return index, rows[i + 1:]
+
+
+def _pick(index, row, *names):
+    for n in names:
+        for h, j in index.items():
+            if h == n.lower() or h.startswith(n.lower()):
+                return row[j] if j < len(row) else None
+    return None
+
+
 def logistics():
-    book = open_book('Logistics/Weekly Report Cut off 06.11.2026.xlsx')
+    book = open_book(latest('Logistics')[1])
+    sheets = book.sheetnames
+    ptsc = next(n for n in sheets if n in ('PTSC items', 'PTSC-supplied materials'))
+    client = next(n for n in sheets if n in ('CLJOC Items', 'Client-supplied materials'))
     out = []
-    rows = list(book['PTSC items'].iter_rows(values_only=True))
-    for r in rows[5:]:
+    index, rows = _columns(list(book[ptsc].iter_rows(values_only=True)), 'Item')
+    for r in rows:
         if not r or not r[1]:
             continue
+        g = lambda *n: _pick(index, r, *n)  # noqa: E731
         out.append({
-            'source': 'PTSC', 'packageNo': clean(r[1]), 'packageDescription': clean(r[2], 160), 'poNo': clean(r[3]), 'shipmentNo': clean(r[4]),
-            'shipmentDescription': clean(r[5], 160), 'etdPol': iso(r[6]), 'etaPod': iso(r[7]), 'forecastOnSite': iso(r[8]), 'actualOnSite': iso(r[9]),
-            'status': clean(r[10]) or 'Planned', 'grossWeightKg': num(r[11]), 'qty': clean(r[12], 80), 'packingList': clean(r[13], 80),
-            'vessel': clean(r[15], 80), 'blNo': clean(r[16], 80), 'portLoading': clean(r[17], 80), 'portDischarge': clean(r[18], 80),
-            'transport': clean(r[19], 60), 'deliveryYard': clean(r[20], 60), 'issue': clean(r[21], 300),
+            'source': 'PTSC', 'packageNo': clean(g('Package no')), 'packageDescription': clean(g('Package description'), 160), 'poNo': clean(g('PO no')), 'shipmentNo': clean(g('Actual shipment no')),
+            'shipmentDescription': clean(g('Shipment description'), 160), 'etdPol': iso(g('ETD POL')), 'etaPod': iso(g('ETA POD')), 'forecastOnSite': iso(g('Forecast on site')), 'actualOnSite': iso(g('Actual on site')),
+            'status': clean(g('Status at present')) or 'Planned', 'grossWeightKg': num(g('Gross weight')), 'qty': clean(g('Qty cont'), 80), 'packingList': clean(g('Packing List'), 80),
+            'vessel': clean(g('Vessel'), 80), 'blNo': clean(g('BL/'), 80), 'portLoading': clean(g('Port of loading'), 80), 'portDischarge': clean(g('Port of discharge'), 80),
+            'transport': clean(g('Transport Method'), 60), 'deliveryYard': clean(g('Delivery Yard'), 60), 'issue': clean(g('Pending'), 300),
         })
-    rows = list(book['CLJOC Items'].iter_rows(values_only=True))
-    head = next(i for i, r in enumerate(rows) if r and r[0] == 'No.')
-    for r in rows[head + 1:]:
+    index, rows = _columns(list(book[client].iter_rows(values_only=True)), 'No.')
+    for r in rows:
         if not r or not isinstance(r[0], (int, float)):
             continue
-        actual = iso(r[9])
+        g = lambda *n: _pick(index, r, *n)  # noqa: E731
+        actual = iso(g('ATA Site'))
         out.append({
-            'source': 'Client', 'packageNo': clean(r[1]), 'packageDescription': clean(r[2], 160), 'poNo': None, 'shipmentNo': clean(r[3]),
-            'shipmentDescription': clean(r[4], 160), 'etdPol': None, 'etaPod': iso(r[7]), 'forecastOnSite': iso(r[8]), 'actualOnSite': actual,
-            'status': 'Received' if actual else 'Planned', 'grossWeightKg': num(r[5]), 'qty': clean(r[6], 80), 'packingList': None,
-            'vessel': None, 'blNo': None, 'portLoading': None, 'portDischarge': None, 'transport': clean(r[10], 60), 'deliveryYard': clean(r[11], 60), 'issue': None,
+            'source': 'Client', 'packageNo': clean(g('ITB No')), 'packageDescription': clean(g('Package description'), 160), 'poNo': None, 'shipmentNo': clean(g('Shipment No')),
+            'shipmentDescription': clean(g('Shipment description'), 160), 'etdPol': None, 'etaPod': iso(g('ETA Port')), 'forecastOnSite': iso(g('Forecast on site')), 'actualOnSite': actual,
+            'status': 'Received' if actual else 'Planned', 'grossWeightKg': num(g('GW')), 'qty': clean(g('No of pkg'), 80), 'packingList': None,
+            'vessel': None, 'blNo': None, 'portLoading': None, 'portDischarge': None, 'transport': clean(g('Transport Method'), 60), 'deliveryYard': clean(g('Delivery Yard'), 60), 'issue': None,
         })
     return out
 
 
 def balance():
-    rows = list(open_book('Materials/STT2B - Material Stock Report Cut off 07.11.2026.xlsx')['Balance'].iter_rows(values_only=True))
+    rows = list(open_book(latest('Materials', '*Stock Report*')[1])['Balance'].iter_rows(values_only=True))
     out = []
     for r in rows[1:]:
         if not r or not r[0]:
@@ -124,7 +176,7 @@ def balance():
 
 
 def summary():
-    rows = list(open_book('Materials/STTP2B - MATERIAL SUMMARY LIST Cut off 07.11.2026.xlsx')['Summary Weight'].iter_rows(values_only=True))
+    rows = list(open_book(latest('Materials', '*SUMMARY LIST*')[1])['Summary Weight'].iter_rows(values_only=True))
     out = []
     for r in rows[2:9]:
         if r[6] and any(v is not None for v in r[7:11]):  # PTSC MC supply: facility, MTO, arrived, transferred to VSP, on MC yard
@@ -134,9 +186,9 @@ def summary():
     return out
 
 
-def curves(cutoff='2026-11-06'):
+def curves(cutoff):
     """One row per facility and scope; each series is a comma-separated list of cumulative percent, one value a week from `start`."""
-    rows = list(open_book('Procurement Plan/STTP2B-Procurement Plan-updated 06-Nov-26.xlsm')['S-curve data'].iter_rows(values_only=True))
+    rows = list(open_book(latest('Procurement Plan')[1])['S-curve data'].iter_rows(values_only=True))
     dates = []
     for v in rows[0][9:]:
         if not isinstance(v, dt.datetime):
@@ -168,7 +220,9 @@ if __name__ == '__main__':
     seed['logistics'] = logistics()
     seed['materialBalance'] = balance()
     seed['materialSummary'] = summary()
-    seed['procCurves'] = curves()
+    cutoff = latest('Procurement Plan')[0].isoformat()
+    seed['procCurves'] = curves(cutoff)
     with open(OUT, 'w', encoding='utf8') as f:
         json.dump(seed, f, ensure_ascii=False, separators=(',', ':'))
+    print('procurement plan', latest('Procurement Plan')[1], '| logistics', latest('Logistics')[1], '| materials', latest('Materials', '*Stock Report*')[1])
     print({k: len(seed[k]) for k in ('procurementPlan', 'logistics', 'materialBalance', 'materialSummary', 'procCurves')}, os.path.getsize(OUT), 'bytes')

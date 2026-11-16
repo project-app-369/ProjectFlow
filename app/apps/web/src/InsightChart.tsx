@@ -58,5 +58,5 @@ export default function InsightChartView({ chart, onPick, compact }: { chart: In
   }, [chart, dark, onPick, horizontal]);
 
   const summary = chart.categories.map((k, i) => `${chart.categoryKind === 'month' ? month(k) : k}: ${chart.series.map(s => `${fmt(s.data[i] ?? 0)} ${s.name}`).join(', ')}`).join('; ');
-  return <div className="chart"><div ref={el} role="img" aria-label={`${chart.title}. ${summary}`} style={{ height }} /></div>;
+  return <div className="chart"><div ref={el} role="img" aria-label={`${chart.title}. ${summary}`} style={{ minHeight: height }} /></div>;
 }

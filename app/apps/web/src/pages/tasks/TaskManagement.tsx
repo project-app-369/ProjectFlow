@@ -50,8 +50,8 @@ export default function TaskManagement() {
         <div className="panel-head"><div><h2>{VIEWS.find(([id]) => id === view)?.[1]}</h2><p>{shown.length} of {tasks.length} tasks{view === 'kanban' ? ' · drag a card to change its status' : ''}</p></div></div>
         <TaskFilters value={filter} onChange={setFilter} />
         {view === 'list' ? <TaskList tasks={shown} onOpen={open} today={today} />
-          : view === 'card' ? <div style={{ padding: '0 22px 22px' }}><TaskCards tasks={shown} onOpen={open} today={today} /></div>
-          : view === 'kanban' ? <div style={{ padding: '0 22px 22px' }}><TaskKanban tasks={shown} onOpen={open} today={today} /></div>
+          : view === 'card' ? <div className="task-cards-wrap"><TaskCards tasks={shown} onOpen={open} today={today} /></div>
+          : view === 'kanban' ? <div className="task-cards-wrap"><TaskKanban tasks={shown} onOpen={open} today={today} /></div>
           : <TaskGantt tasks={shown} onOpen={open} today={today} />}
       </div>
       {editing && <TaskForm task={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}

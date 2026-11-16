@@ -1,5 +1,6 @@
 import { isEffective } from '../../api/src/registry/catalog';
 import { AdminService } from './admin-service';
+import { FacilitiesService } from './facilities-service';
 import { InterfacesService } from './interfaces-service';
 import { RegistersService } from './registers-service';
 import { RisksService } from './risks-service';
@@ -26,6 +27,7 @@ export class Api {
   readonly issues: IssuesService;
   readonly risks: RisksService;
   readonly interfaces: InterfacesService;
+  readonly facilities: FacilitiesService;
 
   constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer) {
     this.svc = new Service(store, clock);
@@ -39,6 +41,7 @@ export class Api {
     this.issues = new IssuesService(this.svc, mailer);
     this.risks = new RisksService(this.svc);
     this.interfaces = new InterfacesService(this.svc);
+    this.facilities = new FacilitiesService(this.svc, this.reg);
   }
 
   /**

@@ -11,7 +11,7 @@ import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced } from '../ui';
 import { Detail, IconFilter, People } from './governance';
@@ -22,6 +22,8 @@ const STATUS_TONE: Record<InterfaceStatus, Tone> = {
   Identified: 'indigo', Assigned: 'indigo', 'Information requested': 'amber', Responded: 'amber', 'Under review': 'amber', Agreed: 'green', Closed: 'green',
 };
 const POINT_TONE: Record<PointStatus, Tone> = { Open: 'amber', Responded: 'indigo', Resolved: 'green', Closed: 'green' };
+const POINT_SORTS: [string, string][] = [['id', 'Point no.'], ['targetDate', 'Target date'], ['queryDate', 'Date raised'], ['updatedAt', 'Last updated'], ['ageDays', 'Age'], ['discipline', 'Discipline'], ['originator', 'From'], ['target', 'To'], ['owner', 'Owner'], ['status', 'Status']];
+const INTERFACE_SORTS: [string, string][] = [['id', 'Interface no.'], ['needDate', 'Needed by'], ['createdAt', 'Date created'], ['updatedAt', 'Last updated'], ['originator', 'From'], ['receiver', 'To'], ['status', 'Status'], ['title', 'Title']];
 const POINT_ICON: Record<PointStatus, string> = { Open: 'status-planned', Responded: 'status-ongoing', Resolved: 'tick', Closed: 'status-completed' };
 const POINT_HELP: Record<PointStatus, string> = {
   Open: 'Raised and waiting for an answer from the target party',
@@ -115,6 +117,7 @@ export function InterfacePointsPage() {
             <IconFilter icon="clock" label="Show points that need attention" value={filter.extra.flag} onChange={v => setExtra('flag', v)}>
               <option value="">Any</option><option value="open">Not settled</option><option value="overdue">Overdue</option>
             </IconFilter>
+            <SortBy options={POINT_SORTS} sort={list.state.sort} order={list.state.order} fallback="id" onChange={list.setSort} />
             <Btn kind="small" onClick={reset}>Clear</Btn>
             <span className="tiny muted" aria-live="polite">{page.data?.total ?? '…'} points</span>
           </div>
@@ -479,6 +482,7 @@ export function InterfaceRegister() {
             <IconFilter icon="status-ongoing" label="Filter by status" value={f.status} onChange={v => set({ status: v })}><option value="">All statuses</option>{page.data?.facets.statuses.map(x => <option key={x}>{x}</option>)}</IconFilter>
             <IconFilter icon="people" label="Filter by party" value={f.party} onChange={v => set({ party: v })}><option value="">All parties</option>{page.data?.facets.parties?.map(x => <option key={x}>{x}</option>)}</IconFilter>
             <label className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={f.overdue} onChange={e => set({ overdue: e.target.checked })} />Overdue only</label>
+            <SortBy options={INTERFACE_SORTS} sort={f.sort} order={f.order} fallback="id" onChange={(sort, order) => set({ sort, order })} />
             <Btn kind="small" onClick={() => { set({ q: '', type: '', status: '', party: '', overdue: false }); setParams({}); }}>Clear</Btn>
             <span className="tiny muted">{page.data?.total ?? '…'} interfaces</span>
           </div>

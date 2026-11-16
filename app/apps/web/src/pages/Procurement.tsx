@@ -74,7 +74,7 @@ export default function Procurement() {
       </div>}
       <div className="panel">
         <div className="panel-head"><div><h2>Procurement packages</h2><p>Select a package to review full award detail</p></div><span className="tiny muted">{page.data?.total ?? '…'} packages</span></div>
-        <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, description, vendor or buyer…" label="Search procurement packages" />
+        <Toolbar list={list} facets={page.data?.facets} placeholder="Search code, description, vendor or buyer…" label="Search procurement packages" defaultSort="code" sorts={[['code', 'Package'], ['loaDate', 'LOA date'], ['poDate', 'PO date'], ['discipline', 'Discipline'], ['vendor', 'Vendor'], ['status', 'Status']]} />
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>

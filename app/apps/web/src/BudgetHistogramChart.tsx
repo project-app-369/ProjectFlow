@@ -58,7 +58,7 @@ export default function BudgetHistogramChart({ data }: { data: BudgetHistogram }
 
   return (
     <div className="chart">
-      <div ref={el} role="img" aria-label={`Manhour histogram per ${data.by}, ${fmt(data.scheduledHours)} scheduled hours, stacked by ${data.group === 'wbs' ? 'WBS area' : 'discipline'}`} style={{ height: 340 }} />
+      <div ref={el} role="img" aria-label={`Manhour histogram per ${data.by}, ${fmt(data.scheduledHours)} scheduled hours, stacked by ${data.group === 'wbs' ? 'WBS area' : 'discipline'}`} style={{ minHeight: 340 }} />
     </div>
   );
 }

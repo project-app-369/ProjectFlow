@@ -5,7 +5,7 @@ import { downloadCsv, request, type MaterialWeight, type Page, type StockLine } 
 import { RecordDrawer } from '../crud';
 import { DataTable } from '../DataTable';
 import { Icon } from '../icons';
-import { useListState } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead, Pager } from '../ui';
@@ -104,6 +104,7 @@ export default function Materials() {
           <label className="search"><Icon name="search" /><input placeholder="Search code, description, PO, supplier, MRIR or heat no…" value={list.state.q} onChange={e => list.set({ q: e.target.value })} aria-label="Search stock" /></label>
           <div className="filter-group">
             {sel('facility', 'facilities', facets?.facility)}{sel('supply', 'supply', facets?.supply)}{sel('category', 'categories', facets?.category)}{sel('yard', 'yards', facets?.yard)}
+            <SortBy options={[['facility', 'Facility'], ['discipline', 'Discipline'], ['category', 'Category'], ['materialCode', 'Material'], ['balance', 'Balance'], ['yard', 'Yard'], ['status', 'Status']]} sort={list.state.sort} order={list.state.order} fallback="facility" onChange={list.setSort} />
             <Btn kind="small" onClick={() => { list.clear(); setFilters({ facility: '', supply: '', category: '', yard: '' }); }}>Clear</Btn>
           </div>
         </div>

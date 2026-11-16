@@ -105,7 +105,7 @@ export default function Milestones() {
             <span className="tiny muted">{page.data?.total ?? '…'} milestones</span>
           </div>
         </div>
-        <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" />
+        <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" defaultSort="id" sorts={[['id', 'ID'], ['planBaseline', 'Baseline date'], ['forecast', 'Forecast date'], ['actual', 'Actual date'], ['variance', 'Variance'], ['subName', 'Sub-contractor'], ['description', 'Key date']]} />
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : grouped ? (
           groups.length ? groups.map(([name, rows]) => {

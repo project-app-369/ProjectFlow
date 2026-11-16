@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { ACCOUNT_STATES, ROLES, forbidden, requireAdmin, requireConfigure, requireMember, userRow, type Actor } from './auth';
+import { ACCOUNT_STATES, PARTIES, ROLES, forbidden, requireAdmin, requireConfigure, requireMember, userRow, type Actor } from './auth';
 import { COLUMNS, PROJECT_SHEETS, SHEET, type SheetKey } from './datasets';
+import { MANIFESTS } from '../../api/src/registry/catalog';
+import { hashPassword, verifyPassword } from './hash';
 import { HttpError, notFound, parse } from './http';
 import type { Service } from './service';
 import type { Row } from './store';
@@ -30,8 +32,13 @@ const projectPatch = z.object({ code: z.string().trim().min(2).max(30), ...proje
 const lifecycleBody = z.object({ to: z.enum(LIFECYCLES), reason: z.string().trim().max(300).optional() });
 
 const email = z.string().trim().toLowerCase().email().max(160);
-const userCreate = z.object({ name: z.string().trim().min(1).max(120), email, isAdmin: z.boolean().default(false), status: z.enum(ACCOUNT_STATES).default('Active') });
-const userPatch = z.object({ name: z.string().trim().min(1).max(120), email, isAdmin: z.boolean(), status: z.enum(ACCOUNT_STATES) }).partial();
+const person = { title: optText(120), company: optText(120), party: z.enum(PARTIES).nullish().transform(v => v ?? null) };
+const userCreate = z.object({ name: z.string().trim().min(1).max(120), email, isAdmin: z.boolean().default(false), status: z.enum(ACCOUNT_STATES).default('Active'), ...person, password: z.string().min(8).max(100).optional() });
+const userPatch = z.object({ name: z.string().trim().min(1).max(120), email, isAdmin: z.boolean(), status: z.enum(ACCOUNT_STATES), ...person }).partial();
+/** What a person may change about themselves. Account state, party and administrator rights stay with administrators. */
+const profilePatch = z.object({ name: z.string().trim().min(1).max(120), email, title: optText(120), company: optText(120) }).partial();
+const passwordBody = z.object({ current: z.string().max(100).optional(), password: z.string().min(8, 'Use at least 8 characters.').max(100) });
+const accessBody = z.object({ cells: z.array(z.object({ moduleKey: z.string().max(80), party: z.enum(PARTIES), visible: z.boolean() })).max(2000) });
 const memberBody = z.object({ role: z.enum(ROLES), title: z.string().trim().max(120).nullish().transform(v => v ?? null) });
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -45,14 +52,89 @@ export class AdminService {
   /* ---------- directory and identity ---------- */
   /** Who can be picked at the demo sign-in: active accounts, names only. */
   directory() {
-    return this.store.readRows(SHEET.users, COLUMNS.users).filter(u => u.status === 'Active').map(u => ({ id: u.id, name: u.name }));
+    return this.store.readRows(SHEET.users, COLUMNS.users).filter(u => u.status === 'Active').map(u => ({ id: u.id, name: u.name, party: u.party ?? null, title: u.title ?? null }));
   }
 
   me(actor: Actor) {
+    const row = this.store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === actor.id);
     return {
-      id: actor.id, name: actor.name, email: actor.email, isAdmin: actor.isAdmin,
+      id: actor.id, name: actor.name, email: actor.email, isAdmin: actor.isAdmin, status: actor.status, party: actor.party,
+      title: row?.title ?? null, company: row?.company ?? null, hasPassword: !!row?.passwordHash, passwordChangedAt: row?.passwordChangedAt ?? null,
+      /** Modules that the party of this person does not see (descendants included); administrators see everything. */
+      hiddenModules: this.hiddenFor(actor),
       memberships: Object.entries(actor.roles).map(([projectId, role]) => ({ projectId, role })),
     };
+  }
+
+  /** Profile of the person acting: name, e-mail, title and company. */
+  updateProfile(body: unknown, actor: Actor) {
+    const patch = parse(profilePatch, body);
+    return this.store.withLock(() => {
+      const users = this.store.readRows(SHEET.users, COLUMNS.users);
+      if (patch.email && users.some(u => u.id !== actor.id && String(u.email).toLowerCase() === patch.email)) throw new HttpError(409, { code: 'EMAIL_TAKEN', message: `${patch.email} already has an account.` });
+      this.store.updateRow(SHEET.users, COLUMNS.users, 'id', actor.id, patch as Row);
+      return this.me({ ...actor, name: patch.name ?? actor.name, email: patch.email ?? actor.email });
+    });
+  }
+
+  /** Changing an existing password needs the current one; setting the first password does not. */
+  changePassword(body: unknown, actor: Actor) {
+    const v = parse(passwordBody, body);
+    return this.store.withLock(() => {
+      const user = this.store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === actor.id)!;
+      if (user.passwordHash && !(v.current && verifyPassword(v.current, String(user.passwordHash)))) {
+        throw new HttpError(400, { code: 'WRONG_PASSWORD', message: 'The current password is not correct.' });
+      }
+      const changedAt = this.now();
+      this.store.updateRow(SHEET.users, COLUMNS.users, 'id', actor.id, { passwordHash: hashPassword(v.password, this.store.newId().slice(0, 12)), passwordChangedAt: changedAt });
+      return { changedAt };
+    });
+  }
+
+  /* ---------- party access: which screens each party sees ---------- */
+  private hiddenCells() {
+    return this.store.readRows(SHEET.partyAccess, COLUMNS.partyAccess).filter(r => r.visible === 'No');
+  }
+
+  /** A hidden module hides everything under it. */
+  private hiddenFor(actor: Actor): string[] {
+    if (actor.isAdmin || !actor.party) return [];
+    const off = new Set(this.hiddenCells().filter(r => r.party === actor.party).map(r => String(r.moduleKey)));
+    if (!off.size) return [];
+    const parent = new Map<string, string | undefined>(MANIFESTS.map(m => [m.key, m.parent]));
+    const hidden = (k: string): boolean => off.has(k) || (parent.get(k) ? hidden(parent.get(k)!) : false);
+    return MANIFESTS.map(m => m.key).filter(hidden);
+  }
+
+  assertParty(actor: Actor, moduleKey: string) {
+    if (this.hiddenFor(actor).includes(moduleKey)) throw forbidden('NOT_FOR_YOUR_PARTY', `This screen is not shared with ${actor.party}.`);
+  }
+
+  /** The matrix: every module and, per party, whether it is shown. */
+  partyAccess(actor: Actor) {
+    requireAdmin(actor);
+    const off = new Set(this.hiddenCells().map(r => `${r.moduleKey}|${r.party}`));
+    return {
+      parties: [...PARTIES],
+      modules: MANIFESTS.map(m => ({ key: m.key, label: m.label, workspace: m.workspace, parent: m.parent ?? null, depth: m.depth, availability: m.availability, visible: Object.fromEntries(PARTIES.map(p => [p, !off.has(`${m.key}|${p}`)])) })),
+    };
+  }
+
+  setPartyAccess(body: unknown, actor: Actor) {
+    requireAdmin(actor);
+    const { cells } = parse(accessBody, body);
+    const known = new Set(MANIFESTS.map(m => m.key));
+    const bad = cells.find(c => !known.has(c.moduleKey));
+    if (bad) throw new HttpError(400, { code: 'UNKNOWN_MODULE', message: `Unknown module ${bad.moduleKey}.` });
+    return this.store.withLock(() => {
+      for (const c of cells) {
+        const patch: Row = { visible: c.visible ? 'Yes' : 'No' };
+        if (!this.store.updateRow(SHEET.partyAccess, COLUMNS.partyAccess, 'moduleKey', c.moduleKey, patch, { party: c.party })) {
+          this.store.appendRows(SHEET.partyAccess, COLUMNS.partyAccess, [{ moduleKey: c.moduleKey, party: c.party, ...patch }]);
+        }
+      }
+    });
+    return this.partyAccess(actor);
   }
 
   /* ---------- projects ---------- */
@@ -158,7 +240,7 @@ export class AdminService {
     const v = parse(userCreate, body);
     return this.store.withLock(() => {
       if (this.store.readRows(SHEET.users, COLUMNS.users).some(u => String(u.email).toLowerCase() === v.email)) throw new HttpError(409, { code: 'EMAIL_TAKEN', message: `${v.email} already has an account.` });
-      const row: Row = { id: `u-${this.store.newId().slice(0, 8)}`, name: v.name, email: v.email, isAdmin: v.isAdmin ? 'Yes' : 'No', status: v.status, createdAt: this.now() };
+      const row: Row = { id: `u-${this.store.newId().slice(0, 8)}`, name: v.name, email: v.email, isAdmin: v.isAdmin ? 'Yes' : 'No', status: v.status, createdAt: this.now(), title: v.title, company: v.company, party: v.party, ...(v.password ? { passwordHash: hashPassword(v.password, this.store.newId().slice(0, 12)), passwordChangedAt: this.now() } : {}) };
       this.store.appendRows(SHEET.users, COLUMNS.users, [row]);
       return { ...userRow(row), memberships: [] };
     });
@@ -177,7 +259,7 @@ export class AdminService {
       if (!staysAdmin && user.isAdmin === 'Yes' && user.status === 'Active' && otherAdmins === 0) {
         throw new HttpError(409, { code: 'LAST_ADMIN', message: 'This is the last active administrator. Make someone else an administrator first.' });
       }
-      const row: Row = { ...(patch.name !== undefined && { name: patch.name }), ...(patch.email !== undefined && { email: patch.email }), ...(patch.status !== undefined && { status: patch.status }), ...(patch.isAdmin !== undefined && { isAdmin: patch.isAdmin ? 'Yes' : 'No' }) };
+      const row: Row = { ...(patch.name !== undefined && { name: patch.name }), ...(patch.email !== undefined && { email: patch.email }), ...(patch.status !== undefined && { status: patch.status }), ...(patch.isAdmin !== undefined && { isAdmin: patch.isAdmin ? 'Yes' : 'No' }), ...(patch.title !== undefined && { title: patch.title }), ...(patch.company !== undefined && { company: patch.company }), ...(patch.party !== undefined && { party: patch.party }) };
       this.store.updateRow(SHEET.users, COLUMNS.users, 'id', id, row);
       const updated = this.store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === id)!;
       return { ...userRow(updated), memberships: this.memberships(id) };

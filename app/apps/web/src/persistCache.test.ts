@@ -22,7 +22,7 @@ describe('query cache persistence', () => {
     persistQueryCache(a);
     await a.fetchQuery({ queryKey: ['dashboard', 'p1'], queryFn: async () => ({ progress: 27.1 }) });
     vi.advanceTimersByTime(2_000);
-    expect(store.get('projectflow.query-cache.v1')).toContain('27.1');
+    expect(store.get('projectflow.query-cache.v2')).toContain('27.1');
 
     const b = fresh();
     restoreQueryCache(b);
@@ -35,26 +35,26 @@ describe('query cache persistence', () => {
     persistQueryCache(a);
     await a.fetchQuery({ queryKey: ['x'], queryFn: async () => 1 });
     vi.advanceTimersByTime(2_000);
-    const saved = JSON.parse(store.get('projectflow.query-cache.v1')!);
+    const saved = JSON.parse(store.get('projectflow.query-cache.v2')!);
 
-    store.set('projectflow.query-cache.v1', JSON.stringify({ ...saved, savedAt: Date.now() - 25 * 3600_000 }));
+    store.set('projectflow.query-cache.v2', JSON.stringify({ ...saved, savedAt: Date.now() - 25 * 3600_000 }));
     const old = fresh(); restoreQueryCache(old);
     expect(old.getQueryData(['x'])).toBeUndefined();
-    expect(store.has('projectflow.query-cache.v1')).toBe(false);
+    expect(store.has('projectflow.query-cache.v2')).toBe(false);
 
-    store.set('projectflow.query-cache.v1', JSON.stringify({ ...saved, scope: 'other' }));
+    store.set('projectflow.query-cache.v2', JSON.stringify({ ...saved, scope: 'other' }));
     const other = fresh(); restoreQueryCache(other);
     expect(other.getQueryData(['x'])).toBeUndefined();
   });
 
   it('ignores a damaged cache and clears it on sign-out', async () => {
     const { persistQueryCache, restoreQueryCache } = await import('./persistCache');
-    store.set('projectflow.query-cache.v1', '{not json');
+    store.set('projectflow.query-cache.v2', '{not json');
     expect(() => restoreQueryCache(fresh())).not.toThrow();
-    expect(store.has('projectflow.query-cache.v1')).toBe(false);
+    expect(store.has('projectflow.query-cache.v2')).toBe(false);
     persistQueryCache(fresh());
-    store.set('projectflow.query-cache.v1', '{}');
+    store.set('projectflow.query-cache.v2', '{}');
     listeners.get('projectflow:signed-out')!();
-    expect(store.has('projectflow.query-cache.v1')).toBe(false);
+    expect(store.has('projectflow.query-cache.v2')).toBe(false);
   });
 });

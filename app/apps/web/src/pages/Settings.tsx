@@ -1,16 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { apiMode, errorText, request, type ModuleInfo, type OperationState, type WorkspaceId } from '../api';
+import { SPREADSHEET_URL, apiMode, errorText, request, type ModuleInfo, type OperationState, type WorkspaceId } from '../api';
+import { Icon } from '../icons';
 import { fmtDate } from '../format';
 import { pathOf, topModules } from '../nav';
 import { CrumbContext, useAccess, useApp, usePrefs, useToast } from '../state';
+import { InstallButton, useInstall } from '../pwa';
+import { sheetHref } from '../sheetLinks';
 import { Badge, Btn, Breadcrumb, PageHead } from '../ui';
 import ProjectsTab from './SettingsProjects';
 import UsersTab from './SettingsUsers';
+import AccessTab from './SettingsAccess';
 
-type TabId = 'projects' | 'users' | 'modules' | 'general' | 'data';
-const ALL_TABS: [TabId, string][] = [['projects', 'Projects'], ['users', 'Users'], ['modules', 'Modules'], ['general', 'General'], ['data', 'Data sources']];
+type TabId = 'projects' | 'users' | 'access' | 'modules' | 'general' | 'data';
+const ALL_TABS: [TabId, string][] = [['projects', 'Projects'], ['users', 'Users'], ['access', 'Party access'], ['modules', 'Modules'], ['general', 'General'], ['data', 'Data sources']];
 const isOn = (s: OperationState) => s === 'Enabled' || s === 'Pilot' || s === 'Locked' || s === 'Read-only';
 
 export default function Settings() {
@@ -18,7 +22,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { project, me } = useApp();
   // Projects and Users exist only where the backend has users (the sheets pre-build); Users is admin mode.
-  const TABS = ALL_TABS.filter(([id]) => (id === 'projects' ? !!me : id === 'users' ? !!me?.isAdmin : true));
+  const TABS = ALL_TABS.filter(([id]) => (id === 'projects' ? !!me : id === 'users' || id === 'access' ? !!me?.isAdmin : true));
   const current = TABS.find(([id]) => id === tab);
   if (!current) return <Navigate to={`/settings/${me ? 'projects' : 'modules'}`} replace />;
   const needsProject = (tab === 'modules' || tab === 'data') && !project.id;
@@ -32,7 +36,7 @@ export default function Settings() {
         ))}
       </div>
       {needsProject ? <div className="panel empty">Select a project first. <Btn kind="small" onClick={() => navigate('/settings/projects')}>Open projects</Btn></div>
-        : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
+        : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'access' ? <AccessTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
     </CrumbContext.Provider>
   );
 }
@@ -83,7 +87,7 @@ function ModulesTab() {
                   {m.description && <>{m.description} </>}
                   <Badge tone={tone[m.availability]}>{m.availability}</Badge> <Badge tone="indigo">{m.phase}</Badge>
                   {m.core && ' · core, always on'}
-                  {m.sheet && <> · <a href={m.sheet.url} target="_blank" rel="noreferrer">Sheet: {m.sheet.name} ↗</a></>}
+                  {m.sheet && <> · <a href={sheetHref(m.sheet)} target="_blank" rel="noreferrer">Sheet: {m.sheet.name} ↗</a></>}
                   {m.sheetCapable && !m.sheet && m.effective && ' · no sheet yet'}
                   {!['Enabled', 'Disabled'].includes(m.state) && ` · ${m.state}`}
                 </small>
@@ -104,6 +108,7 @@ function ModulesTab() {
 function GeneralTab() {
   const prefs = usePrefs();
   const { modules } = useApp();
+  const install = useInstall();
   return (
     <div className="settings-grid">
       <section className="panel">
@@ -116,6 +121,16 @@ function GeneralTab() {
           </select></div>
       </section>
       <section className="panel">
+        <div className="panel-head"><h2>App</h2></div>
+        <div className="setting-row">
+          <div>
+            <strong>Install Project Flow</strong>
+            <small>{install.state === 'installed' ? 'Installed: you are using the app.' : install.state === 'unavailable' ? 'Your browser does not offer installing from here. In Chrome or Edge use the install icon in the address bar.' : 'Opens in its own window with its own icon, and starts faster.'}</small>
+          </div>
+          {install.state === 'installed' ? <Badge tone="green">Installed</Badge> : <InstallButton labelled />}
+        </div>
+      </section>
+      <section className="panel">
         <div className="panel-head"><h2>Reset</h2></div>
         <div className="setting-row"><div><strong>Reset display preferences</strong><small>Module states are project settings and are not affected.</small></div><Btn kind="small" onClick={prefs.reset}>Reset</Btn></div>
       </section>
@@ -125,23 +140,50 @@ function GeneralTab() {
 
 function DataTab() {
   const { project } = useApp();
+  const toast = useToast();
   const health = useQuery({ queryKey: ['health'], queryFn: () => request<{ status: string; database: string; spreadsheet?: string }>('/health') });
+  // The configured link is the exact workbook; the API reports its own only when none is configured (the local simulator reports a placeholder).
+  const sheetUrl = SPREADSHEET_URL || (health.data?.spreadsheet && !/LOCAL-SIMULATOR/.test(health.data.spreadsheet) ? health.data.spreadsheet : '');
+  const sheetId = sheetUrl.match(/\/d\/([\w-]+)/)?.[1] ?? '';
+  const copy = (text: string, what: string) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copied.`), () => toast('Copy is not available in this browser.'));
   return (
-    <section className="panel">
-      <div className="panel-head"><h2>Data sources</h2></div>
-      <div style={{ padding: '0 22px 22px' }}>
-        <p className="tiny muted">Reference data was extracted once from the project workbooks in <code>/data</code> and loaded into the database. The API serves it read-only; nothing writes back to the source files.</p>
-        <div className="detail-grid">
-          <div><small>Project</small><strong>{project.name}</strong></div>
-          <div><small>Contract</small><strong>{project.contract}</strong></div>
-          <div><small>Schedule source</small><strong>Procurement Plan workbook · S-CURVES (M), Progress Table (W)</strong></div>
-          <div><small>Procurement source</small><strong>Expediting Report · pgk_gen_info</strong></div>
-          <div><small>Expediting source</small><strong>Expediting Report · Equipment / Structural / Pipe-Fitting / Valves / Misc summaries</strong></div>
-          <div><small>Cut-off date</small><strong>{fmtDate(project.cutoff)}</strong></div>
-          <div><small>API status</small><strong>{health.data ? `${health.data.status} · ${health.data.database === 'sheets' ? 'Google Sheets via Apps Script' : health.data.database === 'pglite' ? 'embedded PGlite' : 'PostgreSQL'}` : '…'}</strong></div>
-          {apiMode === 'sheets' && health.data?.spreadsheet && <div><small>Data spreadsheet</small><strong><a href={health.data.spreadsheet} target="_blank" rel="noreferrer">Open the spreadsheet ↗</a></strong></div>}
+    <>
+      {apiMode === 'sheets' && (
+        <section className="panel sheet-card">
+          <div className="panel-head"><div><h2>Google Sheet</h2><p>Every register, setting and user of the app is a tab of this one spreadsheet.</p></div></div>
+          {sheetUrl ? (
+            <div className="sheet-card-body">
+              <span className="sheet-glyph" aria-hidden="true"><Icon name="sheet" /></span>
+              <div className="sheet-card-text">
+                <strong>Project Flow data</strong>
+                <a href={sheetUrl} target="_blank" rel="noreferrer" className="sheet-link">{sheetUrl}</a>
+                {sheetId && <small className="muted">Spreadsheet ID <code>{sheetId}</code></small>}
+              </div>
+              <div className="sheet-card-actions">
+                <a className="btn small primary" href={sheetUrl} target="_blank" rel="noreferrer"><Icon name="sheet" />Open the sheet</a>
+                <Btn kind="small" icon="copy" iconOnly={false} onClick={() => copy(sheetUrl, 'Link')}>Copy link</Btn>
+              </div>
+            </div>
+          ) : <div className="empty">No spreadsheet link is set. Add VITE_SPREADSHEET_URL to the web environment file.</div>}
+        </section>
+      )}
+      <section className="panel">
+        <div className="panel-head"><h2>Data sources</h2></div>
+        <div className="panel-body">
+          <p className="tiny muted">{apiMode === 'sheets'
+            ? 'The app reads and writes the Google Sheet above through an Apps Script web app. Reference data was loaded once from the project workbooks in /data; after that the sheet is the source of truth.'
+            : 'Reference data was extracted once from the project workbooks in /data and loaded into the database. The API serves it read-only; nothing writes back to the source files.'}</p>
+          <div className="detail-grid">
+            <div><small>Project</small><strong>{project.name}</strong></div>
+            <div><small>Contract</small><strong>{project.contract}</strong></div>
+            <div><small>Schedule source</small><strong>Procurement Plan workbook · S-CURVES (M), Progress Table (W)</strong></div>
+            <div><small>Procurement source</small><strong>Expediting Report · pgk_gen_info</strong></div>
+            <div><small>Expediting source</small><strong>Expediting Report · Equipment / Structural / Pipe-Fitting / Valves / Misc summaries</strong></div>
+            <div><small>Cut-off date</small><strong>{fmtDate(project.cutoff)}</strong></div>
+            <div><small>API status</small><strong>{health.data ? `${health.data.status} · ${health.data.database === 'sheets' ? 'Google Sheets via Apps Script' : health.data.database === 'pglite' ? 'embedded PGlite' : 'PostgreSQL'}` : '…'}</strong></div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

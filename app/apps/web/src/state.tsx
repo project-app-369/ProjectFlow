@@ -45,6 +45,8 @@ export interface AppData {
   projects: Project[];
   selectProject: (id: string) => void;
   signOut: () => void;
+  /** Acts as another person straight away (the pre-build has no sign-in). */
+  switchUser: (id: string) => void;
   /** Cut-off date of the snapshot being viewed, or null for the current data. */
   asOf: string | null;
   setAsOf: (cutoff: string | null) => void;

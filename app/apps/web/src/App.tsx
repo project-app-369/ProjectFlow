@@ -23,6 +23,8 @@ import Settings from './pages/Settings';
 import Tasks from './pages/Tasks';
 import TaskCalendar from './pages/tasks/TaskCalendar';
 import TaskManagement from './pages/tasks/TaskManagement';
+import Profile from './pages/Profile';
+import { FacilityProgressPage, FacilitySchedulePage } from './pages/Facilities';
 import TaskWorkload from './pages/tasks/TaskWorkload';
 import { AppDataProvider, CrumbContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
 import { ErrorBox, Loading, PageHead } from './ui';
@@ -33,6 +35,8 @@ const PAGES: Record<string, () => ReactNode> = {
   'task-management.calendar': () => <TaskCalendar />,
   'task-management.workload': () => <TaskWorkload />,
   'planning.overall-progress': () => <ProgressOverall />,
+  'planning.schedule': () => <FacilitySchedulePage />,
+  'planning.progress': () => <FacilityProgressPage />,
   'planning.work-packages': () => <WorkPackages />,
   'planning.milestones': () => <Milestones />,
   'procurement.dashboard': () => <ProcurementDashboard />,
@@ -125,7 +129,7 @@ const loadProject = () => { try { return localStorage.getItem(PROJECT_KEY); } ca
 const saveProject = (id: string | null) => { try { if (id) localStorage.setItem(PROJECT_KEY, id); else localStorage.removeItem(PROJECT_KEY); } catch { /* storage unavailable */ } };
 
 /** Signed-in session: resolves the user, the visible projects and the selected project, then its module registry. */
-function Session({ userId, signOut }: { userId: string | null; signOut: () => void }) {
+function Session({ userId, signOut, switchUser }: { userId: string | null; signOut: () => void; switchUser: (id: string) => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(loadProject);
@@ -158,11 +162,17 @@ function Session({ userId, signOut }: { userId: string | null; signOut: () => vo
     qc.invalidateQueries({ predicate: q => !keep.has(String(q.queryKey[0])) });
   }, [qc]);
   const selectProject = useCallback((id: string) => { setAsOf(null); saveProject(id); setSelected(id); navigate('/'); }, [navigate, setAsOf]);
+  // Screens that the person's party is not given (Settings -> Party access) behave as switched off for them.
+  const visibleModules = useMemo<ModulesResponse>(() => {
+    const data = modules.data ?? { workspaces: [], modules: [] };
+    const hidden = new Set(meData?.hiddenModules ?? []);
+    return hidden.size ? { ...data, modules: data.modules.map(m => (hidden.has(m.key) ? { ...m, effective: false } : m)) } : data;
+  }, [modules.data, meData]);
   const value = useMemo(() => ({
     project: project ?? NO_PROJECT,
-    modules: modules.data ?? { workspaces: [], modules: [] },
-    me: meData, projects: list ?? [], selectProject, signOut, asOf, setAsOf,
-  }), [project, modules.data, meData, list, selectProject, signOut, asOf, setAsOf]);
+    modules: visibleModules,
+    me: meData, projects: list ?? [], selectProject, signOut, switchUser, asOf, setAsOf,
+  }), [project, visibleModules, meData, list, selectProject, signOut, switchUser, asOf, setAsOf]);
 
   if (bootstrap.error) return <div style={{ padding: 40 }}><ErrorBox error={bootstrap.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
   if (!list || (apiMode === 'sheets' && !meData)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
@@ -176,6 +186,7 @@ function Session({ userId, signOut }: { userId: string | null; signOut: () => vo
         <Route element={<Layout />}>
           <Route index element={project ? <Home /> : <Navigate to="/settings/projects" replace />} />
           <Route path="m/:key" element={project ? <ModuleRoute /> : <Navigate to="/settings/projects" replace />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="settings" element={<Navigate to={`/settings/${project ? 'modules' : home}`} replace />} />
           <Route path="settings/:tab" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -196,5 +207,5 @@ export function App() {
   }, [signOut]);
 
   if (apiMode === 'sheets' && !userId) return <SignIn onSignIn={signIn} />;
-  return <Session key={userId ?? 'none'} userId={userId} signOut={signOut} />;
+  return <Session key={userId ?? 'none'} userId={userId} signOut={signOut} switchUser={signIn} />;
 }

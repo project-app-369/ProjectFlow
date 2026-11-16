@@ -38,3 +38,20 @@ export function chartTheme() {
     },
   };
 }
+
+/**
+ * A time-span slider under a chart: drag its ends to zoom in on a period, drag the bar to move along. Ctrl + wheel and pinch zoom too.
+ * Charts using it leave `ZOOM_BOTTOM` pixels below the plot for the slider.
+ */
+export const ZOOM_BOTTOM = 62;
+export function timeZoom(theme: ReturnType<typeof chartTheme>) {
+  return [
+    { type: 'inside' as const, zoomOnMouseWheel: 'ctrl' as const, moveOnMouseWheel: false, moveOnMouseMove: false, filterMode: 'none' as const },
+    {
+      type: 'slider' as const, height: 22, bottom: 8, filterMode: 'none' as const, brushSelect: false,
+      borderColor: theme.line, backgroundColor: 'transparent', fillerColor: 'rgba(42,120,214,.16)', dataBackground: { lineStyle: { color: theme.line }, areaStyle: { color: theme.line, opacity: 0.35 } },
+      selectedDataBackground: { lineStyle: { color: theme.plan }, areaStyle: { color: theme.plan, opacity: 0.25 } },
+      handleStyle: { color: theme.plan, borderColor: theme.plan }, moveHandleStyle: { color: theme.plan, opacity: 0.4 }, textStyle: { color: theme.muted, fontSize: 11 },
+    },
+  ];
+}
