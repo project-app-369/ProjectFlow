@@ -21,21 +21,23 @@ export default function Settings() {
   const { tab } = useParams();
   const navigate = useNavigate();
   const { project, me } = useApp();
-  // Projects and Users exist only where the backend has users (the sheets pre-build); Users is admin mode.
-  const TABS = ALL_TABS.filter(([id]) => (id === 'projects' ? !!me : id === 'users' || id === 'access' ? !!me?.isAdmin : true));
+  // Keep admin sections discoverable while guarding their contents for other roles.
+  const TABS = ALL_TABS.filter(([id]) => id !== 'projects' || !!me);
   const current = TABS.find(([id]) => id === tab);
   if (!current) return <Navigate to={`/settings/${me ? 'projects' : 'modules'}`} replace />;
   const needsProject = (tab === 'modules' || tab === 'data') && !project.id;
+  const adminOnly = (tab === 'users' || tab === 'access') && !me?.isAdmin;
 
   return (
     <CrumbContext.Provider value={['Settings', current[1]]}>
       <PageHead title="Settings" desc={me ? 'Choose your project, manage projects and users, turn modules on or off, and set your display preferences.' : 'Turn modules on or off, set your display preferences, and see where the data comes from.'} />
       <div className="tabs" role="tablist">
         {TABS.map(([id, label]) => (
-          <button key={id} className={`tab ${tab === id ? 'active' : ''}`} role="tab" aria-selected={tab === id} onClick={() => navigate(`/settings/${id}`)}>{label}</button>
+          <button key={id} className={`tab ${tab === id ? 'active' : ''}`} role="tab" aria-selected={tab === id} title={(id === 'users' || id === 'access') && !me?.isAdmin ? 'Administrator access' : undefined} onClick={() => navigate(`/settings/${id}`)}>{label}{(id === 'users' || id === 'access') && !me?.isAdmin ? <Icon name="shield" /> : null}</button>
         ))}
       </div>
-      {needsProject ? <div className="panel empty">Select a project first. <Btn kind="small" onClick={() => navigate('/settings/projects')}>Open projects</Btn></div>
+      {adminOnly ? <div className="panel empty">This section is available to administrators.{apiMode === 'sheets' ? ' Select Admin (demo) from the profile menu to review it.' : ''}</div>
+        : needsProject ? <div className="panel empty">Select a project first. <Btn kind="small" onClick={() => navigate('/settings/projects')}>Open projects</Btn></div>
         : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'access' ? <AccessTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
     </CrumbContext.Provider>
   );
