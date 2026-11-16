@@ -10,3 +10,4 @@ desktop.ini
 .tmp.driveupload/
 sites/
 app/apps/sheets/.vitest/
+data/3d-model/*.nwd

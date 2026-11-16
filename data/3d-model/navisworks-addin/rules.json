@@ -1,0 +1,54 @@
+{
+  "//": "Edit the category/property names below to match what your Properties panel actually shows for this model (they vary by source CAD export). Open any item in Navisworks, check the Properties tab, and copy the exact category and property display names.",
+
+  "removalRules": [
+    {
+      "name": "Rigging and lifting",
+      "category": "Item",
+      "property": "Category",
+      "matchType": "Contains",
+      "values": ["Rigging", "Lifting", "Lift Plan", "Crane", "Hoist"]
+    },
+    {
+      "name": "Scaffolding and temporary works",
+      "category": "Item",
+      "property": "Category",
+      "matchType": "Contains",
+      "values": ["Scaffold", "Temporary Works", "Falsework"]
+    },
+    {
+      "name": "Theoretical safety / exclusion zones",
+      "category": "Item",
+      "property": "Category",
+      "matchType": "Contains",
+      "values": ["Safety Zone", "Exclusion Zone", "Swept Path", "Clearance Envelope", "Working Area"]
+    }
+  ],
+
+  "groupRules": [
+    {
+      "folderPath": ["Structure"],
+      "category": "Item",
+      "property": "Level",
+      "setNamePrefix": "Deck "
+    },
+    {
+      "folderPath": ["Piping"],
+      "category": "Item",
+      "property": "System",
+      "setNamePrefix": "Line "
+    },
+    {
+      "folderPath": ["E&I"],
+      "category": "Item",
+      "property": "Discipline",
+      "setNamePrefix": ""
+    },
+    {
+      "folderPath": ["Mechanical"],
+      "category": "Item",
+      "property": "Tag",
+      "setNamePrefix": ""
+    }
+  ]
+}

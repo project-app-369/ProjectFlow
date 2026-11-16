@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Navisworks .NET API add-ins are classic .NET Framework (confirmed through
+         recent Manage releases). If your installed version has moved to a newer
+         runtime, change this and the Reference hint paths below to match. -->
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>NwSimplifyAddin</AssemblyName>
+    <RootNamespace>NwSimplifyAddin</RootNamespace>
+
+    <!-- Point this at your installed Navisworks Manage folder. -->
+    <NavisworksDir Condition="'$(NavisworksDir)' == ''">C:\Program Files\Autodesk\Navisworks Manage 2025</NavisworksDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Autodesk.Navisworks.Api">
+      <HintPath>$(NavisworksDir)\Autodesk.Navisworks.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Keep rules.json next to the built DLL so the plugin can find it at runtime. -->
+    <None Include="rules.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
