@@ -3,6 +3,7 @@ import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useChart } from './useChart';
 import { useEffect, useRef } from 'react';
 import type { BudgetHistogram } from './api';
 import { usePrefs } from './state';
@@ -18,9 +19,10 @@ export default function BudgetHistogramChart({ data }: { data: BudgetHistogram }
   const el = useRef<HTMLDivElement>(null);
   const { dark } = usePrefs();
 
+  const chart = useChart(el);
+
   useEffect(() => {
-    if (!el.current) return;
-    const chart = echarts.init(el.current);
+    if (!chart) return;
     const theme = chartTheme();
     const { muted, line } = theme;
     const x = data.periods.map(p => label(p.start, data.by));
@@ -50,11 +52,8 @@ export default function BudgetHistogramChart({ data }: { data: BudgetHistogram }
         })),
         { name: 'Cumulative', type: 'line' as const, yAxisIndex: 1, showSymbol: false, data: data.cumulative, lineStyle: { color: theme.ink, width: 2 }, itemStyle: { color: theme.ink } },
       ],
-    });
-    const ro = new ResizeObserver(() => chart.resize());
-    ro.observe(el.current);
-    return () => { ro.disconnect(); chart.dispose(); };
-  }, [data, dark]);
+    }, true);
+  }, [chart, data, dark]);
 
   return (
     <div className="chart">

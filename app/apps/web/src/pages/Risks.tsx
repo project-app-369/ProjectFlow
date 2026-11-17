@@ -6,11 +6,12 @@ import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { SortBy, useListState } from '../Register';
+import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager } from '../ui';
-import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, People } from './governance';
+import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, MultiFilter, People } from './governance';
 import { useDeepLink } from '../deepLink';
+import { disciplineTitle } from '../disciplines';
 
 const PAGE_SIZE = 50;
 /** The register opens on everything that is still live; "All statuses" shows the closed ones too. */
@@ -42,6 +43,7 @@ export default function Risks() {
   const extra = { ...filter.extra };
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...extra });
   const page = useQuery({ queryKey: ['risks', project.id, query], queryFn: () => request<RiskPage>(`${base}${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['risks', project.id, q], q => request<RiskPage>(`${base}${q}`));
   const facets = page.data?.facets;
   const setExtra = (k: keyof typeof extra, v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
   const pickCell = (p: number, s: number) => {
@@ -57,10 +59,11 @@ export default function Risks() {
       cell: ({ row: { original: r } }) => (
         <button className="link-button" onClick={() => setOpen(r.id)}>
           <strong style={{ display: 'block', maxWidth: 520, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.title}>{r.title}</strong>
-          <small className="muted"><span className="mono">{r.id}</span>{r.discipline ? ` · ${r.discipline}` : ''}{r.external ? ' · External' : ''}</small>
+          <small className="muted"><span className="mono">{r.id}</span>{r.external ? ' · External' : ''}</small>
         </button>
       ),
     },
+    { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: r } }) => (r.discipline ? <span className="discipline-cell" title={disciplineTitle(r.discipline)}>{r.discipline}</span> : <span className="muted">—</span>) },
     {
       id: 'level', header: 'LEVEL', meta: { sortKey: 'currentRank' },
       cell: ({ row: { original: r } }) => (
@@ -113,9 +116,7 @@ export default function Risks() {
             <IconFilter icon="flag" label="Filter by current level" value={filter.extra.level} onChange={v => setExtra('level', v)}>
               <option value="">All levels</option>{(facets?.levels ?? []).map(l => <option key={l}>{l}</option>)}
             </IconFilter>
-            <IconFilter icon="layers" label="Filter by discipline (RBS)" value={list.state.discipline} onChange={v => list.set({ discipline: v })}>
-              <option value="">All disciplines</option>{(facets?.disciplines ?? []).map(d => <option key={d}>{d}</option>)}
-            </IconFilter>
+            <MultiFilter icon="layers" label="Filter by discipline (tick one or more)" allLabel="All disciplines" options={facets?.disciplines ?? []} value={list.state.discipline} onChange={v => list.set({ discipline: v })} />
             <IconFilter icon="people" label="Filter by owner" value={filter.extra.owner} onChange={v => setExtra('owner', v)}>
               <option value="">Every owner</option><option value="none">No owner</option>{(facets?.owners ?? []).map(o => <option key={o}>{o}</option>)}
             </IconFilter>
@@ -130,7 +131,7 @@ export default function Risks() {
         <FilterChips chips={filter.chips.filter(([k]) => !['level', 'owner', 'flag', 'basis'].includes(k)).map(([k, v]) => (k === 'cell' ? [k, cellLabel(heat.data?.matrix, v, filter.extra.basis)] : [k, v]))} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." rowClassName={r => (r.status === 'Closed' ? 'row-closed' : '')} />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." rowClassName={r => (r.status === 'Closed' ? 'row-closed' : '')} />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}

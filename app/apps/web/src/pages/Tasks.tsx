@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { request, type Task } from '../api';
 import { fmtDate } from '../format';
 import { useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, Loading, Modal, PageHead, Stat } from '../ui';
+import { Badge, Btn, ErrorBox, Modal, PageHead, Stat, PageSkeleton } from '../ui';
 
 const COLUMNS: Task['status'][] = ['To do', 'In progress', 'Done'];
 const priorityTone = { High: 'red', Normal: 'amber', Low: 'indigo' } as const;
@@ -30,7 +30,7 @@ export default function Tasks() {
     onSuccess: () => { refresh(); toast('Task removed.'); }, onError: fail,
   });
 
-  if (isPending) return <Loading />;
+  if (isPending) return <PageSkeleton />;
   if (error) return <ErrorBox error={error} />;
   const tasks = data.items;
   const open = tasks.filter(t => t.status !== 'Done').length;

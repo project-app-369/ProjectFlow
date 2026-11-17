@@ -47,6 +47,13 @@ export const COLUMNS = {
   /** Weekly cumulative progress per facility and scope (overall, a phase, a construction curve), in percent. */
   facilityCurves: [...text('projectId', 'facilityId', 'scope'), ...date('date'), ...num('plan', 'forecast', 'actual')],
   facilityScopes: [...text('projectId', 'facilityId', 'scope', 'label'), ...num('weight')],
+  /** The working schedules: CGF Topsides activity by activity, and the span of each group of the CGF Jacket schedule. each activity (or summary row) with its baseline, working-schedule, WK-planning and re-schedule dates. */
+  workingSchedule: [
+    ...text('projectId', 'id', 'facilityId', 'activityId', 'name', 'parent'), ...num('level'), ...text('leaf'), ...num('duration'), ...text('discipline'),
+    ...date('baseStart', 'baseFinish', 'workStart', 'workFinish', 'wkpStart', 'wkpFinish', 'reStart', 'reFinish'),
+  ],
+  /** Critical-path-network progress by work package: weight, plan and actual at the cut-off, beside the same figures of the baseline plan. */
+  cpnItems: [...text('projectId', 'code', 'name', 'kind'), ...num('weight', 'plan', 'actual', 'lastPlan', 'lastActual', 'basePlan', 'baseActual', 'baseWeight')],
   /** The WBS of a facility with its planned dates and its progress at the cut-off. */
   facilityWbs: [...text('projectId', 'facilityId', 'code', 'name'), ...num('level'), ...text('father'), ...date('start', 'finish'), ...num('weight', 'plan', 'actual'), ...text('shared')],
   budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt')],
@@ -57,8 +64,10 @@ export const COLUMNS = {
   snapshots: [...text('projectId'), ...date('cutoff'), ...stamp('createdAt'), ...text('createdBy', 'note'), ...num('rowCount')],
   snapshotData: [...text('projectId'), ...date('cutoff'), ...text('dataset'), ...num('part'), ...text('json')],
   scurve: [...text('projectId'), ...date('date'), ...num('plan', 'forecast', 'actual')],
+  /** The same overall curve at the weekly cut-offs; `scurve` keeps the monthly ones. */
+  scurveWeekly: [...text('projectId'), ...date('date'), ...num('plan', 'forecast', 'actual')],
   workPackages: [...text('projectId', 'code', 'name'), ...num('weight', 'lastWeekPlan', 'lastWeekActual', 'achievedPlan', 'achievedActual', 'thisWeekPlan', 'thisWeekActual')],
-  milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment', 'facility'), ...text('major')],
+  milestones: [...text('projectId', 'id', 'description'), ...date('planBaseline', 'planSub'), ...text('subName'), ...date('forecast', 'actual'), ...num('variance'), ...text('comment', 'facility'), ...text('major'), ...text('kind', 'package', 'tagNo', 'location', 'deck'), ...date('eta')],
   procurement: [
     ...text('projectId', 'id', 'code', 'discipline', 'description', 'vendorCode', 'vendor', 'origins', 'loaNo'), ...date('loaDate'),
     ...text('poNo'), ...date('poDate'), ...text('buyer', 'expeditor', 'pe', 'vqc', 'status', 'workPackage', 'packageType'), ...num('weightPct'),
@@ -114,6 +123,7 @@ export const SHEET = {
   tasks: 'Personal - Tasks',
   subtasks: 'Personal - Subtasks',
   scurve: 'EPCIC - S-curve',
+  scurveWeekly: 'EPCIC - S-curve weekly',
   workPackages: 'EPCIC - Work packages',
   milestones: 'EPCIC - Milestones',
   procurement: 'EPCIC - Procurement packages',
@@ -127,6 +137,8 @@ export const SHEET = {
   facilityCurves: 'EPCIC - Facility curves',
   facilityScopes: 'EPCIC - Facility scopes',
   facilityWbs: 'EPCIC - Facility WBS',
+  workingSchedule: 'EPCIC - Working schedule',
+  cpnItems: 'EPCIC - CPN progress',
   phaseProgress: 'EPCIC - Phase progress',
   risks: 'Governance - Risks',
   riskActions: 'Governance - Risk actions',
@@ -162,7 +174,7 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
 export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'riskActions', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];

@@ -1,7 +1,24 @@
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { qs } from './api';
 import { Icon } from './icons';
 import { Btn, useDebounced } from './ui';
+
+/**
+ * Pagination that feels instant: while the person reads a page, the next one is fetched into the cache (after a short pause,
+ * so a quick click through pages does not fire a request per page). The next click then shows its rows at once.
+ */
+export function usePrefetchNext(page: number, total: number | undefined, pageSize: number, query: string, key: (q: string) => unknown[], fetch: (q: string) => Promise<unknown>) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!total || page * pageSize >= total) return;
+    const next = query.replace(/([?&])page=\d+/, `$1page=${page + 1}`);
+    if (next === query) return;
+    const id = window.setTimeout(() => void qc.prefetchQuery({ queryKey: key(next), queryFn: () => fetch(next) }), 400);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qc, page, total, pageSize, query]);
+}
 
 export interface ListState { q: string; discipline: string; status: string; sort?: string; order: 'asc' | 'desc'; page: number }
 

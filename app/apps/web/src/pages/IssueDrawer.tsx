@@ -5,7 +5,7 @@ import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useToast } from '../state';
 import { Badge, Btn, Confirm, Field, Modal } from '../ui';
-import { IconChoice } from './governance';
+import { DisciplinePicker, IconChoice } from './governance';
 
 export const ISSUE_STATUSES = ['Not started', 'In progress', 'Pending', 'Completed'] as const;
 export const ISSUE_PRIORITIES = ['Critical', 'High', 'Medium', 'Low'] as const;
@@ -125,7 +125,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
             <div className="gov-meta">
               <span className="meta-item" title="Priority"><IconChoice label="Priority" disabled={off} value={v.priority} options={ISSUE_PRIORITIES.map(p => ({ value: p, label: `${p} priority`, icon: PRIORITY_ICON[p] }))} onChange={x => set('priority', x ?? 'Medium')} /></span>
               <span className="meta-item" title="Status"><IconChoice label="Status" disabled={off} value={v.status} options={ISSUE_STATUSES.map(p => ({ value: p, label: p, icon: STATUS_ICON[p] }))} onChange={x => set('status', x ?? 'Not started')} /></span>
-              <label className="meta-item" title="Responsible team"><Icon name="layers" /><input className="meta-input" placeholder="Team" aria-label="Responsible team" value={v.discipline} maxLength={60} disabled={off} onChange={e => set('discipline', e.target.value)} /></label>
+              <span className="meta-item" title="Disciplines (tick one or more)"><Icon name="layers" /><DisciplinePicker value={v.discipline} disabled={off} onChange={x => set('discipline', x)} /></span>
               <label className="meta-item" title="Start date"><Icon name="flag" /><input type="date" className="meta-input" aria-label="Start date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></label>
               <label className="meta-item" title="Due date: the people in charge are emailed when it is within 3 days or passed"><Icon name="calendar" /><input type="date" className="meta-input" aria-label="Due date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></label>
             </div>

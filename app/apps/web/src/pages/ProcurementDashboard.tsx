@@ -1,14 +1,17 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { Suspense, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { request, type AttentionItem, type ExpeditingBrief, type ProcurementCurve, type ProcurementDashboard as Dash, type Severity, type Shipment } from '../api';
 import { fmtDate, fmtShort, signed, type Tone } from '../format';
 import { Icon } from '../icons';
 import { progressTableValues } from '../procurementProgress';
 import { useApp } from '../state';
-import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat } from '../ui';
+import { CutoffToggle } from '../SCurvePanel';
+import { monthlyCurve, type Cutoffs } from '../scurveTime';
+import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat, PageSkeleton } from '../ui';
+import { lazyPage } from '../lazyPage';
 
-const SCurve = lazy(() => import('../ProcurementSCurveChart'));
+const SCurve = lazyPage(() => import('../ProcurementSCurveChart'));
 const SCOPE_LABEL = { OVR: 'All', LS: 'Lump sum', PS: 'Reimbursable' } as const;
 const FACILITY_LABEL = (f: string) => (f === 'OVERALL' ? 'All facilities' : f.replace(/\b([A-Z])([A-Z]+)\b/g, (_, a: string, b: string) => (b.length > 2 ? a + b.toLowerCase() : a + b)).replace('Cgf', 'CGF').replace('Lq', 'LQ'));
 
@@ -71,12 +74,14 @@ export default function ProcurementDashboard() {
   });
   const overall = useQuery(curveQuery('OVERALL', 'OVR'));
   const curveQ = useQuery({ ...curveQuery(pick.facility, pick.scope), placeholderData: keepPreviousData });
-  if (q.isPending) return <Loading />;
+  if (q.isPending) return <PageSkeleton />;
   if (q.error) return <ErrorBox error={q.error} />;
   const d = q.data;
   const { pipeline: pl, expediting: ex, logistics: lg, materials: mt, concerns: cn, workPackages: wp } = d;
   const flags = ex ? ex.health.delay + ex.health.highRisk + ex.health.atRisk : null;
-  const curve = curveQ.data;
+  const [cut, setCut] = useState<Cutoffs>('weekly');
+  const weeklyCurve = curveQ.data;
+  const curve = useMemo(() => (weeklyCurve && cut === 'monthly' ? monthlyCurve(weeklyCurve) : weeklyCurve), [weeklyCurve, cut]);
   const ov = overall.data?.latest ?? null;
 
   return (
@@ -100,12 +105,13 @@ export default function ProcurementDashboard() {
 
       <div className="dash-grid" style={{ marginTop: 0, marginBottom: 'var(--sp-5)' }}>
         <Panel title="Procurement S-curve" wide
-          sub={curve?.latest ? <>Cumulative progress by week · at {fmtDate(curve.latest.date)} actual {(curve.latest.actual ?? 0).toFixed(1)}% against {(curve.latest.plan ?? 0).toFixed(1)}% plan{curve.latest.forecast != null ? ` · forecast ${curve.latest.forecast.toFixed(1)}%` : ''}</> : 'Cumulative progress by week'}>
+          sub={curve?.latest ? <>Cumulative progress by {cut === 'monthly' ? 'month' : 'week'} · at {fmtDate(curve.latest.date)} actual {(curve.latest.actual ?? 0).toFixed(1)}% against {(curve.latest.plan ?? 0).toFixed(1)}% plan{curve.latest.forecast != null ? ` · forecast ${curve.latest.forecast.toFixed(1)}%` : ''}</> : 'Cumulative progress by week'}>
           <div className="toolbar" style={{ paddingTop: 0 }}>
             <div className="curve-controls">
               <select className="filter" aria-label="Facility" value={curve?.facility ?? pick.facility} onChange={e => setPick({ facility: e.target.value, scope: 'OVR' })}>
                 {(curve?.facilities ?? ['OVERALL']).map(f => <option key={f} value={f}>{FACILITY_LABEL(f)}</option>)}
               </select>
+              <CutoffToggle value={cut} onChange={setCut} />
               <div className="seg" role="group" aria-label="Contract scope">
                 {(curve?.scopes ?? ['OVR']).map(s => <button key={s} type="button" aria-pressed={(curve?.scope ?? pick.scope) === s} onClick={() => setPick(p => ({ ...p, scope: s }))}>{SCOPE_LABEL[s]}</button>)}
               </div>
@@ -170,7 +176,7 @@ export default function ProcurementDashboard() {
             <div className="panel-content">
               {ex.byDiscipline.map(r => (
                 <div className="bar-row" key={r.discipline}>
-                  <div className="bar-row-label"><span>{r.discipline}</span><span className="muted">{r.delay + r.highRisk + r.atRisk} of {r.total} flagged{r.avgVariance != null ? ` · ${signed(r.avgVariance)} pp` : ''}</span></div>
+                  <div className="bar-row-label"><span>{r.discipline}</span><span className="muted">{r.delay + r.highRisk + r.atRisk} of {r.total} flagged{r.avgVariance != null ? ` · ${signed(r.avgVariance)}%` : ''}</span></div>
                   <Bar total={r.total} parts={[{ label: 'Delay', color: 'var(--c-critical)', value: r.delay }, { label: 'High risk', color: 'var(--c-high)', value: r.highRisk }, { label: 'At risk', color: 'var(--c-warn)', value: r.atRisk }, { label: 'On track', color: 'var(--c-good)', value: r.total - r.delay - r.highRisk - r.atRisk }]} />
                 </div>
               ))}
@@ -201,7 +207,7 @@ export default function ProcurementDashboard() {
         {ex && (
           <Panel title="Behind plan" sub="The ten packages furthest below their planned progress">
             {ex.behind.length ? ex.behind.map(r => (
-              <BriefRow key={r.id} r={r} note={<><span className="negative mono">{signed(r.variance ?? 0)} pp</span><small className="muted" style={{ display: 'block' }}>{r.actualPct ?? '—'}% of {r.planPct ?? '—'}%</small></>} />
+              <BriefRow key={r.id} r={r} note={<><span className="negative mono">{signed(r.variance ?? 0)}%</span><small className="muted" style={{ display: 'block' }}>{r.actualPct ?? '—'}% of {r.planPct ?? '—'}%</small></>} />
             )) : <div className="empty">No package is behind plan.</div>}
           </Panel>
         )}

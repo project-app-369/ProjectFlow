@@ -7,7 +7,7 @@ import { expeditingFields } from './procFields';
 import { DataTable } from '../DataTable';
 import { fmtDate, initials, signed } from '../format';
 import { Icon } from '../icons';
-import { Toolbar, useListState } from '../Register';
+import { Toolbar, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
@@ -61,7 +61,7 @@ function Detail({ p }: { p: ExpeditingPackage }) {
         <Pair label="Ex-works" plan={num(p.planExw)} actual={num(p.actExw)} />
         <Pair label="Arrival at site" plan={num(p.planArrival)} actual={num(p.actArrival)} />
         <Pair label="Cumulative progress" plan={p.planPct ?? undefined} actual={p.actualPct ?? undefined} />
-        {p.variance != null && <div><small>Variance</small><strong>{signed(p.variance)} pp</strong></div>}
+        {p.variance != null && <div><small>Variance</small><strong>{signed(p.variance)}%</strong></div>}
       </div>
       {text(p.currentStatusText) && <><h3>Current status</h3><p className="tiny muted" style={{ whiteSpace: 'pre-line' }}>{text(p.currentStatusText)}</p></>}
     </>
@@ -85,6 +85,7 @@ export default function Expediting() {
   const filter = usePick(list, { within: '' });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, within: filter.extra.within });
   const page = useQuery({ queryKey: ['expediting-packages', project.id, query], queryFn: () => request<Page<ExpeditingPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['expediting-packages', project.id, q], q => request<Page<ExpeditingPackage>>(`${base}/packages${q}`));
   const selected: ExpeditingPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ExpeditingPackage>[]>(() => [
@@ -100,7 +101,7 @@ export default function Expediting() {
     { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: p } }) => p.discipline },
     { id: 'vendor', header: 'VENDOR', meta: { sortKey: 'vendor' }, cell: ({ row: { original: p } }) => <span className="tiny">{p.vendor ?? '—'}</span> },
     { id: 'progress', header: 'CUMULATIVE PROGRESS', meta: { sortKey: 'actualPct' }, cell: ({ row: { original: p } }) => <Progress p={p} /> },
-    { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: p } }) => <span className={(p.variance ?? 0) < 0 ? 'negative' : 'positive'}>{p.variance == null ? '—' : `${signed(p.variance)} pp`}</span> },
+    { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: p } }) => <span className={(p.variance ?? 0) < 0 ? 'negative' : 'positive'}>{p.variance == null ? '—' : `${signed(p.variance)}%`}</span> },
     { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: p } }) => <Badge>{p.status}</Badge> },
     { id: 'open', header: '', cell: ({ row: { original: p } }) => <button className="icon-btn" aria-label={`Open ${p.code}`} onClick={() => setSelected(p)}><Icon name="arrow" /></button> },
   ], []);
@@ -129,7 +130,7 @@ export default function Expediting() {
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}

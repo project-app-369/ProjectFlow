@@ -359,10 +359,6 @@ export function milestonesInsights(rows: AnyRow[], cutoff: string): Insights {
         title: 'Status by facility', sub: 'Select a facility to filter.', layout: 'bar', stacked: true, unit: 'milestones', categories: facilities.keys, filterKey: 'facility',
         series: STATUS.map((s, i) => ({ name: s, color: COLORS[i], data: facilities.keys.map(k => facilities.get(k).filter(r => r.status === s).length) })),
       },
-      {
-        title: 'Status by subcontract area', sub: 'Select an area to filter.', layout: 'bar', stacked: true, unit: 'milestones', categories: subs.keys, filterKey: 'sub',
-        series: STATUS.map((s, i) => ({ name: s, color: COLORS[i], data: subs.keys.map(k => subs.get(k).filter(r => r.status === s).length) })),
-      },
     ],
   };
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireManage, requireWrite, type Actor } from './auth';
 import { COLUMNS, SHEET } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
+import { disciplineFacets, normaliseDiscipline, withDisciplines } from './disciplines';
 import { issuesInsights, withinPredicate } from './insights';
 import type { Mailer } from './mailer';
 import type { Service } from './service';
@@ -24,7 +25,7 @@ const email = z.string().trim().toLowerCase().email('Enter a valid email address
 const pics = z.array(email).max(MAX_PICS, `At most ${MAX_PICS} people can be responsible for one issue.`).transform(list => [...new Set(list)]);
 
 const issueFields = {
-  title: z.string().trim().min(1).max(200), description: txt(2000), priority: z.enum(ISSUE_PRIORITIES), discipline: txt(60), status: z.enum(ISSUE_STATUSES),
+  title: z.string().trim().min(1).max(200), description: txt(2000), priority: z.enum(ISSUE_PRIORITIES), discipline: txt(60).transform(normaliseDiscipline), status: z.enum(ISSUE_STATUSES),
   startDate: isoOpt, dueDate: isoOpt, nextAction: txt(1500), remarks: txt(1500), pics,
 };
 const issueCreate = z.object({ ...issueFields, priority: issueFields.priority.default('Medium'), status: issueFields.status.default('Not started'), pics: pics.default([]) });
@@ -37,7 +38,7 @@ const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate'
   priority: z.string().max(20).optional(), pic: z.string().max(120).optional(), within: z.string().max(10).optional(),
 });
 
-const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Team'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks']];
+const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks']];
 
 /**
  * Cells are edited by hand in the spreadsheet, so what is read is tidied before it is used: a status or priority is matched by
@@ -84,7 +85,7 @@ export class IssuesService {
     const mine = subs.filter(s => s.issueId === r.id);
     const due = r.dueDate ? String(r.dueDate) : null;
     return {
-      ...rest, status: normStatus(r.status), priority: normPriority(r.priority), pics: picsOf(r), priorityRank: PRIORITY_RANK[normPriority(r.priority)],
+      ...withDisciplines(rest), status: normStatus(r.status), priority: normPriority(r.priority), pics: picsOf(r), priorityRank: PRIORITY_RANK[normPriority(r.priority)],
       overdue: isOpen(r) && !!due && due < cutoff, daysToDue: isOpen(r) && due ? daysBetween(cutoff, due) : null,
       subtasksTotal: mine.length, subtasksDone: mine.filter(s => s.done === 'Yes').length,
     };
@@ -130,7 +131,7 @@ export class IssuesService {
     return {
       items: paginate(rows as unknown as Row[], f), total: rows.length, page: f.page, pageSize: f.pageSize,
       facets: {
-        disciplines: unique(all.map(r => r.discipline as string | null)), statuses: [...ISSUE_STATUSES], priorities: [...ISSUE_PRIORITIES],
+        disciplines: disciplineFacets(all), statuses: [...ISSUE_STATUSES], priorities: [...ISSUE_PRIORITIES],
         pics: unique(all.flatMap(r => r.pics as string[])),
       },
     };

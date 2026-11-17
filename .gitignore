@@ -8,6 +8,7 @@ desktop.ini
 .pnpm-store/
 .tmp/
 .tmp.driveupload/
+app/apps/api-v2/.env*
 sites/
 app/apps/sheets/.vitest/
 data/3d-model/*.nwd

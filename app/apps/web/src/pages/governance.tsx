@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { DISCIPLINE_NAME, DISCIPLINES, disciplineList } from '../disciplines';
 import { Icon } from '../icons';
 
 /** A filter that shows only an icon and its current choice; the label is the tooltip and the accessible name. */
@@ -9,6 +10,42 @@ export function IconFilter({ icon, label, value, onChange, children }: { icon: s
       <select className="filter" aria-label={label} value={value} onChange={e => onChange(e.target.value)}>{children}</select>
     </label>
   );
+}
+
+/** Several values can be ticked: the chosen ones travel as one string joined with `|`, which the registers' API reads as "any of". */
+export const pickedOf = (value: string) => (value ? value.split('|') : []);
+
+/** A dropdown with a checkbox per option: each reads "CODE - Full name" with the code in bold; the summary shows the codes only. */
+function DisciplineDropdown({ icon, label, allLabel, options, value, onChange, disabled, form }: { icon?: string; label: string; allLabel: string; options: string[]; value: string; onChange: (v: string) => void; disabled?: boolean; form?: boolean }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const picked = pickedOf(value);
+  useEffect(() => {
+    const close = (e: Event) => { if (ref.current?.open && !ref.current.contains(e.target as Node)) ref.current.open = false; };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, []);
+  const toggle = (o: string) => onChange(options.filter(k => (k === o ? !picked.includes(k) : picked.includes(k))).join('|'));
+  return (
+    <details className={`task-filter multi-filter${form ? ' multi-form' : ''}`} ref={ref} title={label} onClick={e => { if (disabled) e.preventDefault(); }}>
+      <summary className="filter" aria-label={label}>{icon && <Icon name={icon} />}<span>{picked.length === 0 ? allLabel : picked.join(', ')}</span></summary>
+      <div className="multi-pop" role="group" aria-label={label}>
+        <button type="button" className="btn text small" disabled={!picked.length} onClick={() => onChange('')}>Clear selection</button>
+        {options.map(o => (
+          <label key={o} className="multi-opt"><input type="checkbox" checked={picked.includes(o)} onChange={() => toggle(o)} /><span><strong>{o}</strong>{DISCIPLINE_NAME[o] ? ` - ${DISCIPLINE_NAME[o]}` : ''}</span></label>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+/** The filter of a register: tick one or more; the chosen codes travel as one string joined with `|`, which the API reads as "any of". */
+export function MultiFilter(props: { icon: string; label: string; allLabel: string; options: string[]; value: string; onChange: (v: string) => void }) {
+  return <DisciplineDropdown {...props} />;
+}
+
+/** The discipline codes of one item, picked from the standard list in a dropdown; saved as the codes joined with ", ". */
+export function DisciplinePicker({ value, onChange, disabled, label = 'Discipline' }: { value: string; onChange: (v: string) => void; disabled?: boolean; label?: string }) {
+  return <DisciplineDropdown form label={label} allLabel="Select…" disabled={disabled} options={DISCIPLINES.map(([c]) => c)} value={disciplineList(value).join('|')} onChange={v => onChange(pickedOf(v).join(', '))} />;
 }
 
 /** A risk level as a coloured pill; the level names come from the project's matrix. */

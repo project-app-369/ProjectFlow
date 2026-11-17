@@ -3,29 +3,38 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { apiMode, getUserId, request, requestBatch, setCurrentAsOf, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
 import { Layout } from './Layout';
-import { defaultKey, landing, pathOf, SHEETS_KEYS } from './nav';
+import { crumbsOf, defaultKey, landing, SHEETS_KEYS } from './nav';
 import Dashboard from './pages/Dashboard';
-import Expediting from './pages/Expediting';
-import { InterfaceMatrixPage, InterfacePointsPage, InterfaceRegister } from './pages/Interfaces';
-import ConstructionBudget from './pages/ConstructionBudget';
-import Knowledge from './pages/Knowledge';
-import Milestones from './pages/Milestones';
 import Placeholder from './pages/Placeholder';
-import Concerns from './pages/Concerns';
-import Logistics from './pages/Logistics';
-import Materials from './pages/Materials';
-import Procurement from './pages/Procurement';
-import ProcurementDashboard from './pages/ProcurementDashboard';
-import Issues from './pages/Issues';
-import Risks from './pages/Risks';
-import { ProgressOverall, WorkPackages } from './pages/Schedule';
-import Settings from './pages/Settings';
-import Tasks from './pages/Tasks';
-import TaskCalendar from './pages/tasks/TaskCalendar';
-import TaskManagement from './pages/tasks/TaskManagement';
-import Profile from './pages/Profile';
-import { FacilityProgressPage, FacilitySchedulePage } from './pages/Facilities';
-import TaskWorkload from './pages/tasks/TaskWorkload';
+import { lazyPage, prefetchPages } from './lazyPage';
+
+// Every other screen is its own chunk, fetched when it is opened (and in the background once the app is idle),
+// so the first screen does not wait for code it may never use.
+const Expediting = lazyPage(() => import('./pages/Expediting'));
+const InterfaceMatrixPage = lazyPage(() => import('./pages/Interfaces').then(m => ({ default: m.InterfaceMatrixPage })));
+const InterfacePointsPage = lazyPage(() => import('./pages/Interfaces').then(m => ({ default: m.InterfacePointsPage })));
+const InterfaceRegister = lazyPage(() => import('./pages/Interfaces').then(m => ({ default: m.InterfaceRegister })));
+const ConstructionBudget = lazyPage(() => import('./pages/ConstructionBudget'));
+const Knowledge = lazyPage(() => import('./pages/Knowledge'));
+const Milestones = lazyPage(() => import('./pages/Milestones'));
+const Concerns = lazyPage(() => import('./pages/Concerns'));
+const Logistics = lazyPage(() => import('./pages/Logistics'));
+const Materials = lazyPage(() => import('./pages/Materials'));
+const Procurement = lazyPage(() => import('./pages/Procurement'));
+const ProcurementDashboard = lazyPage(() => import('./pages/ProcurementDashboard'));
+const Issues = lazyPage(() => import('./pages/Issues'));
+const Risks = lazyPage(() => import('./pages/Risks'));
+const ProgressOverall = lazyPage(() => import('./pages/Schedule').then(m => ({ default: m.ProgressOverall })));
+const WorkPackages = lazyPage(() => import('./pages/Schedule').then(m => ({ default: m.WorkPackages })));
+const Settings = lazyPage(() => import('./pages/Settings'));
+const Tasks = lazyPage(() => import('./pages/Tasks'));
+const TaskCalendar = lazyPage(() => import('./pages/tasks/TaskCalendar'));
+const TaskManagement = lazyPage(() => import('./pages/tasks/TaskManagement'));
+const TaskWorkload = lazyPage(() => import('./pages/tasks/TaskWorkload'));
+const Profile = lazyPage(() => import('./pages/Profile'));
+const CriticalPathNetwork = lazyPage(() => import('./pages/Cpn').then(m => ({ default: m.CriticalPathNetwork })));
+const FacilityProgressPage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilityProgressPage })));
+const FacilitySchedulePage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilitySchedulePage })));
 import { AppDataProvider, CrumbContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
 import { ErrorBox, Loading, PageHead } from './ui';
 
@@ -37,6 +46,7 @@ const PAGES: Record<string, () => ReactNode> = {
   'planning.overall-progress': () => <ProgressOverall />,
   'planning.schedule': () => <FacilitySchedulePage />,
   'planning.progress': () => <FacilityProgressPage />,
+  'planning.cpn': () => <CriticalPathNetwork />,
   'planning.work-packages': () => <WorkPackages />,
   'planning.milestones': () => <Milestones />,
   'procurement.dashboard': () => <ProcurementDashboard />,
@@ -71,6 +81,7 @@ function ModuleRoute() {
   const m = modules.modules.find(x => x.key === key);
 
   useEffect(() => { if (m?.effective) setWorkspace(m.workspace); }, [m, setWorkspace]);
+  useEffect(() => prefetchPages(), []);
 
   if (!m || !m.effective) return <Navigate to="/" replace />;
   const target = landing(modules.modules, key);
@@ -78,7 +89,7 @@ function ModuleRoute() {
   const page = PAGES[key] && (apiMode === 'sheets' || !sheetsOnly.has(key)) ? PAGES[key] : null;
 
   return (
-    <CrumbContext.Provider value={pathOf(modules, key)}>
+    <CrumbContext.Provider value={crumbsOf(modules, key)}>
       <SheetContext.Provider value={m.sheet ?? null}>
         {page ? page() : <Placeholder moduleKey={key} />}
       </SheetContext.Provider>

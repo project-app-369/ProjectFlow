@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { coerceCell, type Column, type Row, type SheetInfo, type Store } from './store';
 
 interface MemSheet { gid: number; header: string[]; rows: Row[] }
+export interface StoreSnapshot { sheets: { name: string; gid: number; header: string[]; rows: Row[] }[] }
 
 /** In-memory store with the same behaviour contract as the spreadsheet store. Used by tests and the local simulator. */
 export class MemoryStore implements Store {
@@ -9,6 +10,21 @@ export class MemoryStore implements Store {
   private nextGid = 1000;
 
   constructor(private readonly baseUrl = 'https://docs.google.com/spreadsheets/d/LOCAL-SIMULATOR/edit') {}
+
+  /** Keep every worksheet, including dynamically created module sheets, in a portable archive. */
+  snapshot(): StoreSnapshot {
+    return { sheets: [...this.sheets].map(([name, sheet]) => ({
+      name, gid: sheet.gid, header: [...sheet.header], rows: sheet.rows.map(row => ({ ...row })),
+    })) };
+  }
+
+  loadSnapshot(snapshot: StoreSnapshot) {
+    this.sheets.clear();
+    for (const sheet of snapshot.sheets) {
+      this.sheets.set(sheet.name, { gid: sheet.gid, header: [...sheet.header], rows: sheet.rows.map(row => ({ ...row })) });
+      this.nextGid = Math.max(this.nextGid, sheet.gid + 1);
+    }
+  }
 
   private info(name: string, s: MemSheet): SheetInfo {
     return { name, gid: s.gid, url: `${this.baseUrl}#gid=${s.gid}` };

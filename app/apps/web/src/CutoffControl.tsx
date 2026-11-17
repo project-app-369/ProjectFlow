@@ -61,7 +61,7 @@ function SnapshotDialog({ existing, onClose }: { existing: Snapshot[]; onClose: 
   });
 
   return (
-    <Modal title="Save cut-off report" onClose={onClose}
+    <Modal popout={false} title="Save cut-off report" onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || !cutoff} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : exists ? 'Replace report' : 'Save report'}</Btn></>}>
       <div className="dialog-body">
         <p style={{ marginBottom: 16 }}>Stores a copy of the project's current data (schedule, milestones, procurement, expediting, risks and interfaces) so it can be opened later from the cut-off dropdown. Saved reports are read-only.</p>

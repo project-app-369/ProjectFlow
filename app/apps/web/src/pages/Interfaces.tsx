@@ -14,7 +14,8 @@ import { FilterChips, InsightsView, usePick } from '../Insights';
 import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced } from '../ui';
-import { Detail, IconFilter, People } from './governance';
+import { Detail, DisciplinePicker, IconFilter, MultiFilter, People } from './governance';
+import { disciplineTitle } from '../disciplines';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -77,6 +78,7 @@ export function InterfacePointsPage() {
       id: 'parties', header: 'FROM → TO', meta: { sortKey: 'target' },
       cell: ({ row: { original: p } }) => <span className="tiny" title={`${partyName(parties.data, p.originator)} asks ${partyName(parties.data, p.target)}`}><span className="muted">{p.originator}</span> → <strong>{p.target}</strong></span>,
     },
+    { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: p } }) => (p.discipline ? <span className="discipline-cell" title={disciplineTitle(p.discipline)}>{p.discipline}</span> : <span className="muted">—</span>) },
     { id: 'owner', header: 'OWNER', cell: ({ row: { original: p } }) => <People names={p.owner ? [p.owner] : []} empty="No IP owner" /> },
     {
       id: 'target', header: 'TARGET', meta: { sortKey: 'targetDate' },
@@ -105,9 +107,7 @@ export function InterfacePointsPage() {
             <IconFilter icon={POINT_ICON[list.state.status as PointStatus] ?? 'status-ongoing'} label="Filter by status" value={list.state.status} onChange={v => list.set({ status: v })}>
               <option value="">All statuses</option>{POINT_STATUSES.map(s => <option key={s}>{s}</option>)}
             </IconFilter>
-            <IconFilter icon="layers" label="Filter by discipline" value={list.state.discipline} onChange={v => list.set({ discipline: v })}>
-              <option value="">All disciplines</option>{(facets?.disciplines ?? []).map(d => <option key={d}>{d}</option>)}
-            </IconFilter>
+            <MultiFilter icon="layers" label="Filter by discipline (tick one or more)" allLabel="All disciplines" options={facets?.disciplines ?? []} value={list.state.discipline} onChange={v => list.set({ discipline: v })} />
             <IconFilter icon="link" label="Filter by target party" value={filter.extra.target} onChange={v => setExtra('target', v)}>
               <option value="">Any target party</option>{(facets?.parties ?? []).map(p => <option key={p} value={p}>{partyName(parties.data, p)}</option>)}
             </IconFilter>
@@ -125,7 +125,7 @@ export function InterfacePointsPage() {
         <FilterChips chips={chips} onClear={reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No interface point matches. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No interface point matches. Change the search or filters." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}
@@ -222,7 +222,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
               </Field>
               <datalist id="ip-parties">{parties.data?.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}</datalist>
               {same && <p className="negative tiny" style={{ gridColumn: '1/-1' }}>Originating and target party must be different.</p>}
-              <Field label="Discipline" hint={point ? undefined : 'Used in the point number, e.g. IP-PI-0035'}><input value={v.discipline} maxLength={40} onChange={e => up('discipline', e.target.value)} /></Field>
+              <Field label="Discipline" hint={point ? undefined : 'The first one is used in the point number, e.g. IP-DE-0035'}><DisciplinePicker value={v.discipline} onChange={x => up('discipline', x)} /></Field>
               <Field label="Work package"><input value={v.workPackage} maxLength={60} onChange={e => up('workPackage', e.target.value)} /></Field>
               <Field label="IP owner"><input value={v.owner} maxLength={120} onChange={e => up('owner', e.target.value)} /></Field>
               <Field label="Linked interface" hint="Optional, from the interface register"><input value={v.interfaceId} maxLength={40} placeholder="INT-…" onChange={e => up('interfaceId', e.target.value)} /></Field>
@@ -489,7 +489,7 @@ export function InterfaceRegister() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={f} onSort={sortBy} empty={page.data && !page.data.total && !s?.total ? 'No formal interfaces recorded yet. Raise day-to-day queries as interface points.' : 'No interfaces match. Change the search or filters.'} />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={f} onSort={sortBy} empty={page.data && !page.data.total && !s?.total ? 'No formal interfaces recorded yet. Raise day-to-day queries as interface points.' : 'No interfaces match. Change the search or filters.'} />
             <Pager page={f.page} pageSize={25} total={page.data?.total ?? 0} onPage={p => set({ page: p })} />
           </>
         )}
@@ -531,7 +531,7 @@ function InterfaceForm({ item, base, onClose, onSaved }: { item: InterfaceRecord
         <div className="form-grid">
           <Field label="Title" full><input value={v.title} maxLength={160} onChange={e => up('title', e.target.value)} autoFocus /></Field>
           <Field label="Type"><select value={v.type} onChange={e => up('type', e.target.value)}>{INTERFACE_TYPES.map(t => <option key={t}>{t}</option>)}</select></Field>
-          <Field label="Discipline"><input value={v.discipline} maxLength={80} onChange={e => up('discipline', e.target.value)} /></Field>
+          <Field label="Discipline"><DisciplinePicker value={v.discipline} onChange={x => up('discipline', x)} /></Field>
           <Field label="Originating party" hint="Who needs something"><input value={v.originator} maxLength={120} list="int-parties" onChange={e => up('originator', e.target.value)} /></Field>
           <Field label="Receiving party" hint="Who provides it"><input value={v.receiver} maxLength={120} list="int-parties" onChange={e => up('receiver', e.target.value)} /></Field>
           <datalist id="int-parties">{parties.data?.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}</datalist>

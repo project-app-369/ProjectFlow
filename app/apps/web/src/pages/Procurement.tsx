@@ -7,7 +7,7 @@ import { packageFields } from './procFields';
 import { DataTable } from '../DataTable';
 import { fmtDate, initials } from '../format';
 import { Icon } from '../icons';
-import { Toolbar, useListState } from '../Register';
+import { Toolbar, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
@@ -32,6 +32,7 @@ export default function Procurement() {
   const filter = usePick(list, { workPackage: '', buyer: '' });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, workPackage: filter.extra.workPackage, buyer: filter.extra.buyer });
   const page = useQuery({ queryKey: ['procurement-packages', project.id, query], queryFn: () => request<Page<ProcurementPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['procurement-packages', project.id, q], q => request<Page<ProcurementPackage>>(`${base}/packages${q}`));
   const selected: ProcurementPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ProcurementPackage>[]>(() => [
@@ -78,7 +79,7 @@ export default function Procurement() {
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireManage, requireWrite, type Actor } from './auth';
 import { COLUMNS, SHEET } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
+import { disciplineFacets, normaliseDiscipline, withDisciplines } from './disciplines';
 import { agePredicate, pointsInsights, withinPredicate } from './insights';
 import {
   INTERFACE_STATUSES, INTERFACE_TYPES, POINT_STATUSES, allowedNext, interfaceSettled, normPointStatus, pointAllowedNext, pointResolved,
@@ -24,7 +25,7 @@ const sameParty = (a?: string | null, b?: string | null) => !!a && !!b && a.trim
 const interfaceFields = {
   title: z.string().trim().min(1).max(160), type: z.enum(INTERFACE_TYPES),
   originator: z.string().trim().min(1).max(120), receiver: z.string().trim().min(1).max(120),
-  coordinator: txt(120), discipline: txt(80), boundary: txt(1000), requiredInput: txt(1000), requiredOutput: txt(1000),
+  coordinator: txt(120), discipline: txt(80).transform(normaliseDiscipline), boundary: txt(1000), requiredInput: txt(1000), requiredOutput: txt(1000),
   needDate: isoOpt, response: txt(2000), acceptance: txt(1000), evidence: txt(500), milestoneId: txt(40),
 };
 const differentParties = (v: { originator?: string; receiver?: string }) => !sameParty(v.originator, v.receiver);
@@ -38,7 +39,7 @@ const interfaceQuery = listQuery(['id', 'title', 'status', 'needDate', 'originat
 
 /* ---------------- interface points ---------------- */
 const pointFields = {
-  title: txt(200), description: z.string().trim().min(1).max(3000), owner: txt(120), workPackage: txt(60), discipline: txt(40),
+  title: txt(200), description: z.string().trim().min(1).max(3000), owner: txt(120), workPackage: txt(60), discipline: txt(40).transform(normaliseDiscipline),
   originator: z.string().trim().min(1).max(120), target: z.string().trim().min(1).max(120), action: txt(3000),
   queryDate: isoOpt, targetDate: isoOpt, reference: txt(500), resolution: txt(3000), resolvedDocument: txt(300), remarks: txt(1500), interfaceId: txt(40),
 };
@@ -84,7 +85,7 @@ export class InterfacesService {
     const settled = pointResolved(status);
     const end = settled ? (p.resolvedDate ? String(p.resolvedDate) : null) : cutoff;
     return {
-      ...strip(p), title: pointTitle(p), status, settled, allowedNext: pointAllowedNext(status),
+      ...withDisciplines(strip(p)), title: pointTitle(p), status, settled, allowedNext: pointAllowedNext(status),
       overdue: !settled && !!p.targetDate && String(p.targetDate) < cutoff,
       daysLate: !settled && p.targetDate && String(p.targetDate) < cutoff ? daysBetween(String(p.targetDate), cutoff) : null,
       ageDays: p.queryDate && end ? Math.max(0, daysBetween(String(p.queryDate), end)) : null,
@@ -120,7 +121,7 @@ export class InterfacesService {
     const { f, all, rows } = this.pointFilter(projectId, raw);
     return {
       items: paginate(rows, f), total: rows.length, page: f.page, pageSize: f.pageSize,
-      facets: { disciplines: unique(all.map(r => r.discipline)), statuses: [...POINT_STATUSES], parties: unique(all.flatMap(r => [r.originator, r.target])), owners: unique(all.map(r => r.owner)) },
+      facets: { disciplines: disciplineFacets(all), statuses: [...POINT_STATUSES], parties: unique(all.flatMap(r => [r.originator, r.target])), owners: unique(all.map(r => r.owner)) },
     };
   }
 
@@ -154,7 +155,7 @@ export class InterfacesService {
       const rows = this.pointRows(projectId);
       // Like the register: IP-<discipline>-<number>, the number running across all points.
       const n = rows.reduce((m, r) => Math.max(m, Number(/(\d+)$/.exec(String(r.id))?.[1] ?? 0)), 0) + 1;
-      const id = `IP-${(v.discipline ?? 'GEN').toUpperCase().replace(/[^A-Z0-9&]/g, '')}-${String(n).padStart(4, '0')}`;
+      const id = `IP-${(String(v.discipline ?? 'GEN').split(', ')[0]).toUpperCase().replace(/[^A-Z0-9&]/g, '')}-${String(n).padStart(4, '0')}`;
       const now = this.now();
       this.store.appendRows(SHEET.interfacePoints, COLUMNS.interfacePoints, [{ projectId, id, ...v, queryDate: v.queryDate ?? now.slice(0, 10), status: 'Open', createdAt: now, updatedAt: now }]);
       return this.pointGet(projectId, id);

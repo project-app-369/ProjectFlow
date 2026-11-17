@@ -35,7 +35,8 @@ export function toCsv(rows: unknown[][]): string {
 export const listQuery = <S extends readonly [string, ...string[]]>(sortFields: S) =>
   z.object({
     q: z.string().trim().max(100).optional(),
-    discipline: z.string().max(60).optional(),
+    /** One discipline, or several joined with `|`: a row matches any of them. */
+    discipline: z.string().max(800).optional(),
     status: z.string().max(60).optional(),
     sort: z.enum(sortFields).optional(),
     order: z.enum(['asc', 'desc']).default('asc'),
@@ -53,7 +54,7 @@ type AnyRow = Record<string, string | number | null>;
 export function filterAndSort<T extends AnyRow>(rows: T[], f: ListParams, searchKeys: string[], defaultSort: string): T[] {
   const needle = f.q?.toLowerCase();
   const out = rows.filter(r =>
-    (!f.discipline || r.discipline === f.discipline) &&
+    (!f.discipline || (Array.isArray(r.disciplines) ? (r.disciplines as unknown as string[]) : [String(r.discipline)]).some(d => f.discipline!.split('|').includes(d))) &&
     (!f.status || r.status === f.status) &&
     (!needle || searchKeys.some(k => String(r[k] ?? '').toLowerCase().includes(needle))));
   const key = f.sort ?? defaultSort;

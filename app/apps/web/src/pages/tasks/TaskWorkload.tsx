@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { PERSONAL_KEY, request, type Workload, type WorkloadStat } from '../../api';
 import { addDays, addMonths, fmtShort, hours, localToday, monthStart, weekStart } from '../../format';
 import { useApp } from '../../state';
-import { Btn, ErrorBox, Loading, PageHead, Stat } from '../../ui';
+import { Btn, ErrorBox, PageHead, Stat, PageSkeleton } from '../../ui';
 import { useProjectLabels } from './common';
 
 // Projects are categories with no status meaning: the shared categorical palette (--cat-1..8), themed for light and dark.
@@ -27,7 +27,7 @@ export default function TaskWorkload() {
     queryFn: () => request<Workload>(`/tasks/workload?by=${by}&from=${first}&to=${last}&today=${today}`),
   });
 
-  if (q.isPending) return <Loading />;
+  if (q.isPending) return <PageSkeleton />;
   if (q.error) return <ErrorBox error={q.error} />;
   const w = q.data;
   const hrs = (s: WorkloadStat) => (openOnly ? s.openHours : s.hours);

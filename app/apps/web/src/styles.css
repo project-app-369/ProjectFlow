@@ -353,8 +353,7 @@ table.workload th,table.workload td{white-space:nowrap}
 tr.current-period{background:#e9f5f2}tr.total-row td{border-top:2px solid var(--line);background:#f8f9fd}
 
 /* ---------- motion ---------- */
-.fade{animation:appear .3s ease-out}
-@keyframes appear{from{opacity:.3;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* a page change or a data refresh does not replay an entrance: content simply appears (placeholders shimmer only while they stand in) */
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 
 /* ---------- dark theme ---------- */
@@ -1163,9 +1162,9 @@ body.dark .signin{background:radial-gradient(60rem 34rem at 8% -6%,#1a2650 0,tra
    Cards:   1rem x 1.25rem padding, label / value / foot, equal height in a row, foot pinned to the bottom.
    Grid:    cards share the row equally and wrap when a card would drop under 9.5rem, so no row has dead space. */
 :root{--gap:var(--sp-4);--card-px:1.25rem;--card-py:1rem}
-.lintel .fade{display:flex;flex-direction:column;gap:var(--gap)}
-.lintel .fade>*{margin:0!important}
-.lintel .fade>.stats{margin-bottom:0!important}
+.lintel .route{display:flex;flex-direction:column;gap:var(--gap)}
+.lintel .route>*{margin:0!important}
+.lintel .route>.stats{margin-bottom:0!important}
 .page-head,.page-head{margin:0;padding:0;border-bottom:0}
 .lintel main{padding-top:var(--sp-4)}
 
@@ -1525,8 +1524,8 @@ body.dark .sheet-glyph{background:#17352a;color:#7bd69a}
 
 /* ---------- facility schedule and progress ---------- */
 .facility-tabs{display:flex;gap:var(--sp-2);flex-wrap:wrap}
-.facility-tab{display:inline-flex;align-items:baseline;gap:var(--sp-2);border:1px solid var(--control-border);background:var(--surface);color:var(--ink);border-radius:var(--pill);min-height:var(--tap);padding:0 var(--sp-4);cursor:pointer;transition:background .15s ease,border-color .15s ease}
-.facility-tab small{color:var(--muted);font-variant-numeric:tabular-nums}
+.facility-tab{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;gap:var(--sp-2);border:1px solid var(--control-border);background:var(--surface);color:var(--ink);border-radius:var(--pill);min-height:var(--tap);padding:0 var(--sp-4);cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.facility-tab small{line-height:1;color:var(--muted);font-variant-numeric:tabular-nums}
 .facility-tab:hover{border-color:var(--ink)}
 .facility-tab.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .facility-tab.on small{color:color-mix(in srgb,var(--surface) 72%,transparent)}
@@ -1563,3 +1562,117 @@ body.dark .sheet-glyph{background:#17352a;color:#7bd69a}
 .zoom-slider input[type=range]{width:7.5rem;accent-color:var(--lin-blue);cursor:pointer}
 .zoom-slider .icon-btn{min-width:1.75rem;width:1.75rem;height:1.75rem;border:1px solid var(--control-border);border-radius:var(--pill);font-size:1rem;line-height:1;color:var(--ink)}
 @media(max-width:720px){.zoom-slider input[type=range]{width:5rem}}
+
+/* Dashboard KPI cards: overall figures in blue, in-week figures in teal */
+.stat.stat-overall{background:color-mix(in srgb,#4f6bed 9%,var(--surface));border-color:color-mix(in srgb,#4f6bed 28%,var(--line))}
+.stat.stat-week{background:color-mix(in srgb,#0d9488 10%,var(--surface));border-color:color-mix(in srgb,#0d9488 30%,var(--line))}
+.stat.stat-overall .stat-label{color:color-mix(in srgb,#4f6bed 75%,var(--muted))}
+.stat.stat-week .stat-label{color:color-mix(in srgb,#0d9488 80%,var(--muted))}
+
+a.list-card{color:inherit;text-decoration:none}
+a.list-card:hover{background:var(--surface-subtle)}
+a.list-card:hover p{text-decoration:underline}
+
+/* a section's progress card beside its Risks and Concerns cards */
+.section-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:var(--gap);margin-top:var(--gap);align-items:start}
+
+/* every phase side by side in one row, wrapping only when the card is too narrow */
+.phase-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8.5rem),1fr));gap:var(--sp-4) var(--sp-4);padding:5px var(--card-px) var(--card-py)}
+.phase-row .apbar-figures>.apbar-label{white-space:normal;overflow-wrap:anywhere;line-height:1.25;min-height:2.5em}
+
+/* Discipline column and the tick-several discipline filter of the Risk and Issue registers */
+.discipline-cell{display:block;max-width:15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.multi-filter{position:relative}
+details.multi-filter>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:var(--sp-2);padding-left:var(--sp-3);min-width:8.5rem;max-width:15rem}
+details.multi-filter>summary::-webkit-details-marker{display:none}
+details.multi-filter>summary .icon{width:1rem;height:1rem;color:var(--muted);flex:none}
+details.multi-filter>summary span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.multi-pop{position:absolute;z-index:30;top:calc(100% + 4px);left:0;min-width:16rem;max-width:min(24rem,86vw);max-height:20rem;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 12px 32px rgba(15,23,42,.18);padding:var(--sp-2)}
+.multi-opt{display:flex;align-items:flex-start;gap:var(--sp-2);padding:6px var(--sp-2);border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-sm)}
+.multi-opt:hover{background:var(--surface-subtle)}
+.multi-opt input{margin-top:2px;flex:none}
+.discipline-picker{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.chip-toggle{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:2px 10px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.03em;cursor:pointer;min-height:1.75rem}
+.chip-toggle.on{background:color-mix(in srgb,var(--accent,#4f6bed) 14%,var(--surface));border-color:var(--accent,#4f6bed);color:var(--ink)}
+.chip-toggle:disabled{opacity:.6;cursor:default}
+.discipline-cell{font-weight:700;letter-spacing:.02em}
+
+details.multi-form{display:block;width:100%}
+details.multi-form>summary{width:100%;max-width:none;min-height:2.5rem}
+details.multi-form .multi-pop{min-width:max(100%,19rem)}
+details.multi-form{min-width:7rem}
+.multi-opt strong{font-weight:700}
+
+/* ===== facility timeline and milestone network (Timeline.tsx) ===== */
+.tl-scroll{overflow-x:auto;padding-bottom:var(--sp-1)}
+.tl{--tl-label:14rem;min-width:46rem;position:relative}
+.tl-row{display:grid;grid-template-columns:var(--tl-label) 1fr;border-top:1px solid var(--line)}
+.tl-head{border-top:0}
+.tl-label{position:sticky;left:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:var(--sp-2) var(--sp-3) var(--sp-2) 0;background:var(--surface);min-width:0}
+.tl-label strong{font-size:var(--fs-md);overflow-wrap:anywhere}
+.tl-label small{color:var(--muted);font-size:var(--fs-xs);line-height:1.3}
+.tl-track{position:relative;min-height:4.4rem}
+.tl-axis{height:2.5rem;min-height:0}
+.tl-tick{position:absolute;top:.1rem;padding-left:.3rem;border-left:1px solid var(--line);font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;line-height:1.2}
+.tl-cut-label{position:absolute;top:1.3rem;transform:translateX(-50%);padding:0 .35rem;border-radius:99px;background:var(--ink);color:var(--surface);font-size:11px;font-weight:600;white-space:nowrap;z-index:2}
+.tl-grid{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.7}
+.tl-cut{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--ink);opacity:.55;z-index:1}
+.tl-bar{position:absolute;top:calc(50% - .425rem);height:.85rem;border-radius:99px;overflow:hidden;background:color-mix(in srgb,var(--c-plan) 30%,transparent);border:1px solid color-mix(in srgb,var(--c-plan) 65%,transparent)}
+.tl-bar>i{display:block;height:100%;background:var(--c-actual)}
+.tl-work{position:absolute;top:calc(50% + .6rem);height:.3rem;border-radius:99px;background:var(--c-high)}
+.tl-chain{position:absolute;top:calc(50% - 1px);height:2px;background:var(--c-open);opacity:.55}
+.tl-ms{position:absolute;top:50%;width:.8rem;height:.8rem;transform:translate(-50%,-50%) rotate(45deg);border:2px solid var(--surface);background:var(--c-open);z-index:2;cursor:help}
+.tl-ms.major{width:1.05rem;height:1.05rem}
+.tl-ms.done,.k.ms.done{background:var(--c-good)}
+.tl-ms.overdue,.k.ms.overdue{background:var(--c-critical)}
+.tl-ms.soon,.k.ms.soon{background:var(--c-warn)}
+.tl-ms.planned,.k.ms.planned{background:var(--c-open)}
+.tl-ms:hover,.tl-ms:focus-visible{outline:2px solid var(--ink);outline-offset:1px;z-index:4}
+.tl-row.later .tl-label{opacity:.65}
+.tl-later{position:absolute;left:.5rem;top:calc(50% - .6rem);color:var(--muted);font-size:var(--fs-sm)}
+.tl-legend{display:flex;flex-wrap:wrap;gap:.25rem 1rem;list-style:none;margin:var(--sp-3) 0 0;padding:0;font-size:var(--fs-xs);color:var(--muted)}
+.tl-legend li{display:flex;align-items:center;gap:.4rem}
+.k{display:inline-block;flex:none}
+.k.bar{width:1.4rem;height:.6rem;border-radius:99px;background:linear-gradient(90deg,var(--c-actual) 55%,color-mix(in srgb,var(--c-plan) 30%,transparent) 55%);border:1px solid color-mix(in srgb,var(--c-plan) 65%,transparent)}
+.k.work{width:1.4rem;height:.3rem;border-radius:99px;background:var(--c-high)}
+.k.ms{width:.7rem;height:.7rem;transform:rotate(45deg)}
+.k.ms.major{width:.9rem;height:.9rem}
+@media (max-width:600px){.tl{--tl-label:7.5rem}}
+
+/* ===== critical path network page ===== */
+.cpn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:var(--gap)}
+.float-chip{display:inline-block;min-width:3rem;text-align:center}
+@media (min-width:721px){.table-wrap th.num,.table-wrap td.num{text-align:right;font-variant-numeric:tabular-nums}.table-wrap thead tr+tr th{border-top:0}}
+
+/* ===== dialogs opened in a window of their own (Modal popout) ===== */
+.popout-root{min-height:100vh}
+.modal-backdrop.popout{position:static;display:block;padding:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;animation:none}
+.modal.popout{width:100%;max-width:none;height:100vh;border:0;border-radius:0;box-shadow:none;animation:none}
+.dialog-head h2{flex:1;min-width:0}
+
+/* page title one step smaller; breadcrumb steps that lead somewhere are links */
+.page-head h1{font-size:var(--fs-2xl);letter-spacing:-.025em;margin:var(--sp-1) 0}
+.breadcrumb .crumb-link{color:inherit;text-decoration:none;border-radius:var(--r-sm)}
+.breadcrumb .crumb-link:hover{color:var(--brand);text-decoration:underline}
+.breadcrumb .crumb-link:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* two charts in one row (Milestones) */
+.ins-charts.in-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ins-charts.in-row>.ins-panel.ins-panel.ins-panel{grid-column:auto!important;order:0}
+@media (max-width:1023px){.ins-charts.in-row{grid-template-columns:minmax(0,1fr)}}
+.roadmap-tools{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap}
+.roadmap-tools label.check{display:inline-flex;gap:.4rem;align-items:center;font-size:var(--fs-sm);color:var(--muted)}
+
+/* ---------- loading placeholders ---------- */
+.sk{display:block;border-radius:var(--r);background:linear-gradient(90deg,var(--soft) 25%,var(--surface-subtle) 50%,var(--soft) 75%);background-size:300% 100%;animation:sk-shimmer 1.4s linear infinite}
+@keyframes sk-shimmer{from{background-position:100% 0}to{background-position:0 0}}
+.sk-block{display:grid;gap:var(--sp-3);padding:var(--sp-4) 0}
+.sk-line{height:.9rem}
+.sk-page{display:grid;gap:var(--gap)}
+.sk-title{height:2rem;width:min(18rem,60%)}
+.sk-card{min-height:6.25rem;border-radius:var(--r-lg)}
+.sk-panel{min-height:14rem;border-radius:var(--r-lg)}
+.sk-chart{min-height:300px;display:grid}
+.sk-chart>.sk-panel{min-height:300px}
+.sk-table{display:grid;gap:var(--sp-2);padding:var(--sp-3)}
+.sk-row{height:2.25rem}

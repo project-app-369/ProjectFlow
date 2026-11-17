@@ -6,18 +6,20 @@ import { DataTable } from '../DataTable';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { SortBy, useListState } from '../Register';
+import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, ErrorBox, PageHead, Pager } from '../ui';
 import { IssueDrawer, ISSUE_PRIORITIES, ISSUE_STATUSES } from './IssueDrawer';
 import { useDeepLink } from '../deepLink';
+import { disciplineTitle } from '../disciplines';
+import { MultiFilter } from './governance';
 
 const PAGE_SIZE = 50;
 const PRIORITY_ICON: Record<string, string> = { Critical: 'urgency-urgent', High: 'urgency-high', Medium: 'urgency-normal', Low: 'urgency-low' };
 const STATUS_ICON: Record<string, string> = { 'Not started': 'status-backlog', Pending: 'status-planned', 'In progress': 'status-ongoing', Completed: 'status-completed' };
 const WINDOWS: [string, string][] = [['overdue', 'Overdue'], ['30', 'Due within 30 days'], ['45', 'Due within 45 days'], ['60', 'Due within 60 days'], ['none', 'No due date']];
 
-const SORTS: [string, string][] = [['dueDate', 'Due date'], ['startDate', 'Start date'], ['updatedAt', 'Last updated'], ['priorityRank', 'Priority'], ['discipline', 'Team'], ['status', 'Status'], ['title', 'Title'], ['id', 'Issue no.']];
+const SORTS: [string, string][] = [['dueDate', 'Due date'], ['startDate', 'Start date'], ['updatedAt', 'Last updated'], ['priorityRank', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['title', 'Title'], ['id', 'Issue no.']];
 
 interface IssuePage extends Page<Issue> { facets: Page<Issue>['facets'] & { priorities: string[]; pics: string[] } }
 
@@ -48,6 +50,7 @@ export default function Issues() {
   const extra = { priority: filter.extra.priority, pic: filter.extra.pic, within: filter.extra.within };
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...extra });
   const page = useQuery({ queryKey: ['issues', project.id, query], queryFn: () => request<IssuePage>(`${base}${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['issues', project.id, q], q => request<IssuePage>(`${base}${q}`));
   const facets = page.data?.facets;
   const suggestions = useMemo(() => [...new Set([...(facets?.pics ?? []), ...(me?.email ? [String(me.email).toLowerCase()] : [])])].sort(), [facets, me]);
   const setExtra = (k: 'priority' | 'pic' | 'within', v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
@@ -64,10 +67,11 @@ export default function Issues() {
       cell: ({ row: { original: i } }) => (
         <button className="link-button" onClick={() => setOpen(i.id)}>
           <strong style={{ display: 'block', maxWidth: 560, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={i.title}>{i.title}</strong>
-          <small className="muted"><span className="mono">{i.id}</span>{i.discipline ? ` · ${i.discipline}` : ''}</small>
+          <small className="muted"><span className="mono">{i.id}</span></small>
         </button>
       ),
     },
+    { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: i } }) => (i.discipline ? <span className="discipline-cell" title={disciplineTitle(i.discipline)}>{i.discipline}</span> : <span className="muted">—</span>) },
     { id: 'priority', header: 'PRI', meta: { sortKey: 'priorityRank' }, cell: ({ row: { original: i } }) => <span className="issue-icon" title={`${i.priority} priority`}><Icon name={PRIORITY_ICON[i.priority]} /><span className="sr-only">{i.priority}</span></span> },
     {
       id: 'pic', header: 'PIC',
@@ -102,9 +106,7 @@ export default function Issues() {
             <IconFilter icon={PRIORITY_ICON[filter.extra.priority] ?? 'urgency-normal'} label="Filter by priority" value={filter.extra.priority} onChange={v => setExtra('priority', v)}>
               <option value="">All priorities</option>{ISSUE_PRIORITIES.map(p => <option key={p}>{p}</option>)}
             </IconFilter>
-            <IconFilter icon="layers" label="Filter by team" value={list.state.discipline} onChange={v => list.set({ discipline: v })}>
-              <option value="">All teams</option>{(facets?.disciplines ?? []).map(d => <option key={d}>{d}</option>)}
-            </IconFilter>
+            <MultiFilter icon="layers" label="Filter by discipline (tick one or more)" allLabel="All disciplines" options={facets?.disciplines ?? []} value={list.state.discipline} onChange={v => list.set({ discipline: v })} />
             <IconFilter icon="people" label="Filter by person in charge" value={filter.extra.pic} onChange={v => setExtra('pic', v)}>
               <option value="">Everyone</option><option value="none">Nobody assigned</option>{(facets?.pics ?? []).map(p => <option key={p}>{p}</option>)}
             </IconFilter>
@@ -119,7 +121,7 @@ export default function Issues() {
         <FilterChips chips={filter.chips.filter(([k]) => k !== 'priority' && k !== 'pic' && k !== 'within')} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No issue matches. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No issue matches. Change the search or filters." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}

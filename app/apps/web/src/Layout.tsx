@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiMode, request, type ExpeditingSummary, type ModuleInfo, type WorkspaceId } from './api';
 import { CutoffControl } from './CutoffControl';
@@ -11,7 +11,7 @@ import { startMobileTables } from './mobileTables';
 import { startAutoGrow } from './autoGrow';
 import { ProfileMenu } from './ProfileMenu';
 import { InstallButton } from './pwa';
-import { Btn, ErrorBoundary, Modal } from './ui';
+import { Btn, ErrorBoundary, Modal, PageSkeleton } from './ui';
 
 const WS_ICON: Record<WorkspaceId, string> = { personal: 'user', epcic: 'building', governance: 'shield', reports: 'book' };
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
@@ -137,7 +137,7 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
         <ProfileMenu flags={flags} />
       </div>
       {open && (
-        <Modal title="Notification center" onClose={() => setOpen(false)} actions={<Btn onClick={() => setOpen(false)}>Close</Btn>}>
+        <Modal popout={false} title="Notification center" onClose={() => setOpen(false)} actions={<Btn onClick={() => setOpen(false)}>Close</Btn>}>
           <div className="dialog-body">
             {summary.data?.flags.length
               ? summary.data.flags.map(f => <div key={f.id} className="timeline-event"><strong>{f.name || f.code}</strong><small>{f.vendor || f.code} · {f.status}</small></div>)
@@ -190,7 +190,7 @@ export function Layout() {
       {menu && <div className="scrim" onClick={() => setMenu(false)} aria-hidden="true" />}
       <div className="workspace lintel">
         <Header toggleMenu={() => (isDesktop() ? prefs.setNavCollapsed(!prefs.navCollapsed) : setMenu(m => !m))} menuOpen={menu} />
-        <main id="main" tabIndex={-1}><div className="fade" key={pathname}><NotMember /><SnapshotBanner /><ErrorBoundary><Outlet /></ErrorBoundary></div></main>
+        <main id="main" tabIndex={-1}><div className="route" key={pathname}><NotMember /><SnapshotBanner /><ErrorBoundary><Suspense fallback={<PageSkeleton />}><Outlet /></Suspense></ErrorBoundary></div></main>
       </div>
     </>
   );

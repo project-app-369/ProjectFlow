@@ -5,7 +5,7 @@ import { ActualPlanBar } from './ui';
 describe('actual versus plan progress', () => {
   it('renders the reference values, actual fill and independent plan marker', () => {
     const html = renderToStaticMarkup(<ActualPlanBar actual={47.6} plan={50} />);
-    expect(html).toContain('47.6% actual, 50.0% plan, -2.4 pp');
+    expect(html).toContain('47.6% actual, 50.0% plan, -2.4%');
     expect(html).toContain('apbar-fill behind');
     expect(html).toContain('width:47.6%');
     expect(html).toContain('left:50%');

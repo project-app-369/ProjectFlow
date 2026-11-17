@@ -31,8 +31,25 @@ SEED = os.path.join(ROOT, 'app', 'apps', 'api', 'seed', 'sttp2b.json')
 
 
 def book(prefix):
-    path = next(p for p in sorted(glob.glob(os.path.join(BASE, '*.xlsx'))) if os.path.basename(p).startswith(prefix) and not os.path.basename(p).startswith('~$'))
+    """The newest workbook starting with `prefix` under the Progress folder (its sub-folders hold earlier cut-offs); `book.last` is its path."""
+    paths = [p for p in glob.glob(os.path.join(BASE, '**', '*.xlsx'), recursive=True)
+             if os.path.basename(p).startswith(prefix) and not os.path.basename(p).startswith('~$') and 'CPN' not in os.path.basename(p)]
+    path = max(paths, key=lambda p: (cutoff_of(p), -len(p)))
+    book.last = path
     return openpyxl.load_workbook(path, read_only=True, data_only=True)
+
+
+def cutoff_of(path):
+    """The cut-off a workbook is for, from the date in its name (20261113, 261030) or in its folder (30.10.2026)."""
+    m = re.search(r'(20\d{2})(\d{2})(\d{2})', os.path.basename(path)) or re.search(r'_(\d{2})(\d{2})(\d{2})\b', os.path.basename(path))
+    if m:
+        y, mo, d = m.groups()
+        return f"{y if len(y) == 4 else '20' + y}-{mo}-{d}"
+    m = re.search(r'(\d{2})\.(\d{2})\.(20\d{2})', path)
+    if m:
+        return f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
+    m = re.search(r'(\d{2})\.(\d{2})\b', os.path.basename(path))
+    return f'2026-{m.group(2)}-{m.group(1)}' if m else '2026-10-30'
 
 
 def day(v):
@@ -45,7 +62,7 @@ def num(v, scale=1.0):
 
 curves = []  # facilityId, scope, date, plan, forecast, actual
 scopes = []  # facilityId, scope, label, weight (share of the facility, percent)
-LABEL = {'overall': 'Overall', 'construction': 'Construction', 'engineering': 'Engineering', 'procurement': 'Procurement', 'precom': 'Pre-commissioning', 'documents': 'Final documents',
+LABEL = {'overall': 'Overall', 'construction': 'Construction', 'engineering': 'Engineering', 'procurement': 'Procurement', 'precom': 'Pre-com & commissioning', 'documents': 'Final documents',
          'topsides-fabrication': 'Topsides fabrication', 'ehouse-fabrication': 'E-house fabrication', 'pile': 'Pile', 'conductor': 'Conductor', 'fabrication': 'LQ module fabrication'}
 
 
@@ -61,6 +78,10 @@ def add(facility, scope, dates, plan, forecast=None, actual=None, actual_until=N
     first = next((i for i in plan_ix if plan[i] and plan[i] > 0), plan_ix[0] if plan_ix else 0)
     last = next((i for i in plan_ix if plan[i] is not None and plan[i] >= 99.95), plan_ix[-1] if plan_ix else len(dates) - 1)
     lo, hi = max(0, first - 2), min(len(dates) - 1, last + 1)
+    # keep the weeks the actual has been reported for, even past the week the plan reaches 100 percent
+    for i, d in enumerate(dates):
+        if d and actual and i < len(actual) and actual[i] is not None and (actual_until is None or d <= actual_until):
+            hi = max(hi, i)
     for i, d in enumerate(dates):
         if not d or i < lo or i > hi:
             continue
@@ -78,10 +99,12 @@ def add(facility, scope, dates, plan, forecast=None, actual=None, actual_until=N
 
 # ---------------------------------------------------------------- construction curves per WBS node (all facilities)
 wb6 = book('6 - STTP2B')
+CUTOFF6 = cutoff_of(book.last)
+print('construction workbook', os.path.basename(book.last), CUTOFF6)
 ws = wb6['S-Curve Data']
 grid = list(ws.iter_rows(min_row=1, max_row=130, max_col=224, values_only=True))
 dates6 = [day(v) for v in grid[2][11:222]]
-CUTOFF = '2026-10-30'
+CUTOFF = '2026-10-30'  # the jacket, bridge and LQM#2 workbooks are still those of this cut-off
 
 
 def row6(r, scale=100.0):
@@ -91,11 +114,13 @@ def row6(r, scale=100.0):
 def curve6(facility, scope, plan_row):
     # rows come in blocks: early plan, late plan, forecast, actual
     plan, forecast, actual = row6(plan_row), row6(plan_row + 2), row6(plan_row + 3)
-    return add(facility, scope, dates6, plan, forecast, actual, actual_until=CUTOFF)
+    # the sheet carries zeros after the last reported week: the actual stops at the last week with progress
+    reported = [d for d, v in zip(dates6, actual) if d and v and v > 0 and d <= CUTOFF6]
+    return add(facility, scope, dates6, plan, forecast, actual, actual_until=max(reported) if reported else CUTOFF6)
 
 
 CONSTRUCTION = [
-    ('cgf-topsides', 'construction', 5), ('cgf-topsides', 'topsides-fabrication', 32), ('cgf-topsides', 'ehouse-fabrication', 36),
+    ('cgf-topsides', 'topsides-fabrication', 32), ('cgf-topsides', 'ehouse-fabrication', 36),
     ('cgf-jacket', 'construction', 108),
     ('pile-conductor', 'pile', 112), ('pile-conductor', 'conductor', 116),
     ('bridge', 'construction', 120),
@@ -149,6 +174,36 @@ LQ = {'op': 52, 'oa': 53, 'ep': 40, 'ea': 41, 'pp': 42, 'pa': 43, 'cp': 44, 'ca'
 d, sr = trim(*weekly(ws, 39, 4, LQ))
 phases('lqm2', d, sr, {'overall': ('op', 'oa'), 'engineering': ('ep', 'ea'), 'procurement': ('pp', 'pa'), 'precom': ('rp', 'ra'), 'documents': ('dp', 'da')}, weights_of(ws, LQ))
 
+# ---------------------------------------------------------------- work package curves (progress report): overall and phases
+def drop(facility, keys):
+    global curves, scopes
+    curves[:] = [c for c in curves if not (c['facilityId'] == facility and c['scope'] in keys)]
+    scopes[:] = [x for x in scopes if not (x['facilityId'] == facility and x['scope'] in keys)]
+
+
+WP_IDS = {'WP2': {'overall': '1', 'engineering': '1.1', 'procurement': '1.2', 'construction': '1.3', 'precom': '1.4'},
+          'WP4': {'overall': '3', 'engineering': '3.1', 'procurement': '3.2', 'construction': '3.3', 'precom': '3.4'}}
+for facility, wp, replaces in [('cgf-topsides', 'WP2', ['overall', 'engineering', 'procurement', 'construction', 'precom']), ('lqm2', 'WP4', ['overall', 'engineering', 'procurement', 'construction', 'precom'])]:
+    wbr = book('1 - STTP2B - Progress Report')
+    cut = cutoff_of(book.last)
+    grid = list(wbr['Overall WP (W)'].iter_rows(min_row=1, max_row=90, max_col=215, values_only=True))
+    hdr = grid[6]
+    first = next(j for j, v in enumerate(hdr) if isinstance(v, (datetime.datetime, datetime.date)))
+    dts = [day(v) for v in hdr[first:]]
+    ser = {}
+    for r in grid[7:]:
+        if r[25] in ('PLANNED', 'ACTUAL') and r[26] == wp:
+            ser[(str(r[23]), r[25])] = [num(v) for v in r[first:]]
+    drop(facility, replaces)
+    for key in replaces:
+        ident = WP_IDS[wp][key]
+        plan, actual = ser.get((ident, 'PLANNED')), ser.get((ident, 'ACTUAL'))
+        if plan is None:
+            continue
+        add(facility, key, dts, plan, None, actual, actual_until=cut)
+        scope(facility, key)
+    print(f'  {facility:15s} work package {wp}: {", ".join(replaces)} at {cut} ({os.path.basename(book.last)})')
+
 # ---------------------------------------------------------------- WBS: schedule (R-WBS) and progress at the cut-off (Level 3 (WBS))
 ws = wb6['R-WBS']
 schedule = {}
@@ -191,7 +246,7 @@ for facility, prefixes in FACILITY_PREFIXES.items():
             'weight': pr.get('weight'), 'plan': pr.get('plan'), 'actual': pr.get('actual'), 'shared': 'Yes' if any(code == p or code.startswith(p + '.') for p in SHARED) else 'No',
         })
 
-out = {'cutoff': CUTOFF, 'source': 'STTP2B progress monitoring workbooks, cut-off 30 Oct 2026', 'scopes': scopes, 'curves': curves, 'wbs': wbs_rows}
+out = {'cutoff': CUTOFF6, 'source': f'STTP2B progress monitoring workbooks: construction curves, WBS and the CGF Topsides and LQM#2 work package curves at {CUTOFF6}; jacket and bridge phase curves at {CUTOFF}', 'scopes': scopes, 'curves': curves, 'wbs': wbs_rows}
 # merged into the shared seed file as `facilityProgress`; every other key is left exactly as it was
 with open(SEED, encoding='utf-8') as f:
     seed = json.load(f)

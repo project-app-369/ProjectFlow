@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireManage, requireWrite, type Actor } from './auth';
 import { COLUMNS, SHEET } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
+import { disciplineFacets, withDisciplines } from './disciplines';
 import { risksInsights, withinPredicate } from './insights';
 import {
   IMPACT_DIMENSIONS, MATRIX_V1, RISK_STATUSES, RISK_STRATEGIES, isActiveRisk, levelRank, matrixFromRows, normRating, normRiskStatus, normStrategy, rate,
@@ -90,7 +91,7 @@ export class RisksService {
     const active = isActiveRisk(status);
     const ratings = Object.fromEntries(([['pre', pre], ['post', post]] as const).flatMap(([p, x]) => [[`${p}Probability`, x.probability], ...IMPACT_DIMENSIONS.map(([k]) => [`${p}${k}`, x.dimensions[k.toLowerCase()]])]));
     return {
-      ...rest, ...ratings, status, strategy: normStrategy(r.strategy), external: String(r.external ?? '').toLowerCase() === 'yes',
+      ...withDisciplines(rest), ...ratings, status, strategy: normStrategy(r.strategy), external: String(r.external ?? '').toLowerCase() === 'yes',
       owners: ownersOf(r.owner), active,
       preSeverity: pre.severity, preScore: pre.score, preLevel: pre.level, preWorst: pre.worst,
       postSeverity: post.severity, postScore: post.score, postLevel: post.level, postWorst: post.worst,
@@ -161,7 +162,7 @@ export class RisksService {
     return {
       items: paginate(rows, f), total: rows.length, page: f.page, pageSize: f.pageSize,
       facets: {
-        disciplines: unique(all.map(r => r.discipline)), categories: unique(all.map(r => r.category)), statuses: [...RISK_STATUSES], levels: [...m.levels].reverse(),
+        disciplines: disciplineFacets(all), categories: unique(all.map(r => r.category)), statuses: [...RISK_STATUSES], levels: [...m.levels].reverse(),
         owners: unique(all.flatMap(r => r.owners)), strategies: [...RISK_STRATEGIES],
       },
     };

@@ -3,6 +3,7 @@ import { BarChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useChart } from './useChart';
 import { useEffect, useRef } from 'react';
 import type { InsightChart } from './api';
 import { usePrefs } from './state';
@@ -19,9 +20,10 @@ export default function InsightChartView({ chart, onPick, compact }: { chart: In
   const horizontal = chart.layout === 'bar';
   const height = horizontal ? (compact ? Math.max(130, chart.categories.length * 22 + 40) : Math.max(180, chart.categories.length * 30 + 60)) : compact ? 200 : 280;
 
+  const c = useChart(el);
+
   useEffect(() => {
-    if (!el.current) return;
-    const c = echarts.init(el.current);
+    if (!c) return;
     const theme = chartTheme();
     const { muted, line } = theme;
     const names = chart.categories.map(k => (chart.categoryKind === 'month' ? month(k) : k));
@@ -48,14 +50,13 @@ export default function InsightChartView({ chart, onPick, compact }: { chart: In
       yAxis: horizontal ? cat : val,
       series,
     }, true);
+    c.off('click');
+    c.getZr().off('mousemove');
     if (onPick && chart.filterKey) {
       c.on('click', (p: { dataIndex: number }) => onPick(chart.filterValues?.[p.dataIndex] ?? chart.categories[p.dataIndex]));
       c.getZr().on('mousemove', () => { c.getZr().setCursorStyle('pointer'); });
     }
-    const ro = new ResizeObserver(() => c.resize());
-    ro.observe(el.current);
-    return () => { ro.disconnect(); c.dispose(); };
-  }, [chart, dark, onPick, horizontal]);
+  }, [c, chart, dark, onPick, horizontal]);
 
   const summary = chart.categories.map((k, i) => `${chart.categoryKind === 'month' ? month(k) : k}: ${chart.series.map(s => `${fmt(s.data[i] ?? 0)} ${s.name}`).join(', ')}`).join('; ');
   return <div className="chart"><div ref={el} role="img" aria-label={`${chart.title}. ${summary}`} style={{ minHeight: height }} /></div>;

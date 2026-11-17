@@ -5,10 +5,11 @@ import { apiMode, downloadCsv, request, type Insights, type Milestone, type Mile
 import { RecordDrawer, suggest, type FieldDef } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
+import { Timeline, type TimelineRow } from '../Timeline';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { Toolbar, useListState } from '../Register';
+import { Toolbar, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { Badge, Btn, ErrorBox, PageHead, Pager, Deferred } from '../ui';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -31,6 +32,43 @@ const milestoneFields = (sug: { facility: string[]; sub: string[] }, creating: b
   { key: 'comment', label: 'Comment', kind: 'textarea', max: 500 },
 ];
 
+/** Every milestone of the project on one time axis, a lane per facility; the facility filter narrows it to one lane. */
+function ProjectRoadmap({ base, projectId, cutoff }: { base: string; projectId: string; cutoff: string }) {
+  const [facility, setFacility] = useState('');
+  const [equipment, setEquipment] = useState(false);
+  const all = useQuery({ queryKey: ['milestones-roadmap', projectId], queryFn: () => request<Page<Milestone>>(`${base}?pageSize=200&sort=planBaseline&order=asc`) });
+  const items = all.data?.items ?? [];
+  const facilities = useMemo(() => [...new Set(items.map(m => m.facility ?? 'Project'))].sort(), [items]);
+  const rows = useMemo<TimelineRow[]>(() => {
+    const keep = items.filter(m => (equipment || m.kind !== 'Equipment') && (!facility || (m.facility ?? 'Project') === facility));
+    const lanes = new Map<string, Milestone[]>();
+    for (const m of keep) lanes.set(m.facility ?? 'Project', [...(lanes.get(m.facility ?? 'Project') ?? []), m]);
+    const first = (ms: Milestone[]) => ms.map(m => m.actual ?? m.forecast ?? m.planSub ?? m.planBaseline ?? '9').sort()[0];
+    return [...lanes.entries()].sort(([, a], [, b]) => first(a).localeCompare(first(b))).map(([name, ms]) => ({
+      id: name, label: name, sub: `${ms.filter(m => m.status === 'Done').length}/${ms.length} achieved${ms.some(m => m.status === 'Overdue') ? ` · ${ms.filter(m => m.status === 'Overdue').length} overdue` : ''}`,
+      milestones: ms.map(m => ({ id: m.id, description: m.description, baseline: m.planBaseline, working: m.planSub, forecast: m.forecast, actual: m.actual, status: m.status, major: !!(m as { major?: boolean }).major })),
+    }));
+  }, [items, facility, equipment]);
+  const count = rows.reduce((n, r) => n + r.milestones.length, 0);
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div><h2>Project roadmap</h2><p>{count} milestones, a lane per facility, at their achieved, forecast or working-schedule date · cut-off {fmtDate(cutoff)}</p></div>
+        <div className="roadmap-tools">
+          <select className="filter" aria-label="Facility" value={facility} onChange={e => setFacility(e.target.value)}>
+            <option value="">All facilities</option>
+            {facilities.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <label className="check"><input type="checkbox" checked={equipment} onChange={e => setEquipment(e.target.checked)} /> Equipment installation</label>
+        </div>
+      </div>
+      <div className="panel-content">
+        {all.error ? <ErrorBox error={all.error} /> : all.isPending ? <div className="empty">Loading…</div> : rows.length ? <Timeline rows={rows} cutoff={cutoff} label="Project roadmap of milestones by facility" /> : <div className="empty">No milestone for this selection.</div>}
+      </div>
+    </section>
+  );
+}
+
 /** Key milestones: loaded from the project's Key Milestones workbook, then kept up to date here and on the sheet. */
 export default function Milestones() {
   const { project } = useApp();
@@ -49,6 +87,7 @@ export default function Milestones() {
   const extra = { within: filter.extra.within, facility: filter.extra.facility };
   const query = list.query({ page: list.state.page, pageSize: grouped ? 200 : PAGE_SIZE, ...extra });
   const page = useQuery({ queryKey: ['milestones', project.id, query], queryFn: () => request<Page<Milestone>>(`${base}${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['milestones', project.id, q], q => request<Page<Milestone>>(`${base}${q}`));
   const editing: Milestone | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   const items = page.data?.items ?? [];
 
@@ -94,7 +133,8 @@ export default function Milestones() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${csvQuery}`, 'milestones.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New milestone</Btn>}
         </>} />
-      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} />
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair chartsInRow />
+      <Deferred height="24rem"><ProjectRoadmap base={base} projectId={project.id} cutoff={project.cutoff} /></Deferred>
       <div className="panel">
         <div className="panel-head">
           <div><h2>Milestone register</h2><p>{canEdit ? 'Select a milestone to update its dates, or add one' : 'Select a milestone to see its dates'}</p></div>
@@ -124,7 +164,7 @@ export default function Milestones() {
           }) : <div className="empty">No milestones match.</div>
         ) : (
           <>
-            <DataTable columns={columns} data={items} state={list.state} onSort={list.toggleSort} empty="No milestones match." />
+            <DataTable columns={columns} data={items} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No milestones match." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}
@@ -133,7 +173,7 @@ export default function Milestones() {
         <RecordDrawer title={editing === 'new' ? 'New milestone' : `${editing.id} · Milestone`} size="md" base={base} id={editing === 'new' ? undefined : editing.id}
           record={editing === 'new' ? null : editing as never} fields={milestoneFields(drawerSuggestions, editing === 'new')} canDelete={access.canManage && apiMode === 'sheets'}
           deleteNote="The milestone leaves the register and the sheet. A milestone that a risk or interface is linked to cannot be deleted until it is unlinked."
-          invalidate={['milestones', 'milestone-summary', 'insights', 'dashboard', 'risks', 'interfaces']} onClose={() => setEditing(null)} />
+          invalidate={['milestones', 'milestones-roadmap', 'milestone-summary', 'insights', 'dashboard', 'risks', 'interfaces']} onClose={() => setEditing(null)} />
       )}
     </>
   );

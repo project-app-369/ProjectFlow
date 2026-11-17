@@ -48,6 +48,26 @@ function procurementRows(register: RawRow[], plan: RawRow[]): Row[] {
 interface FacilityProgressSeed { curves: RawRow[]; scopes: RawRow[]; wbs: RawRow[] }
 const facilityOf = (raw: SeedData): FacilityProgressSeed => ((raw as unknown as { facilityProgress?: FacilityProgressSeed }).facilityProgress ?? { curves: [], scopes: [], wbs: [] });
 
+interface CpnSeed { cutoff?: string; overall?: RawRow | null; workPackages?: RawRow[]; curve?: RawRow[] }
+/** The critical-path-network progress: work packages and the total as rows, and its weekly curve as the curve of the pseudo-facility "cpn". */
+function cpnOf(raw: SeedData): { items: RawRow[]; curves: RawRow[] } {
+  const cpn = (raw as unknown as { cpn?: CpnSeed }).cpn;
+  if (!cpn) return { items: [], curves: [] };
+  const items = [...(cpn.workPackages ?? []).map(w => ({ ...w, kind: 'Work package' })), ...(cpn.overall ? [{ code: 'CPN', name: 'CPN overall', kind: 'Overall', ...cpn.overall }] : [])];
+  return { items, curves: (cpn.curve ?? []).map(c => ({ facilityId: 'cpn', scope: 'overall', date: c.date, plan: c.plan ?? null, forecast: null, actual: c.actual ?? null })) };
+}
+const workingScheduleOf = (raw: SeedData): RawRow[] => (raw as unknown as { workingSchedule?: RawRow[] }).workingSchedule ?? [];
+
+/** Adds the working schedule and the CPN progress to a workbook made before they existed. */
+export function appendSeedSchedule(store: Store, raw: SeedData) {
+  const pairs: [keyof typeof COLUMNS & keyof typeof SHEET, RawRow[]][] = [['workingSchedule', workingScheduleOf(raw)], ['cpnItems', cpnOf(raw).items], ['scurveWeekly', ((raw.schedule as { scurveWeekly?: RawRow[] }).scurveWeekly ?? [])]];
+  for (const [key, rows] of pairs) {
+    if (rows.length && !store.readRows(SHEET[key], COLUMNS[key]).some(r => r.projectId === PROJECT_ID)) store.appendRows(SHEET[key], COLUMNS[key], rows.map(r => ({ projectId: PROJECT_ID, ...r })) as unknown as Row[]);
+  }
+  const curves = cpnOf(raw).curves;
+  if (curves.length && !store.readRows(SHEET.facilityCurves, COLUMNS.facilityCurves).some(r => r.facilityId === 'cpn')) store.appendRows(SHEET.facilityCurves, COLUMNS.facilityCurves, curves.map(r => ({ projectId: PROJECT_ID, ...r })) as unknown as Row[]);
+}
+
 /** Loads the per-facility progress into sheets that have no rows for the project yet (a workbook made before this module existed). */
 export function appendSeedFacilityProgress(store: Store, raw: SeedData) {
   const f = facilityOf(raw);
@@ -115,6 +135,7 @@ export function seedRows(raw: SeedData) {
   return {
     project: [{ id: pid, code: raw.project.code, name: raw.project.name, shortName: 'STTP2B', client: null, contract: raw.project.contract, location: null, lifecycle: 'Active', cutoff: raw.project.cutoff }] as Row[],
     scurve: withProject(raw.schedule.scurve),
+    scurveWeekly: withProject(((raw.schedule as { scurveWeekly?: RawRow[] }).scurveWeekly ?? [])),
     workPackages: withProject(raw.schedule.workPackages),
     milestones: withProject((raw as unknown as { milestones: RawRow[] }).milestones.map(m => ({ ...m, facility: m.facility ?? milestoneFacility(String(m.id)) }))),
     procurement: procurementRows(raw.procurement as RawRow[], (raw as unknown as { procurementPlan?: RawRow[] }).procurementPlan ?? []),
@@ -122,7 +143,9 @@ export function seedRows(raw: SeedData) {
     materialBalance: withProject(((raw as unknown as { materialBalance?: RawRow[] }).materialBalance ?? []).map((r, i) => ({ id: `MB-${String(i + 1).padStart(3, '0')}`, ...r }))),
     issues: (raw as unknown as { issues?: RawRow[] }).issues ?? [],
     phaseProgress: withProject(((raw as unknown as { phaseProgress?: RawRow[] }).phaseProgress ?? []).map((r, i) => ({ id: `PH-${String(i + 1).padStart(2, '0')}`, reportDate: (raw as unknown as { progressCutoff?: string }).progressCutoff ?? null, ...r }))),
-    facilityCurves: withProject(facilityOf(raw).curves),
+    facilityCurves: withProject([...facilityOf(raw).curves, ...cpnOf(raw).curves]),
+    workingSchedule: withProject(workingScheduleOf(raw)),
+    cpnItems: withProject(cpnOf(raw).items),
     facilityScopes: withProject(facilityOf(raw).scopes),
     facilityWbs: withProject(facilityOf(raw).wbs),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
@@ -215,8 +238,8 @@ export function ensureAllSheets(store: Store) {
   const sheets: [string, readonly { key: string; type: string }[]][] = [
     [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.partyAccess, COLUMNS.partyAccess], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
-    [SHEET.facilityCurves, COLUMNS.facilityCurves], [SHEET.facilityScopes, COLUMNS.facilityScopes], [SHEET.facilityWbs, COLUMNS.facilityWbs],
-    [SHEET.scurve, COLUMNS.scurve], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
+    [SHEET.facilityCurves, COLUMNS.facilityCurves], [SHEET.facilityScopes, COLUMNS.facilityScopes], [SHEET.facilityWbs, COLUMNS.facilityWbs], [SHEET.workingSchedule, COLUMNS.workingSchedule], [SHEET.cpnItems, COLUMNS.cpnItems],
+    [SHEET.scurve, COLUMNS.scurve], [SHEET.scurveWeekly, COLUMNS.scurveWeekly], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
     [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
     [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
     [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
@@ -289,12 +312,14 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     const hadIssuesSheet = Boolean(store.sheetInfo(SHEET.issues));
     const hadRiskMatrix = Boolean(store.sheetInfo(SHEET.riskMatrix));
     const hadFacilityCurves = Boolean(store.sheetInfo(SHEET.facilityCurves));
+    const hadWorkingSchedule = Boolean(store.sheetInfo(SHEET.workingSchedule));
     ensureAllSheets(store);
     if (store.readRows(SHEET.projects, COLUMNS.projects).length) {
       // Upgrade existing workbooks once, without overwriting their project data.
       if (!hadIssuesSheet) appendSeedIssues(store, seedRows(raw).issues, String(raw.project.cutoff), now);
       if (!hadRiskMatrix) appendSeedGovernance(store, raw);
       if (!hadFacilityCurves) appendSeedFacilityProgress(store, raw);
+      if (!hadWorkingSchedule) appendSeedSchedule(store, raw);
       return false;
     }
 
@@ -305,6 +330,7 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.memberships, COLUMNS.memberships, SEED_USERS.map(u => ({ projectId: pid, userId: u.id, role: u.role, title: u.title })));
     store.appendRows(SHEET.modules, COLUMNS.modules, MANIFESTS.map(m => ({ projectId: pid, moduleKey: m.key, path: pathOf(m.key).join(' / '), state: defaultState(m), updatedAt: now })));
     store.appendRows(SHEET.scurve, COLUMNS.scurve, rows.scurve);
+    store.appendRows(SHEET.scurveWeekly, COLUMNS.scurveWeekly, rows.scurveWeekly);
     store.appendRows(SHEET.workPackages, COLUMNS.workPackages, rows.workPackages);
     store.appendRows(SHEET.milestones, COLUMNS.milestones, rows.milestones);
     store.appendRows(SHEET.knowledge, COLUMNS.knowledge, knowledgeSeed((raw as unknown as { milestones: RawRow[] }).milestones, now));
@@ -317,6 +343,8 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.facilityCurves, COLUMNS.facilityCurves, rows.facilityCurves);
     store.appendRows(SHEET.facilityScopes, COLUMNS.facilityScopes, rows.facilityScopes);
     store.appendRows(SHEET.facilityWbs, COLUMNS.facilityWbs, rows.facilityWbs);
+    store.appendRows(SHEET.workingSchedule, COLUMNS.workingSchedule, rows.workingSchedule);
+    store.appendRows(SHEET.cpnItems, COLUMNS.cpnItems, rows.cpnItems);
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
     appendSeedIssues(store, rows.issues, String(raw.project.cutoff), now);
     appendSeedGovernance(store, raw);

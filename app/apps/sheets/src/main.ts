@@ -54,11 +54,33 @@ function adminSetup(store: SheetsStore, user: unknown): Envelope {
   }
 }
 
+/** Paginated, read-only export for the PostgreSQL migration. Requires the API token and an administrator. */
+function adminExport(store: SheetsStore, user: unknown, path: string): Envelope {
+  const admin = store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === user && /^(yes|true)$/i.test(String(u.isAdmin)) && u.status !== 'Inactive');
+  if (!admin) return fail(403, 'ADMIN_ONLY', 'Only an administrator can export the Sheet.');
+  const query = Object.fromEntries((path.split('?')[1] ?? '').split('&').filter(Boolean).map(part => {
+    const [key, value = ''] = part.split('=');
+    return [decodeURIComponent(key), decodeURIComponent(value)];
+  }));
+  const key = query.dataset as keyof typeof SHEET | undefined;
+  if (!key || !(key in SHEET)) return fail(400, 'BAD_DATASET', 'Choose a known dataset key.');
+  const offset = Number(query.offset ?? 0);
+  if (!Number.isSafeInteger(offset) || offset < 0) return fail(400, 'BAD_OFFSET', 'offset must be a non-negative integer.');
+  const columns = COLUMNS[key];
+  const info = store.sheetInfo(SHEET[key]);
+  const rows = info ? store.readRows(SHEET[key], columns) : [];
+  return { ok: true, status: 200, data: {
+    key, sheet: SHEET[key], gid: info?.gid ?? null, header: columns.map(c => c.key),
+    offset, total: rows.length, rows: rows.slice(offset, offset + 100),
+  } };
+}
+
 function respond(request: ApiRequest, token: unknown): Envelope {
   if (!authorized(token)) return fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.');
   const store = openStore();
   if (!store.sheetInfo(SHEET.projects)) return fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.');
   if (request.method === 'POST' && request.path === '/admin/setup') return adminSetup(store, request.user);
+  if (request.method === 'GET' && request.path.startsWith('/admin/export?')) return adminExport(store, request.user, request.path);
   // Public web requests must never send email as the spreadsheet owner.
   if (/\/remind(?:-due)?$/.test(request.path)) return fail(403, 'OWNER_ONLY', 'Email reminders are available only to the spreadsheet owner.');
   return handle(new Api(store, () => new Date(), noMailer), request);

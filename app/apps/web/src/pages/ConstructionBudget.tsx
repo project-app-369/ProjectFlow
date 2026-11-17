@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { downloadCsv, errorText, request, type BudgetHistogram, type BudgetInput, type BudgetResponse, type WbsNode } from '../api';
 import { fmtDate, fmtShort } from '../format';
 import { Icon } from '../icons';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Stat } from '../ui';
 import { parseBudgetImport } from './budgetImport';
+import { lazyPage } from '../lazyPage';
 
-const BudgetHistogramChart = lazy(() => import('../BudgetHistogramChart'));
+const BudgetHistogramChart = lazyPage(() => import('../BudgetHistogramChart'));
 const hrs = (n: number) => `${n.toLocaleString('en-GB', { maximumFractionDigits: 1 })} h`;
 
 /** Construction → Budget: manhour budget per WBS activity, and when those hours fall. */
@@ -218,7 +219,7 @@ function ImportDialog({ base, canReplace, hasData, onClose, onDone }: { base: st
   });
   const ready = parsed.rows.length > 0 && parsed.errors.length === 0;
   return (
-    <Modal title="Import WBS" onClose={onClose}
+    <Modal popout={false} title="Import WBS" onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={!ready || send.isPending} onClick={() => { setError(''); send.mutate(); }}>{send.isPending ? 'Importing…' : mode === 'replace' ? 'Replace budget' : `Import ${parsed.rows.length || ''} rows`}</Btn></>}>
       <div className="dialog-body">
         <p style={{ marginBottom: 12 }}>Paste rows copied from a spreadsheet (or CSV text). The first row is a header with these columns, in any order: <strong>WBS, Name</strong>, and optionally <strong>Parent, Discipline, Manhours, Start, Finish, Notes</strong>. Dates may be yyyy-mm-dd or dd/mm/yyyy. Nothing is imported unless every row is valid.</p>

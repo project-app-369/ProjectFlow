@@ -28,6 +28,8 @@ DATABASE_URL=postgres://projectflow:projectflow@localhost:5432/projectflow pnpm 
 
 ## Pre-build on Google Sheets
 
+The Supabase-backed successor is under [`apps/api-v2`](apps/api-v2/README.md). It preserves the current Sheets route contract, migrates the live Sheet into a private PostgreSQL schema, and leaves this Google Sheets API available as a backup. It is not connected to the published Site until its live import and verification are complete.
+
 Before the full server exists, the same web client can run against a Google Spreadsheet served by an Apps Script web app: one sheet per dataset, and a sheet plus link generated whenever a module is established. It also carries projects, users and roles, milestones, risks and interfaces, which the NestJS API does not have yet. See [`apps/sheets/README.md`](apps/sheets/README.md), [ADR 0003](docs/adr/0003-prebuild-on-google-sheets.md), [ADR 0004](docs/adr/0004-projects-users-and-worksheet-areas.md) and the [implementation plan](../docs/ProjectFlow_implementation_plan.md).
 
 ```bash

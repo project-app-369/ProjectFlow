@@ -12,6 +12,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "dev:sheets-api": "pnpm --filter @projectflow/sheets dev",
+    "dev:api-v2": "pnpm --filter @projectflow/api-v2 dev",
+    "dev:web-v2": "pnpm --filter @projectflow/web dev:v2",
     "dev:web-sheets": "pnpm --filter @projectflow/web dev:sheets",
     "build:sheets": "pnpm --filter @projectflow/sheets build"
   }

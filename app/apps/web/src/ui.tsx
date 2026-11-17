@@ -1,8 +1,9 @@
-import { Component, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Component, useContext, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { signed, statusTone, type Tone } from './format';
-import { CrumbContext, SheetContext } from './state';
+import { Link } from 'react-router-dom';
+import { CrumbContext, SheetContext, type Crumb } from './state';
 import { sheetHref } from './sheetLinks';
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
@@ -37,9 +38,9 @@ function CountUp({ value }: { value: ReactNode }) {
   return <span aria-label={raw}>{sign && shown > 0 ? '+' : ''}{text}</span>;
 }
 
-export function Stat({ label, value, unit, foot, icon }: { label: string; value: ReactNode; unit?: string; foot: ReactNode; icon: string }) {
+export function Stat({ label, value, unit, foot, icon, tone }: { label: string; value: ReactNode; unit?: string; foot: ReactNode; icon: string; /** Tints the card, to group related figures. */ tone?: 'overall' | 'week' }) {
   return (
-    <div className="stat">
+    <div className={`stat${tone ? ` stat-${tone}` : ''}`}>
       <div className="stat-label">{label}<Icon name={icon} /></div>
       <div className="stat-value mono"><CountUp value={value} />{unit && <small>{unit}</small>}</div>
       <div className="stat-foot" title={typeof foot === 'string' ? foot : undefined}>{foot}</div>
@@ -53,14 +54,14 @@ export function ActualPlanBar({ actual, plan, label, compact, hideActual }: { ac
   const p = plan != null && Number.isFinite(plan) ? plan : null;
   const gap = p == null || a == null ? null : a - p;
   const at = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
-  const text = `${a == null ? 'Actual unavailable' : `${a.toFixed(1)}% actual`}, ${p == null ? 'plan unavailable' : `${p.toFixed(1)}% plan`}${gap == null ? '' : `, ${signed(gap)} pp`}`;
+  const text = `${a == null ? 'Actual unavailable' : `${a.toFixed(1)}% actual`}, ${p == null ? 'plan unavailable' : `${p.toFixed(1)}% plan`}${gap == null ? '' : `, ${signed(gap)}%`}`;
   return (
     <div className={`apbar ${compact ? 'compact' : ''}`}>
       <div className="apbar-figures">
         {label && <span className="apbar-label">{label}</span>}
         {!hideActual && <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>}
         <span className="muted">{p == null ? '—' : `${p.toFixed(1)}%`} plan</span>
-        {gap != null && <span className={gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}>{signed(gap)} pp</span>}
+        {gap != null && <span className={gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}>{signed(gap)}%</span>}
       </div>
       <div className="apbar-track" role="img" aria-label={text} title={text}>
         {a != null && <div className={`apbar-fill ${gap != null && gap < 0 ? 'behind' : ''}`} style={{ width: at(a) }} />}
@@ -70,16 +71,19 @@ export function ActualPlanBar({ actual, plan, label, compact, hideActual }: { ac
   );
 }
 
-export function Breadcrumb({ parts }: { parts: string[] }) {
+export function Breadcrumb({ parts }: { parts: Crumb[] }) {
   return (
-    <div className="breadcrumb">
-      {parts.map((p, i) => (
-        <span key={i} style={{ display: 'contents' }}>
-          {i > 0 && <span className="sep">/</span>}
-          {i === parts.length - 1 ? <strong>{p}</strong> : <span>{p}</span>}
-        </span>
-      ))}
-    </div>
+    <nav className="breadcrumb" aria-label="Breadcrumb">
+      {parts.map((c, i) => {
+        const p = typeof c === 'string' ? { label: c } : c;
+        return (
+          <span key={i} style={{ display: 'contents' }}>
+            {i > 0 && <span className="sep">/</span>}
+            {i === parts.length - 1 ? <strong aria-current="page">{p.label}</strong> : p.to ? <Link className="crumb-link" to={p.to}>{p.label}</Link> : <span>{p.label}</span>}
+          </span>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -142,13 +146,51 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([typ
  * <dialog>, so its position cannot depend on a browser's default dialog styles. It traps focus, closes on Escape or a
  * click on the dimmed page, locks page scrolling while open, and gives focus back when it closes.
  */
-export function Modal({ title, onClose, children, actions, size = 'md' }: { title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
+export function Modal({ title, onClose, children, actions, size = 'md', popout = size !== 'sm', startPopped = false }: {
+  title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Offers a button that moves the dialog into a window of its own (on by default, except for small confirmations). */
+  popout?: boolean;
+  /** Opens straight into a window of its own; shown as a dialog in the page only when the browser blocks the window. */
+  startPopped?: boolean;
+}) {
   const panel = useRef<HTMLDivElement>(null);
+  const [popped, setPopped] = useState<{ win: Window; host: HTMLElement } | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const poppedRef = useRef(popped);
+  poppedRef.current = popped;
   const close = useRef(onClose);
   close.current = onClose;
   const id = useId();
 
+  /** Opens a window beside the app and copies the page's styles and theme into it; the dialog is then drawn there, from this same component. */
+  const openWindow = () => {
+    const win = window.open('', '', 'popup=yes,width=1100,height=860');
+    if (!win) return false;
+    const doc = win.document;
+    doc.title = `${title} · Project Flow`;
+    document.head.querySelectorAll('link[rel="stylesheet"],style').forEach(n => doc.head.appendChild(n.cloneNode(true)));
+    const viewport = doc.createElement('meta');
+    viewport.name = 'viewport';
+    viewport.content = 'width=device-width,initial-scale=1';
+    doc.head.appendChild(viewport);
+    for (const a of Array.from(document.documentElement.attributes)) doc.documentElement.setAttribute(a.name, a.value);
+    doc.body.className = document.body.className;
+    const host = doc.createElement('div');
+    host.className = 'popout-root';
+    doc.body.appendChild(host);
+    let finished = false;
+    const done = () => { if (!finished) { finished = true; close.current(); } };
+    win.addEventListener('pagehide', done);
+    doc.addEventListener('keydown', e => { if (e.key === 'Escape') done(); });
+    setPopped({ win, host });
+    return true;
+  };
+  const autoOpened = useRef(false); // StrictMode runs effects twice in development; one window is enough
+  useEffect(() => { if (startPopped && !autoOpened.current) { autoOpened.current = true; if (!openWindow()) setBlocked(true); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { const p = poppedRef.current; if (p && !p.win.closed) p.win.close(); }, []);
+
   useEffect(() => {
+    if (popped) return; // the page behind is free to scroll while the dialog lives in its own window
     const el = panel.current!;
     const token = Symbol('modal');
     modalStack.push(token);
@@ -182,24 +224,83 @@ export function Modal({ title, onClose, children, actions, size = 'md' }: { titl
       if (--modalLocks === 0) { body.style.overflow = saved.overflow; body.style.paddingRight = saved.padding; }
       before?.focus?.({ preventScroll: true });
     };
-  }, []);
+  }, [popped]);
 
-  return createPortal(
-    <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close.current(); }}>
-      <div className={`modal size-${size}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={panel} tabIndex={-1}>
+  if (startPopped && !popped && !blocked) return null;
+  const frame = (
+    <div className={`modal-backdrop${popped ? ' popout' : ''}`} onMouseDown={popped ? undefined : e => { if (e.target === e.currentTarget) close.current(); }}>
+      <div className={`modal size-${size}${popped ? ' popout' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={panel} tabIndex={-1}>
         <div className="dialog-head">
           <h2 id={id}>{title}</h2>
+          {popout && !popped && <button className="icon-btn" type="button" aria-label="Open in a new window" title="Open in a new window" onClick={openWindow}><Icon name="popout" /></button>}
           <button className="icon-btn" type="button" aria-label="Close dialog" title="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
         {children}
         {actions && <div className="dialog-actions">{actions}</div>}
       </div>
-    </div>,
-    document.body,
+    </div>
+  );
+  return createPortal(frame, popped ? popped.host : document.body);
+}
+
+/**
+ * Placeholders that hold the shape of what is loading, so the page does not jump when the data arrives and nothing is
+ * re-animated on arrival: the shimmer only runs while the placeholder is there, and the content that replaces it simply appears.
+ */
+export function Skeleton({ lines = 3, height }: { lines?: number; height?: string }) {
+  return (
+    <div className="sk-block" role="status" aria-busy="true" aria-label="Loading" style={height ? { minHeight: height } : undefined}>
+      {Array.from({ length: lines }, (_, i) => <span key={i} className="sk sk-line" style={{ width: `${92 - ((i * 17) % 40)}%` }} />)}
+    </div>
   );
 }
 
-export const Loading = ({ label = 'Loading…' }: { label?: string }) => <div className="empty">{label}</div>;
+/** A whole page while its first data loads: title, a row of figures and two panels. */
+export function PageSkeleton({ stats = 4, panels = 2 }: { stats?: number; panels?: number }) {
+  return (
+    <div className="sk-page" role="status" aria-busy="true" aria-label="Loading">
+      <span className="sk sk-title" />
+      {stats > 0 && <div className="stats">{Array.from({ length: stats }, (_, i) => <span key={i} className="sk sk-card" />)}</div>}
+      {Array.from({ length: panels }, (_, i) => <span key={i} className="sk sk-panel" />)}
+    </div>
+  );
+}
+
+/** Rows of a register while its page loads (the header stays, so only the rows are waiting). */
+export function TableSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <div className="table-wrap sk-table" role="status" aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => <span key={i} className="sk sk-row" />)}
+    </div>
+  );
+}
+
+/** What is shown in place of a panel or chart while it loads. The wording is kept for screen readers; the picture is a placeholder. */
+export const Loading = ({ label = 'Loading…' }: { label?: string }) => (
+  /chart/i.test(label)
+    ? <div className="sk-chart" role="status" aria-busy="true" aria-label={label}><span className="sk sk-panel" /></div>
+    : <Skeleton lines={4} />
+);
+
+/** True once the element has come near the viewport, and stays true: below-the-fold work starts when the person scrolls to it. */
+export function useInView<T extends Element>(margin = '240px'): [RefObject<T | null>, boolean] {
+  const ref = useRef<T | null>(null);
+  const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    const el = ref.current;
+    if (seen || !el) return;
+    const io = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { setSeen(true); io.disconnect(); } }, { rootMargin: margin });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen, margin]);
+  return [ref, seen];
+}
+
+/** Renders its children only once scrolled near, with a placeholder of the same height until then. */
+export function Deferred({ children, height = '16rem' }: { children: ReactNode; height?: string }) {
+  const [ref, seen] = useInView<HTMLDivElement>();
+  return <div ref={ref}>{seen ? children : <Skeleton lines={0} height={height} />}</div>;
+}
 
 export function ErrorBox({ error }: { error: unknown }) {
   return <div className="panel empty">{error instanceof Error ? error.message : 'Something went wrong.'}</div>;

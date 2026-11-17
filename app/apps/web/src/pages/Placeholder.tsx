@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { request, type ModuleRecords, type SheetInfo } from '../api';
 import { pathOf } from '../nav';
 import { useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, Loading, PageHead } from '../ui';
+import { Badge, Btn, ErrorBox, PageHead, PageSkeleton } from '../ui';
 import { sheetHref } from '../sheetLinks';
 
 /** Rows of a module's sheet, shown read-only; edit them in the spreadsheet itself. */
 function SheetRecords({ moduleKey }: { moduleKey: string }) {
   const { project } = useApp();
   const q = useQuery({ queryKey: ['records', project.id, moduleKey], queryFn: () => request<ModuleRecords>(`/projects/${project.id}/modules/${moduleKey}/records`) });
-  if (q.isPending) return <Loading />;
+  if (q.isPending) return <PageSkeleton />;
   if (q.error) return <ErrorBox error={q.error} />;
   const { columns, items } = q.data;
   return (

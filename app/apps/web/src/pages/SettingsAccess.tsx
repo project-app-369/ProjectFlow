@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, useMemo, useState } from 'react';
 import { PARTIES, errorText, request, type Party, type PartyAccess, type PartyAccessModule, type WorkspaceId } from '../api';
 import { useApp, useToast } from '../state';
-import { Btn, ErrorBox, Loading } from '../ui';
+import { Btn, ErrorBox, PageSkeleton } from '../ui';
 
 const WORKSPACE_LABEL: Record<WorkspaceId, string> = { personal: 'Personal', epcic: 'EPCIC', governance: 'Governance', reports: 'Reports' };
 type Cell = { moduleKey: string; party: Party; visible: boolean };
@@ -53,7 +53,7 @@ export default function AccessTab() {
   });
 
   if (!me?.isAdmin) return <div className="panel empty">Party access is limited to administrators.</div>;
-  if (access.isPending) return <Loading />;
+  if (access.isPending) return <PageSkeleton />;
   if (access.error) return <ErrorBox error={access.error} />;
 
   const rows = modules.filter(m => only === 'all' || m.availability === 'Available');

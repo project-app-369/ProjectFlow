@@ -24,7 +24,7 @@ const sheetsToken: string = import.meta.env.VITE_SHEETS_TOKEN ?? '';
 
 /** Demo identity (pre-build only): the chosen user id is sent with every request; it is not authentication. */
 const USER_KEY = 'projectflow.user';
-const DEFAULT_DEMO_USER_ID = 'u-member';
+const DEFAULT_DEMO_USER_ID = 'u-admin';
 export const getUserId = (): string | null => {
   try { return localStorage.getItem(USER_KEY) ?? (apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null); }
   catch { return apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null; }
@@ -42,6 +42,67 @@ const SNAPSHOT_PATH = /^\/projects\/[^/]+\/(dashboard|schedule|milestones|procur
 
 interface Envelope { ok: boolean; status: number; data?: unknown; error?: { code?: string; message?: string; issues?: { path: string; message: string }[] } }
 
+/** Turns a backend envelope into its data, or throws the error it carries. */
+function unwrap<T>(envelope: Envelope | null, httpStatus: number): T {
+  if (!envelope) throw new ApiError('The sheets API returned something other than JSON. Check the web app deployment and its access setting.', 'BAD_RESPONSE', httpStatus);
+  if (!envelope.ok) {
+    if (envelope.error?.code === 'USER_REQUIRED') window.dispatchEvent(new Event('projectflow:signed-out'));
+    throw new ApiError(envelope.error?.message ?? 'Request failed.', envelope.error?.code, envelope.status, envelope.error?.issues);
+  }
+  return envelope.data as T;
+}
+
+async function getOne<T>(path: string): Promise<T> {
+  const user = getUserId() ?? undefined;
+  const res = await fetch(`${sheetsUrl}?${new URLSearchParams({ path, ...(sheetsToken && { token: sheetsToken }), ...(user && { user }) })}`);
+  return unwrap<T>((await res.json().catch(() => null)) as Envelope | null, res.status);
+}
+
+/**
+ * GET requests made in the same moment (a screen asks for several things at once) travel as one BATCH request: each call to the
+ * sheets backend costs a round trip and, on Apps Script, a fresh read of the sheets, so one call for five reads is far cheaper than five.
+ * A backend that does not know BATCH (an older deployment) answers with a single error envelope; the app then switches batching off
+ * and asks for each path on its own.
+ */
+interface Job { path: string; resolve: (v: unknown) => void; reject: (e: unknown) => void }
+const BATCH_WINDOW_MS = 6;
+const BATCH_MAX = 20;
+let queue: Job[] = [];
+let timer: ReturnType<typeof setTimeout> | undefined;
+let batchSupported = true;
+
+function getBatched<T>(path: string): Promise<T> {
+  if (!batchSupported) return getOne<T>(path);
+  return new Promise<T>((resolve, reject) => {
+    queue.push({ path, resolve: resolve as (v: unknown) => void, reject });
+    timer ??= setTimeout(flush, BATCH_WINDOW_MS);
+  });
+}
+
+function flush() {
+  timer = undefined;
+  const jobs = queue;
+  queue = [];
+  for (let i = 0; i < jobs.length; i += BATCH_MAX) void send(jobs.slice(i, i + BATCH_MAX));
+}
+
+async function send(jobs: Job[]) {
+  const alone = () => jobs.forEach(j => getOne(j.path).then(j.resolve, j.reject));
+  if (jobs.length === 1) return alone();
+  try {
+    const res = await fetch(sheetsUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ method: 'BATCH', requests: jobs.map(j => ({ method: 'GET', path: j.path })), token: sheetsToken || undefined, user: getUserId() ?? undefined }),
+    });
+    const envelopes = (await res.json().catch(() => null)) as Envelope[] | null;
+    if (!Array.isArray(envelopes) || envelopes.length !== jobs.length) { batchSupported = false; return alone(); }
+    jobs.forEach((j, i) => { try { j.resolve(unwrap(envelopes[i], res.status)); } catch (e) { j.reject(e); } });
+  } catch (e) {
+    jobs.forEach(j => j.reject(e));
+  }
+}
+
 async function requestSheets<T>(path: string, init?: RequestInit): Promise<T> {
   const asOfPath = currentAsOf && SNAPSHOT_PATH.test(path);
   if (asOfPath && (init?.method ?? 'GET').toUpperCase() !== 'GET') {
@@ -50,22 +111,14 @@ async function requestSheets<T>(path: string, init?: RequestInit): Promise<T> {
   if (asOfPath) path += `${path.includes('?') ? '&' : '?'}asOf=${currentAsOf}`;
   if (!sheetsUrl) throw new ApiError('VITE_SHEETS_URL is not set. Copy .env.sheets.example to .env.sheets.local and fill it in.', 'NOT_CONFIGURED');
   const method = (init?.method ?? 'GET').toUpperCase();
-  const user = getUserId() ?? undefined;
-  const res = method === 'GET'
-    ? await fetch(`${sheetsUrl}?${new URLSearchParams({ path, ...(sheetsToken && { token: sheetsToken }), ...(user && { user }) })}`)
-    : await fetch(sheetsUrl, {
-        method: 'POST',
-        // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script cannot answer one).
-        headers: { 'content-type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined, token: sheetsToken || undefined, user }),
-      });
-  const envelope = (await res.json().catch(() => null)) as Envelope | null;
-  if (!envelope) throw new ApiError('The sheets API returned something other than JSON. Check the web app deployment and its access setting.', 'BAD_RESPONSE', res.status);
-  if (!envelope.ok) {
-    if (envelope.error?.code === 'USER_REQUIRED') window.dispatchEvent(new Event('projectflow:signed-out'));
-    throw new ApiError(envelope.error?.message ?? 'Request failed.', envelope.error?.code, envelope.status, envelope.error?.issues);
-  }
-  return envelope.data as T;
+  if (method === 'GET') return getBatched<T>(path);
+  const res = await fetch(sheetsUrl, {
+    method: 'POST',
+    // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script cannot answer one).
+    headers: { 'content-type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined, token: sheetsToken || undefined, user: getUserId() ?? undefined }),
+  });
+  return unwrap<T>((await res.json().catch(() => null)) as Envelope | null, res.status);
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -202,7 +255,7 @@ export interface WeeklyOverall { lastWeekPlan: number; lastWeekActual: number; t
 export interface WorkPackagesResponse { items: WorkPackage[]; overall: WeeklyOverall }
 export interface ScurvePoint { date: string; plan: number | null; forecast: number | null; actual: number | null }
 export interface OverallProgressResponse {
-  scurve: ScurvePoint[]; latest: ScurvePoint | null; thisWeek: { plan: number; actual: number }; lastWeek?: { plan: number; actual: number }; workPackageCount: number;
+  scurve: ScurvePoint[]; scurveWeekly?: ScurvePoint[]; latest: ScurvePoint | null; thisWeek: { plan: number; actual: number }; lastWeek?: { plan: number; actual: number }; workPackageCount: number;
   /** Progress by phase (engineering, procurement, construction, ...) at the report date. */
   phases?: PhaseProgress[]; reportDate?: string | null;
 }
@@ -219,13 +272,43 @@ export interface FacilityHead {
   milestones: { total: number; done: number; overdue: number };
 }
 export interface FacilityList { cutoff: string; facilities: FacilityHead[] }
-export interface FacilityProgress { facility: FacilityHead; cutoff: string; scopes: FacilityScope[]; wbs: FacilityWbsRow[]; milestones: Milestone[] }
+export interface ScheduleCheck {
+  scope: string; label: string; asOf: string | null; baseline: number | null; working: number | null; plan: number | null;
+  curve: { date: string; baseline: number; working: number }[];
+}
+export interface FacilityProgress { facility: FacilityHead; cutoff: string; scopes: FacilityScope[]; wbs: FacilityWbsRow[]; milestones: Milestone[]; scheduleCheck: ScheduleCheck | null }
+
+/** A key date on the timeline and the network: its baseline, the subcontractor's working-schedule date, forecast and actual. */
+export interface TimelineMilestone {
+  id: string; description: string; baseline: string | null; working: string | null; forecast: string | null; actual: string | null; status: MilestoneStatus; major: boolean;
+}
+export interface TimelineFacility {
+  id: string; label: string; later: boolean; start: string | null; finish: string | null; workStart: string | null; workFinish: string | null;
+  actual: number | null; plan: number | null; variance: number | null; basis: string | null; milestones: TimelineMilestone[]; first: string | null; last: string | null;
+}
+export interface FacilityTimeline { cutoff: string; start: string | null; finish: string | null; facilities: TimelineFacility[] }
+
+export interface CpnPackage {
+  code: string; name: string; weight: number | null; baseWeight: number | null; plan: number | null; actual: number | null; variance: number | null;
+  basePlan: number | null; baseActual: number | null; baseVariance: number | null; lastPlan: number | null; lastActual: number | null;
+}
+export interface CpnActivity {
+  id: string; name: string; top: string; discipline: string | null; baseStart: string | null; baseFinish: string | null; workStart: string | null; workFinish: string | null;
+  reStart: string | null; reFinish: string | null; finish: string; float: number;
+}
+export interface CpnData {
+  cutoff: string; asOf: string | null; overall: CpnPackage | null; packages: CpnPackage[];
+  curve: { date: string; plan: number | null; forecast: null; actual: number | null }[];
+  critical: { total: number; threshold: number; count: number; items: CpnActivity[] };
+  milestones: (TimelineMilestone & { facility: string })[];
+}
 export interface FacilitySchedule { facility: FacilityHead; cutoff: string; wbs: FacilityWbsRow[]; milestones: Milestone[] }
 
 export type MilestoneStatus = 'Done' | 'Overdue' | 'Due soon' | 'Planned';
 export interface Milestone {
   id: string; description: string; planBaseline: string | null; planSub: string | null; subName: string | null;
   forecast: string | null; actual: string | null; variance: number | null; comment: string | null; facility: string | null;
+  kind?: string | null; package?: string | null; eta?: string | null; tagNo?: string | null; location?: string | null; deck?: string | null;
   status: MilestoneStatus; slipDays: number | null; daysToGo: number | null;
 }
 export interface MilestoneSummary {

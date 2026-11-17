@@ -10,7 +10,7 @@ export const WIRED_KEYS = [
   'procurement.expediting.vendor-overview',
 ] as const;
 /** Screens that only the sheets backend serves so far (NestJS parity is on the implementation plan). */
-export const SHEETS_KEYS = ['planning.schedule', 'planning.progress', 'management.issues', 'procurement.dashboard', 'procurement.concerns', 'procurement.logistics', 'procurement.materials', 'construction.budget', 'knowledge.overview', 'knowledge.engineering', 'knowledge.procurement', 'knowledge.services', 'knowledge.quality', 'knowledge.hse', 'knowledge.construction', 'knowledge.precom', 'knowledge.ti', 'knowledge.huc', 'task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;
+export const SHEETS_KEYS = ['planning.schedule', 'planning.progress', 'planning.cpn', 'management.issues', 'procurement.dashboard', 'procurement.concerns', 'procurement.logistics', 'procurement.materials', 'construction.budget', 'knowledge.overview', 'knowledge.engineering', 'knowledge.procurement', 'knowledge.services', 'knowledge.quality', 'knowledge.hse', 'knowledge.construction', 'knowledge.precom', 'knowledge.ti', 'knowledge.huc', 'task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;
 const wired = new Set<string>(apiMode === 'sheets' ? [...WIRED_KEYS, ...SHEETS_KEYS] : WIRED_KEYS);
 
 export const kidsOf = (mods: ModuleInfo[], key: string) => mods.filter(m => m.parent === key && m.effective);
@@ -46,6 +46,17 @@ export function pathOf(data: ModulesResponse, key: string): string[] {
   if (!chain.length) return [];
   const ws = data.workspaces.find(w => w.id === chain[0].workspace)?.label ?? '';
   return [ws, ...(chain[0].group ? [chain[0].group] : []), ...chain.map(m => m.label)];
+}
+
+/** The breadcrumb as links: the workspace opens its start page, a module opens its first screen; the group and the page itself are plain text. */
+export function crumbsOf(data: ModulesResponse, key: string): { label: string; to?: string }[] {
+  const by = new Map(data.modules.map(m => [m.key, m]));
+  const chain: ModuleInfo[] = [];
+  for (let m = by.get(key); m; m = m.parent ? by.get(m.parent) : undefined) chain.unshift(m);
+  if (!chain.length) return [];
+  const ws = data.workspaces.find(w => w.id === chain[0].workspace)?.label ?? '';
+  const last = chain.length - 1;
+  return [{ label: ws, to: '/' }, ...(chain[0].group ? [{ label: chain[0].group }] : []), ...chain.map((m, i) => (i === last ? { label: m.label } : { label: m.label, to: `/m/${m.key}` }))];
 }
 
 export function topModules(mods: ModuleInfo[], ws: WorkspaceId) {

@@ -7,7 +7,7 @@ import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
-import { SortBy, useListState } from '../Register';
+import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
@@ -33,9 +33,10 @@ export default function Concerns() {
   const summary = useQuery({ queryKey: ['concern-summary', project.id], queryFn: () => request<ConcernSummary>(`${base}/summary`) });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, type: filters.type, severity: filters.severity, area: filters.area, owner: filters.owner, within: filters.within, packageCode: pkg, active: filters.activeOnly && !list.state.status ? 'true' : undefined });
   const page = useQuery({ queryKey: ['concerns', project.id, query], queryFn: () => request<Page<Concern>>(`${base}${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['concerns', project.id, q], q => request<Page<Concern>>(`${base}${q}`));
   const editing: Concern | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   // codes for the package picker come from the registers themselves
-  const codes = useQuery({ queryKey: ['package-codes', project.id], staleTime: 60_000, queryFn: async () => {
+  const codes = useQuery({ queryKey: ['package-codes', project.id], staleTime: 60_000, enabled: editing !== null, queryFn: async () => {
     const [a, b] = await Promise.all([
       request<Page<{ code: string }>>(`/projects/${project.id}/procurement/packages?pageSize=200`).catch(() => null),
       request<Page<{ code: string }>>(`/projects/${project.id}/expediting/packages?pageSize=200`).catch(() => null),
@@ -98,7 +99,7 @@ export default function Concerns() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort}
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort}
               empty={page.data && !page.data.total && !s?.total ? 'No risks or concerns recorded yet.' : 'No record matches. Change the search or filters.'} />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>

@@ -3,6 +3,7 @@ import { LineChart } from 'echarts/charts';
 import { DataZoomComponent, GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useChart } from './useChart';
 import { useEffect, useRef } from 'react';
 import type { ProcurementCurve } from './api';
 import { usePrefs } from './state';
@@ -17,9 +18,10 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
   const el = useRef<HTMLDivElement>(null);
   const { dark } = usePrefs();
 
+  const chart = useChart(el);
+
   useEffect(() => {
-    if (!el.current) return;
-    const chart = echarts.init(el.current);
+    if (!chart) return;
     const theme = chartTheme();
     const { muted, line } = theme;
     const teal = theme.teal;
@@ -40,10 +42,7 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
       yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: muted, fontSize: 12, formatter: '{value}%' }, splitLine: { lineStyle: { color: line, type: 'dashed' } } },
       series: [series('Plan', curve.plan, theme.plan, false, 2, true), series('Forecast', curve.forecast, theme.forecast, true), series('Actual', curve.actual, teal, false, 2.5)],
     }, true);
-    const ro = new ResizeObserver(() => chart.resize());
-    ro.observe(el.current);
-    return () => { ro.disconnect(); chart.dispose(); };
-  }, [curve, dark]);
+  }, [chart, curve, dark]);
 
   const name = `${curve.facility ?? ''} ${curve.scope ?? ''}`.trim();
   return <div className="chart"><div ref={el} role="img" aria-label={`Procurement S-curve for ${name}, plan versus forecast and actual`} style={{ minHeight: 340 }} /></div>;

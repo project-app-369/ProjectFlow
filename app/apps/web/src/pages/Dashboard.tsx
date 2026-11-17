@@ -5,7 +5,7 @@ import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { SCurvePanel } from '../SCurvePanel';
 import { useApp } from '../state';
-import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat } from '../ui';
+import { ActualPlanBar, Badge, ErrorBox, PageHead, Stat, PageSkeleton } from '../ui';
 
 
 const Unavailable = ({ label }: { label: string }) => (
@@ -15,32 +15,35 @@ const Unavailable = ({ label }: { label: string }) => (
 export default function Dashboard() {
   const { project } = useApp();
   const { data, error, isPending } = useQuery({ queryKey: ['dashboard', project.id], queryFn: () => request<DashboardData>(`/projects/${project.id}/dashboard`) });
-  if (isPending) return <Loading />;
+  if (isPending) return <PageSkeleton />;
   if (error) return <ErrorBox error={error} />;
 
   const { overallProgress: op, workPackages: wp } = data;
   const latest = op?.latest;
-  const behind = wp ? wp.items.filter(w => (w.thisWeekActual ?? 0) < (w.thisWeekPlan ?? 0)).length : 0;
-  const move = op?.lastWeek ? op.thisWeek.actual - op.lastWeek.actual : null;
-  const ms = data.milestones, rk = data.risks, itf = data.interfaces;
-  const hot = rk ? rk.byLevel[rk.top] ?? 0 : 0;
+  const ms = data.milestones;
+  const cum = latest && latest.actual != null && latest.plan != null ? { actual: latest.actual, plan: latest.plan } : null;
+  const cumVar = cum ? cum.actual - cum.plan : null;
+  // the work-package sheet holds cumulative figures per week, so the week's own progress is this week minus last week
+  const gain = (now: number | null | undefined, before: number | null | undefined) => now != null && before != null ? Math.round((now - before) * 10) / 10 : null;
+  const wk = op?.lastWeek ? { actual: gain(op.thisWeek.actual, op.lastWeek.actual), plan: gain(op.thisWeek.plan, op.lastWeek.plan) } : null;
+  const wkVar = wk && wk.actual != null && wk.plan != null ? Math.round((wk.actual - wk.plan) * 10) / 10 : null;
+  const varFoot = (v: number | null) => v == null ? 'Not available' : <span className={v < -0.05 ? 'negative' : v > 0.05 ? 'positive' : ''}>{v < -0.05 ? 'Behind plan' : v > 0.05 ? 'Ahead of plan' : 'On plan'}</span>;
 
   return (
     <>
       <PageHead title="Project overview" desc={`${project.name} — EPCIC progress${op?.reportDate ? ` at ${fmtDate(op.reportDate)}` : ''}, by work package and phase.`} />
       <div className="stats">
-        <Stat label="EPCIC progress" value={op ? latest?.actual ?? 0 : '—'} unit={op ? '%' : undefined}
-          foot={op && latest ? <ActualPlanBar actual={latest.actual} plan={latest.plan} compact hideActual /> : 'Overall Progress is off'} icon="chart" />
-        <Stat label="Progress this period" value={move != null ? `${move > 0 ? '+' : ''}${move.toFixed(1)}` : '—'} unit={move != null ? 'pp' : undefined} foot="Change in actual since last week" icon="calendar" />
-        <Stat label="Work packages" value={wp?.items.length ?? '—'} foot={wp ? <span className={behind ? 'warning' : 'positive'}>{behind} behind plan · {wp.items.length - behind} on or ahead</span> : 'Work Packages is off'} icon="layers" />
-        <Stat label="Milestones overdue" value={ms?.overdue ?? '—'} foot={ms ? `${ms.dueSoon} due in 30 days · ${ms.done} of ${ms.total} achieved` : 'Milestones are off'} icon="flag" />
-        <Stat label="Active risks" value={rk?.active ?? '—'} foot={rk ? <span className={hot ? 'negative' : ''}>{hot} {rk.top.toLowerCase()} · {rk.responseOverdue} responses overdue</span> : 'Risks are off'} icon="risk" />
-        <Stat label="Open interface points" value={itf?.pointsOpen ?? '—'} foot={itf ? <span className={itf.pointsOverdue ? 'negative' : ''}>{itf.pointsOverdue} overdue · {itf.points} in the register</span> : 'Interfaces are off'} icon="link" />
+        <Stat tone="overall" label="Cumulative actual" value={cum ? cum.actual : '—'} unit={cum ? '%' : undefined} foot={op ? 'Overall, to the cut-off' : 'Overall Progress is off'} icon="chart" />
+        <Stat tone="overall" label="Cumulative planned" value={cum ? cum.plan : '—'} unit={cum ? '%' : undefined} foot="Overall, to the cut-off" icon="chart" />
+        <Stat tone="overall" label="Cumulative variance" value={cumVar != null ? `${cumVar > 0 ? '+' : ''}${cumVar.toFixed(1)}` : '—'} unit={cumVar != null ? '%' : undefined} foot={varFoot(cumVar)} icon="chart" />
+        <Stat tone="week" label="In-week actual" value={wk?.actual ?? '—'} unit={wk?.actual != null ? '%' : undefined} foot={op ? 'Progress made this week' : 'Overall Progress is off'} icon="calendar" />
+        <Stat tone="week" label="In-week planned" value={wk?.plan ?? '—'} unit={wk?.plan != null ? '%' : undefined} foot="Progress planned this week" icon="calendar" />
+        <Stat tone="week" label="In-week variance" value={wkVar != null ? `${wkVar > 0 ? '+' : ''}${wkVar.toFixed(1)}` : '—'} unit={wkVar != null ? '%' : undefined} foot={varFoot(wkVar)} icon="calendar" />
       </div>
 
       <div className="grid-main">
         {op ? (
-          <SCurvePanel points={op.scurve} sub="Cumulative weighted progress of the whole scope, plan vs. actual, with the major milestones" />
+          <SCurvePanel points={op.scurveWeekly?.length ? op.scurveWeekly : op.scurve} monthly={op.scurve} defaultCut="monthly" sub="Cumulative weighted progress of the whole scope, plan vs. actual, with the major milestones" />
         ) : <Unavailable label="Overall Progress" />}
 
         {ms ? (

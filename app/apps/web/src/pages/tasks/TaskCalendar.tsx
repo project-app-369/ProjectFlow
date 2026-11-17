@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { PTask } from '../../api';
 import { addDays, addMonths, fmtDate, fmtDay, fmtMonth, fmtShort, hours, monthStart, weekStart } from '../../format';
 import { Icon } from '../../icons';
-import { Btn, ErrorBox, Loading, PageHead } from '../../ui';
+import { Btn, ErrorBox, PageHead, PageSkeleton } from '../../ui';
 import { applyFilter, emptyFilter, StatusBadges, TaskFilters, TaskForm, UrgencyBadge, useTasks, type TaskFilter } from './common';
 
 type Mode = 'day' | 'week' | 'month';
@@ -41,7 +41,7 @@ export default function TaskCalendar() {
   const [editing, setEditing] = useState<PTask | { due: string } | null>(null);
   const shown = useMemo(() => applyFilter(tasks, filter), [tasks, filter]);
 
-  if (isPending) return <Loading />;
+  if (isPending) return <PageSkeleton />;
   if (error) return <ErrorBox error={error} />;
 
   const move = (dir: -1 | 1) => setAnchor(a => (mode === 'day' ? addDays(a, dir) : mode === 'week' ? addDays(a, 7 * dir) : addMonths(monthStart(a), dir)));

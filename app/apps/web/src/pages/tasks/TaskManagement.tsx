@@ -4,7 +4,7 @@ import { useDeepLinkItem } from '../../deepLink';
 import type { PTask } from '../../api';
 import { hours } from '../../format';
 import { Icon } from '../../icons';
-import { Btn, ErrorBox, Loading, PageHead, Stat } from '../../ui';
+import { Btn, ErrorBox, PageHead, Stat, PageSkeleton } from '../../ui';
 import { applyFilter, emptyFilter, TaskFilters, TaskForm, useTasks, type TaskFilter } from './common';
 import { TaskCards, TaskGantt, TaskKanban, TaskList } from './TaskViews';
 
@@ -25,7 +25,7 @@ export default function TaskManagement() {
     return { open: open.length, overdue: tasks.filter(t => t.overdue).length, hours: open.reduce((n, t) => n + (t.effort ?? 0), 0), done: tasks.length - open.length };
   }, [tasks]);
 
-  if (isPending) return <Loading />;
+  if (isPending) return <PageSkeleton />;
   if (error) return <ErrorBox error={error} />;
 
   const open = (t: PTask) => setEditing(t);

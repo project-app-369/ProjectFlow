@@ -31,7 +31,7 @@ describe('setup', () => {
     expect(store.sheetNames()).toEqual([
       'Settings - Projects', 'Settings - Users', 'Settings - Party access', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
-      'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - S-curve', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
+      'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - Working schedule', 'EPCIC - CPN progress', 'EPCIC - S-curve', 'EPCIC - S-curve weekly', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
       'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
@@ -41,7 +41,7 @@ describe('setup', () => {
   it('loads the reference data and is idempotent', () => {
     expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(148);
     expect(store.readRows(SHEET.expediting, COLUMNS.expediting)).toHaveLength(145);
-    expect(store.readRows(SHEET.milestones, COLUMNS.milestones)).toHaveLength(48);
+    expect(store.readRows(SHEET.milestones, COLUMNS.milestones)).toHaveLength(83);
     expect(store.readRows(SHEET.users, COLUMNS.users)).toHaveLength(4);
     expect(seedStore(store, seedData)).toBe(false);
     expect(store.readRows(SHEET.procurement, COLUMNS.procurement)).toHaveLength(148);
@@ -80,13 +80,17 @@ describe('data endpoints match the NestJS API contract', () => {
     expect(d.procurement.total).toBe(148);
     expect(d.expediting).toMatchObject({ total: 145, delayed: 12, atRisk: 6 });
     expect(d.workPackages.items).toHaveLength(5);
-    expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(27.1, 1);
+    expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(29.3, 1);
     expect(d.workPackages.items.map((w: any) => w.code)).toEqual(['WP2', 'WP3', 'WP4', 'WP5', 'WP6']);
-    expect(d.overallProgress.latest).toMatchObject({ date: '2026-10-30', actual: 27.1 });
+    expect(d.overallProgress.latest).toMatchObject({ date: '2026-11-13', actual: 29.3 });
     expect(d.overallProgress.phases.map((p: any) => p.phase).slice(0, 3)).toEqual(['Engineering', 'Procurement', 'Onshore construction']);
-    expect(d.overallProgress.phases[1]).toMatchObject({ plan: 41.24, actual: 43.65, reportDate: '2026-10-30' });
+    expect(d.overallProgress.phases[1]).toMatchObject({ plan: 43.42, actual: 46.49, reportDate: '2026-11-13' });
     expect(d.overallProgress.scurve.at(-1).actual).toBeNull();
-    expect(d.milestones.total).toBe(48);
+    // the same overall curve is also served weekly, with the actual stopping at the cut-off
+    expect(d.overallProgress.scurveWeekly.length).toBeGreaterThan(d.overallProgress.scurve.length);
+    expect(d.overallProgress.scurveWeekly.find((p: any) => p.date === '2026-11-13')).toMatchObject({ plan: 26.79, actual: 29.29 });
+    expect(d.overallProgress.scurveWeekly.filter((p: any) => p.date > '2026-11-13').every((p: any) => p.actual === null)).toBe(true);
+    expect(d.milestones.total).toBe(83);
     expect(d.risks).toMatchObject({ total: 90, active: 62, levels: ['High', 'Medium', 'Low'], top: 'High' });
     expect(d.interfaces).toMatchObject({ total: 0, open: 0, points: 34, pointsOpen: 33 });
   });
@@ -284,8 +288,8 @@ describe('members and users', () => {
 describe('milestones (reference data)', () => {
   it('summarises against the reporting cut-off', () => {
     const s = ok(call('GET', `${P}/milestones/summary`));
-    expect(s).toMatchObject({ total: 48, done: 9, cutoff: '2026-11-06' });
-    expect(s.done + s.overdue + s.dueSoon + s.planned).toBe(48);
+    expect(s).toMatchObject({ total: 83, done: 11, cutoff: '2026-11-06' });
+    expect(s.done + s.overdue + s.dueSoon + s.planned).toBe(83);
     expect(s.next).toHaveLength(5);
     expect(s.next.every((m: any) => m.status !== 'Done')).toBe(true);
     expect(Object.keys(s.bySub).sort()).toEqual(['AECC', 'MC', 'PSB', 'PVSM', 'VSP']);
@@ -293,13 +297,13 @@ describe('milestones (reference data)', () => {
 
   it('lists, filters and derives status', () => {
     const all = ok(call('GET', `${P}/milestones?pageSize=200`));
-    expect(all.total).toBe(48);
+    expect(all.total).toBe(83);
     const byId = (id: string) => all.items.find((m: any) => m.id === id);
     expect(byId('01-M-1000')).toMatchObject({ description: 'Project Effective Date', status: 'Done' });
     expect(byId('01-M-1350')).toMatchObject({ description: 'Final Acceptance', status: 'Planned' });
     expect(byId('04-M-1140')).toMatchObject({ status: 'Done', variance: 16 });
     expect(ok(call('GET', `${P}/milestones?sub=AECC`)).items.every((m: any) => m.subName === 'AECC')).toBe(true);
-    expect(ok(call('GET', `${P}/milestones?status=Done`)).total).toBe(9);
+    expect(ok(call('GET', `${P}/milestones?status=Done`)).total).toBe(11);
     expect(ok(call('GET', `${P}/milestones?q=float-over`)).total).toBeGreaterThan(0);
     expect(ok(call('GET', `${P}/milestones.csv`)).csv).toContain('Project Effective Date');
   });
@@ -310,7 +314,7 @@ describe('milestones (reference data)', () => {
     const done = ok(call('PATCH', `${P}/milestones/KM-001`, { actual: '2026-11-17', facility: 'CGF Topsides' }));
     expect(done).toMatchObject({ status: 'Done', variance: 7, facility: 'CGF Topsides' });
     expect(ok(call('GET', `${P}/milestones?facility=${encodeURIComponent('CGF Topsides')}`)).items.map((m: any) => m.id)).toContain('KM-001');
-    expect(ok(call('GET', `${P}/milestones`)).facets.facilities).toEqual(expect.arrayContaining(['Project', 'CGF Topsides', 'CGF Jacket & Bridge', 'LQ Module #2', 'Pipeline']));
+    expect(ok(call('GET', `${P}/milestones`)).facets.facilities).toEqual(expect.arrayContaining(['CGF Topsides', 'CGF Jacket', 'Bridge', 'LQ Module #2', 'Pipeline']));
     expect(ok(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Own id' })).id).toBe('M-99');
     expect(err(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Again' })).status).toBe(409);
     expect(err(call('POST', `${P}/milestones`, { description: '' })).status).toBe(400);
@@ -329,10 +333,10 @@ describe('milestones (reference data)', () => {
   it('summarises milestones for the page: cards, status strip, look-ahead and charts', () => {
     const ins = ok(call('GET', `${P}/milestones/insights`));
     expect(ins.cards).toHaveLength(6);
-    expect(ins.cards[0]).toMatchObject({ label: 'Milestones', value: 48 });
+    expect(ins.cards[0]).toMatchObject({ label: 'Milestones', value: 83 });
     expect(ins.strip.boxes.map((b: any) => b.label)).toEqual(['Done', 'Overdue', 'Due soon', 'Planned']);
     expect(ins.lookAhead.boxes.map((b: any) => b.label)).toEqual(['Overdue', 'Within 30 days', 'Within 45 days', 'Within 60 days', 'No date']);
-    expect(ins.charts.map((c: any) => c.filterKey)).toEqual([undefined, 'facility', 'sub']);
+    expect(ins.charts.map((c: any) => c.filterKey)).toEqual([undefined, 'facility']);
     const w = ok(call('GET', `${P}/milestones?within=60`));
     expect(w.total).toBe(ins.lookAhead.boxes[3].value);
   });
@@ -356,7 +360,7 @@ describe('risk management', () => {
     expect(live.items.some((r: any) => r.status === 'Closed')).toBe(false);
     const first = ok(call('GET', `${P}/risks/PEP-DEN-0001`));
     // Probable (4) x worst of schedule/cost/scope = Moderate (3) = 12, a red cell; after mitigation Unlikely x Minor = 4, green.
-    expect(first).toMatchObject({ status: 'Closed', category: 'Project Executional', discipline: 'Detail Engineering', preScore: 12, preLevel: 'High', preWorst: ['Schedule', 'Cost', 'Scope'], postScore: 4, postLevel: 'Low', currentLevel: 'Low', owners: ['CV Phong', 'DH Tien'] });
+    expect(first).toMatchObject({ status: 'Closed', category: 'Project Executional', discipline: 'DE', preScore: 12, preLevel: 'High', preWorst: ['Schedule', 'Cost', 'Scope'], postScore: 4, postLevel: 'Low', currentLevel: 'Low', owners: ['CV Phong', 'DH Tien'] });
     expect(first.actions.length).toBe(3);
     const opts = ok(call('GET', `${P}/risks/options`));
     expect(opts.matrix).toMatchObject({ version: 'Project matrix (4 x 4)', probabilityLabels: ['Rare', 'Unlikely', 'Possible', 'Probable'], severityLabels: ['Negligible', 'Minor', 'Moderate', 'Major'], levels: ['Low', 'Medium', 'High'] });
@@ -368,7 +372,7 @@ describe('risk management', () => {
 
   it('rates each impact dimension, takes the worst, and numbers new risks after the register', () => {
     const r = ok(call('POST', `${P}/risks`, risk));
-    expect(r).toMatchObject({ id: 'PEP-PRO-0091', no: 91, discipline: 'Commercial/ Procurement', preSeverity: 4, preScore: 12, preLevel: 'High', preWorst: ['Schedule'], postLevel: null, currentLevel: 'High', createdBy: ADMIN });
+    expect(r).toMatchObject({ id: 'PEP-PRO-0091', no: 91, discipline: 'PRO', preSeverity: 4, preScore: 12, preLevel: 'High', preWorst: ['Schedule'], postLevel: null, currentLevel: 'High', createdBy: ADMIN });
     expect(r.owners).toEqual(['Procurement lead', 'Site manager']);
     const after = ok(call('PATCH', `${P}/risks/${r.id}`, { postProbability: 2, postSchedule: 2, status: 'Monitor' }));
     expect(after).toMatchObject({ status: 'Monitor', postScore: 4, postLevel: 'Low', currentLevel: 'Low', preLevel: 'High' });
@@ -401,6 +405,20 @@ describe('risk management', () => {
     expect(d).toMatchObject({ actionsDone: 1, actionsOverdue: 0, actions: [{ done: true, doneDate: '2026-11-08' }] });
     expect(ok(call('DELETE', `${P}/risks/${r.id}/actions/${aid}`)).actionsTotal).toBe(0);
     expect(err(call('POST', `${P}/risks/${r.id}/actions`, { action: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
+  });
+
+  it('filters by one or several disciplines joined with |', () => {
+    const all = ok(call('GET', `${P}/risks?pageSize=200`));
+    const [a, b] = all.facets.disciplines as string[];
+    const one = ok(call('GET', `${P}/risks?pageSize=200&discipline=${encodeURIComponent(a)}`));
+    expect(one.total).toBeGreaterThan(0);
+    expect(one.items.every((r: any) => r.discipline === a)).toBe(true);
+    const both = ok(call('GET', `${P}/risks?pageSize=200&discipline=${encodeURIComponent(`${a}|${b}`)}`));
+    expect(both.items.every((r: any) => r.discipline === a || r.discipline === b)).toBe(true);
+    expect(both.total).toBe(all.items.filter((r: any) => r.discipline === a || r.discipline === b).length);
+    expect(both.total).toBeGreaterThan(one.total);
+    const issues = ok(call('GET', `${P}/issues?pageSize=200&sort=discipline`));
+    expect(issues.items.length).toBeGreaterThan(0);
   });
 
   it('filters by level, owner, flag, heatmap cell and response window, and sorts by level', () => {
@@ -1268,6 +1286,22 @@ describe('facility schedule and progress', () => {
     expect(p.wbs.map((w: any) => w.name)).toEqual(['PILE', 'CONDUCTOR']);
   });
 
+  it('lists the scopes of every facility in the order overall, engineering, procurement, construction, pre-com', () => {
+    const order = ['overall', 'engineering', 'procurement', 'construction', 'precom'];
+    for (const id of ['cgf-topsides', 'cgf-jacket', 'pile-conductor', 'bridge', 'lqm2']) {
+      const keys = (ok(call('GET', `${P}/facilities/${id}/progress`)).scopes as any[]).map(x => x.scope).filter(k => order.includes(k));
+      expect(keys, id).toEqual(order.filter(k => keys.includes(k)));
+    }
+  });
+
+  it('gives CGF Topsides its overall, engineering and procurement curves, from the work package of the progress report', () => {
+    const p = ok(call('GET', `${P}/facilities/cgf-topsides/progress`));
+    expect(p.scopes.slice(0, 4).map((x: any) => x.scope)).toEqual(['overall', 'engineering', 'procurement', 'construction']);
+    expect(p.scopes[0]).toMatchObject({ headline: true, asOf: '2026-11-13', actual: 27.7 });
+    expect(p.scopes[1].actual).toBeCloseTo(96.79, 1);
+    expect(p.scopes[2].actual).toBeCloseTo(45.2, 1);
+  });
+
   it('sorts the key milestones into their facility', () => {
     const names = (id: string) => (ok(call('GET', `${P}/facilities/${id}/progress`)).milestones as any[]).map(m => m.description);
     expect(names('cgf-topsides')).toContain('First Steel Cut for CGF Topsides');
@@ -1277,6 +1311,57 @@ describe('facility schedule and progress', () => {
     expect(names('lqm2')).toContain('LQ Module Ready for Sail-away');
     expect(names('cgf-jacket')).not.toContain('First Steel Cut for Pile');
     expect(names('dsf')).toEqual([]);
+  });
+
+  it('puts every facility and its key milestones on one timeline, with the working schedule beside CGF Topsides', () => {
+    const t = ok(call('GET', `${P}/facility-timeline`));
+    expect(t.facilities.map((f: any) => f.id)).toEqual(['cgf-topsides', 'cgf-jacket', 'pile-conductor', 'bridge', 'lqm2', 'dsf', 'other-pipeline']);
+    // every key date is on the timeline once: the rows add up to the key dates of the register
+    const keyDates = ok(call('GET', `${P}/milestones?pageSize=200`)).items.filter((m: any) => m.kind !== 'Equipment').length;
+    expect(t.facilities.reduce((n: number, f: any) => n + f.milestones.length, 0)).toBe(keyDates);
+    // progress is the overall progress, not the construction curve
+    expect(t.facilities[0]).toMatchObject({ basis: 'Overall', actual: 27.7 });
+    expect(t.facilities[1].basis).toBe('Overall');
+    expect(t.start <= t.finish).toBe(true);
+    const top = t.facilities[0];
+    expect(top.milestones.length).toBeGreaterThan(20);
+    expect(top.milestones.some((m: any) => m.description === 'Install Pedestal Crane')).toBe(false); // equipment installation rows are not key dates
+    expect(top.workStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(t.facilities[1].workStart).toBeNull();
+    expect(t.facilities[5]).toMatchObject({ later: true, milestones: [] });
+  });
+
+  it('draws the CGF Jacket from its own schedule: span, and the nine key dates M1000 to M1080 with the subcontractor dates', () => {
+    const t = ok(call('GET', `${P}/facility-timeline`));
+    const jk = t.facilities.find((f: any) => f.id === 'cgf-jacket');
+    expect(jk).toMatchObject({ start: '2026-02-23', finish: '2027-05-31' });
+    const at = (id: string) => jk.milestones.find((m: any) => m.id === id);
+    expect(at('M1000')).toMatchObject({ description: 'Effective Date (ED)', working: '2026-02-23', status: 'Done' });
+    expect(at('M1010')).toMatchObject({ description: 'KOM', working: '2026-03-17' });
+    expect(['03-M-1020', 'M1030', 'M1040', 'M1050', 'M1060', '03-M-1100', '03-M-1110'].map(id => at(id).working)).toEqual(
+      ['2026-05-04', '2026-10-17', '2026-11-12', '2027-01-26', '2027-02-13', '2027-05-15', '2027-05-31']);
+  });
+
+  it('checks the CGF Topsides S-curve against the working schedule', () => {
+    const p = ok(call('GET', `${P}/facilities/cgf-topsides/progress`));
+    expect(p.scheduleCheck).toMatchObject({ scope: 'construction' });
+    const c = p.scheduleCheck.curve;
+    expect(c.length).toBeGreaterThan(20);
+    expect(c[c.length - 1]).toMatchObject({ baseline: 100, working: 100 });
+    expect(c.every((x: any) => x.working >= x.baseline - 0.01)).toBe(true); // the working schedule runs ahead of the baseline
+    expect(ok(call('GET', `${P}/facilities/cgf-jacket/progress`)).scheduleCheck).toBeNull();
+  });
+
+  it('serves the critical path network: CPN progress, critical activities and the milestone chain', () => {
+    const c = ok(call('GET', `${P}/cpn`));
+    expect(c.overall).toMatchObject({ weight: 100, plan: 23.34, actual: 10.04, basePlan: 26.79, baseActual: 29.29 });
+    expect(c.packages.map((w: any) => w.code)).toEqual(['WP2', 'WP3', 'WP4', 'WP5', 'WP6']);
+    expect(c.curve.length).toBeGreaterThan(100);
+    expect(c.curve.every((p: any) => p.date <= '2026-11-13' || p.actual === null)).toBe(true);
+    expect(c.critical.threshold).toBe(7);
+    expect(c.critical.items.every((a: any) => a.float <= 7 && a.finish >= c.cutoff)).toBe(true);
+    expect(c.milestones.length).toBeGreaterThan(40);
+    expect(c.milestones.some((m: any) => m.major)).toBe(true);
   });
 
   it('returns the WBS schedule with dates, and none for DSF', () => {

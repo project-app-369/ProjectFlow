@@ -78,6 +78,26 @@
         "5174"
       ],
       "port": 5174
+    },
+    {
+      "name": "app-api-v2",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/api-v2",
+        "dev"
+      ],
+      "port": 3300
+    },
+    {
+      "name": "app-web-v2",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/web",
+        "dev:v2"
+      ],
+      "port": 5173
     }
   ]
 }

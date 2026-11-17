@@ -5,7 +5,7 @@ import { errorText, qs, request, type KnowledgeArticle, type KnowledgeDomain, ty
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Pager, useDebounced } from '../ui';
+import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Pager, useDebounced, PageSkeleton } from '../ui';
 import { ArticleBody } from './knowledgeBody';
 import { useDeepLink } from '../deepLink';
 
@@ -121,7 +121,7 @@ function ArticleCard({ a, showDomain, onOpen }: { a: KnowledgeArticle; showDomai
 }
 
 function Overview({ summary, canWrite, onOpen, onNew }: { summary?: KnowledgeSummary; canWrite: boolean; onOpen: (id: string) => void; onNew: () => void }) {
-  if (!summary) return <Loading />;
+  if (!summary) return <PageSkeleton />;
   const enabled = summary.taxonomy.filter(t => t.enabled);
   return (
     <>

@@ -5,7 +5,7 @@ import { downloadCsv, request, type MaterialWeight, type Page, type StockLine } 
 import { RecordDrawer } from '../crud';
 import { DataTable } from '../DataTable';
 import { Icon } from '../icons';
-import { SortBy, useListState } from '../Register';
+import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead, Pager } from '../ui';
@@ -30,6 +30,7 @@ export default function Materials() {
   const weights = useQuery({ queryKey: ['material-weights', project.id], queryFn: () => request<Page<MaterialWeight>>(`${base}/summary?pageSize=200`) });
   const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...filters });
   const page = useQuery({ queryKey: ['material-balance', project.id, query], queryFn: () => request<Page<StockLine>>(`${base}/balance${query}`), placeholderData: keepPreviousData });
+  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['material-balance', project.id, q], q => request<Page<StockLine>>(`${base}/balance${q}`));
   const stock: StockLine | 'new' | null = stockId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === stockId) ?? null);
   const facets = page.data?.facets;
 
@@ -110,7 +111,7 @@ export default function Materials() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} state={list.state} onSort={list.toggleSort} empty="No stock line matches. Change the search or filters." />
+            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No stock line matches. Change the search or filters." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}

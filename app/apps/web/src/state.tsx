@@ -72,7 +72,9 @@ export function useAccess() {
 }
 
 /* ---------------- breadcrumb ---------------- */
-export const CrumbContext = createContext<string[]>([]);
+/** One step of the breadcrumb; a step with `to` is a link. */
+export type Crumb = string | { label: string; to?: string };
+export const CrumbContext = createContext<Crumb[]>([]);
 
 /** The spreadsheet sheet behind the current screen, when the backend keeps data in Google Sheets. */
 export const SheetContext = createContext<SheetInfo | null>(null);

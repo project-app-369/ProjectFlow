@@ -30,7 +30,13 @@ PHASES = [('ENGINEERING', 'Engineering'), ('PROCUREMENT', 'Procurement'), ('ONSH
 
 
 def book():
-    path = glob.glob(os.path.join(DATA, '1 - *Progress Report*.xlsx'))[0]
+    """The newest Progress Report workbook, by the cut-off date in its name, from the Progress folder or the CPN folder (13 Nov 2026 and later)."""
+    paths = []
+    for folder in (DATA, os.path.join(DATA, '..', 'CPN')):
+        paths += [p for p in glob.glob(os.path.join(folder, '1 - *Progress Report*.xlsx')) if not os.path.basename(p).startswith('~$')]
+    # newest date first; at the same date the standard report, not the CPN variant (whose weights and plan differ)
+    path = max(paths, key=lambda p: (re.search(r'_(\d{8})', os.path.basename(p)).group(1), 'CPN' not in os.path.basename(p)))
+    print('progress report', os.path.basename(path))
     return openpyxl.load_workbook(path, read_only=True, data_only=True)
 
 
@@ -74,6 +80,27 @@ def scurve(wb, cutoff):
     return out
 
 
+def scurve_weekly(wb, cutoff):
+    """Weekly cumulative OVERALL plan and actual (percent) from `Overall WP (W)`: the PLANNED and ACTUAL rows of the OVERALL line; the actual stops at the cut-off."""
+    grid = list(wb['Overall WP (W)'].iter_rows(min_row=1, max_row=90, max_col=215, values_only=True))
+    hdr = grid[6]
+    first = next(j for j, v in enumerate(hdr) if isinstance(v, dt.datetime))
+    dates = [iso(v) for v in hdr[first:]]
+    plan = actual = None
+    for r in grid[7:]:
+        if r[24] == 'OVERALL' and r[25] == 'PLANNED':
+            plan = r[first:]
+        elif r[24] == 'OVERALL' and r[25] == 'ACTUAL':
+            actual = r[first:]
+    assert plan is not None and actual is not None, 'weekly OVERALL rows not found'
+    out = []
+    for i, d in enumerate(dates):
+        if not d:
+            continue
+        out.append({'date': d, 'plan': pct(plan[i]), 'forecast': None, 'actual': pct(actual[i]) if d <= cutoff else None})
+    return out
+
+
 def phases(wb):
     rows = list(wb['dashboard data'].iter_rows(min_row=29, max_row=40, max_col=4, values_only=True))
     out = []
@@ -100,7 +127,7 @@ if __name__ == '__main__':
             p['actual'] = None
         elif p['date'] < cutoff and p['actual'] is None:
             p['actual'] = None
-    seed['schedule'] = {'scurve': curve, 'workPackages': items, 'overall': overall}
+    seed['schedule'] = {'scurve': curve, 'scurveWeekly': scurve_weekly(wb, cutoff), 'workPackages': items, 'overall': overall}
     seed['phaseProgress'] = phases(wb)
     seed['progressCutoff'] = cutoff
     with open(OUT, 'w', encoding='utf8') as f:
