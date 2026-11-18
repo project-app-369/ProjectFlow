@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "Project Flow",
+  "short_name": "Project Flow",
+  "description": "EPCIC project management: schedule and progress, procurement and expediting, risks, issues, interfaces, tasks and reports, stored in Supabase.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./#/?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#062538",
+  "theme_color": "#062538",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tasks", "short_name": "Tasks", "url": "./#/m/task-management.board?source=shortcut", "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Risk register", "short_name": "Risks", "url": "./#/m/management.risks?source=shortcut", "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Issues", "short_name": "Issues", "url": "./#/m/management.issues?source=shortcut", "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "My profile", "short_name": "Profile", "url": "./#/profile?source=shortcut", "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ],
+  "prefer_related_applications": false
+}
