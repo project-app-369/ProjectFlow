@@ -29,7 +29,7 @@ beforeEach(() => {
 describe('setup', () => {
   it('generates the worksheets grouped by area: settings first, then each workspace', () => {
     expect(store.sheetNames()).toEqual([
-      'Settings - Projects', 'Settings - Users', 'Settings - Party access', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
+      'Settings - Projects', 'Settings - Users', 'Settings - Party access', 'Settings - Role access', 'Settings - Person access', 'Settings - Access log', 'Settings - Memberships', 'Settings - Modules', 'Settings - Module changes',
       'Personal - Tasks', 'Personal - Subtasks',
       'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - Working schedule', 'EPCIC - CPN progress', 'EPCIC - S-curve', 'EPCIC - S-curve weekly', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
@@ -798,6 +798,47 @@ describe('construction budget', () => {
   const B = `${P}/construction/budget`;
   const add = (wbs: string, extra: object = {}, user = ADMIN) => ok(call('POST', B, { wbs, name: `Activity ${wbs}`, ...extra }, user));
 
+  describe('loaded from the MPI tracking workbook', () => {
+    it('carries the WBS with budget, actual and earned manhours, rolled up from the activities', () => {
+      const r = ok(call('GET', B));
+      expect(r.summary.activities).toBeGreaterThan(300);
+      expect(r.summary.totalHours).toBeGreaterThan(2_900_000);
+      expect(r.summary.actualHours).toBeGreaterThan(340_000);
+      expect(r.summary.cpi).toBeGreaterThan(0.9);
+      expect(r.summary.cpi).toBeLessThan(1.1);
+      expect(r.summary.progressPct).toBeGreaterThan(5);
+      const areas = r.items.filter((n: any) => n.level === 1);
+      expect(areas.map((n: any) => n.wbs)).toEqual(['CGF-TOPSIDE', 'PRELIMINARY']);
+      // each area's figures are the sum of the activities below it, and every discipline adds up to its area
+      for (const area of areas) {
+        const below = r.items.filter((n: any) => n.leaf && n.top === area.wbs);
+        expect(area.hours).toBeCloseTo(below.reduce((a: number, n: any) => a + n.ownHours, 0), 0);
+        expect(area.actualHours).toBeCloseTo(below.reduce((a: number, n: any) => a + (n.ownActual ?? 0), 0), 0);
+      }
+      expect(areas[0].notes).toContain('2,148,412'); // the workbook's own area total disagrees with its disciplines, and says so
+      expect(r.items.filter((n: any) => n.level === 4).every((n: any) => n.leaf)).toBe(true);
+    });
+
+    it('draws a histogram from the discipline spans of the baseline schedule, and exports actuals in the CSV', () => {
+      const h = ok(call('GET', `${B}/histogram?by=month`));
+      expect(h.periods.length).toBeGreaterThan(12);
+      expect(h.scheduledHours).toBeGreaterThan(1_000_000);
+      const csv = ok(call('GET', `${B}.csv`)).csv as string;
+      expect(csv.split(String.fromCharCode(10))[0]).toContain('Actual manhours');
+    });
+
+    it('lets a manager correct the hours spent on an activity, and the totals follow', () => {
+      const leaf = ok(call('GET', B)).items.find((n: any) => n.leaf && n.ownActual > 0);
+      const before = ok(call('GET', B)).summary.actualHours;
+      ok(call('PATCH', `${B}/${leaf.wbs}`, { actualHours: leaf.ownActual + 100 }, MANAGER));
+      expect(ok(call('GET', B)).summary.actualHours).toBeCloseTo(before + 100, 1);
+      expect(call('PATCH', `${B}/${leaf.wbs}`, { actualHours: 1 }, CLIENT).ok).toBe(false);
+    });
+  });
+
+  describe('typed by hand', () => {
+  beforeEach(() => { store.deleteRows(SHEET.budget, COLUMNS.budget, { projectId: 'sttp2b' }); });
+
   it('starts empty and keeps its own sheet', () => {
     expect(ok(call('GET', B))).toMatchObject({ items: [], summary: { totalHours: 0, activities: 0 } });
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'construction.budget').sheet.name).toBe('EPCIC - Construction budget');
@@ -905,6 +946,7 @@ describe('construction budget', () => {
   it('is unavailable when its module is switched off', () => {
     ok(call('PUT', `${P}/modules/construction.budget`, { state: 'Disabled' }));
     expect(err(call('GET', B)).error.code).toBe('MODULE_DISABLED');
+  });
   });
 });
 

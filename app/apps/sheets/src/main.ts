@@ -3,6 +3,7 @@
  * function stubs (doGet, doPost, onOpen, setup, showToken) because Apps Script looks them up by name.
  */
 import { Api } from './api';
+import { readSession, type AuthOptions } from './auth';
 import { COLUMNS, SHEET } from './datasets';
 import { handle, handleBatch, type ApiRequest, type Envelope } from './router';
 import { noMailer, type Mailer } from './mailer';
@@ -10,6 +11,19 @@ import { seedStore, type SeedData } from './seed';
 import { SheetsStore } from './sheets-store';
 
 const TOKEN_PROPERTY = 'API_TOKEN';
+/** Script property holding the secret that signs session tokens. When it exists, sign-in with a password is required; without it the demo user picker is used. */
+const SESSION_PROPERTY = 'SESSION_SECRET';
+
+function authOptions(): AuthOptions | undefined {
+  const secret = PropertiesService.getScriptProperties().getProperty(SESSION_PROPERTY);
+  return secret ? { secret } : undefined;
+}
+
+/** The user an admin call acts as: the session's user when sign-in is required, otherwise the stated one. */
+function callerId(store: SheetsStore, request: ApiRequest): string | undefined {
+  const auth = authOptions();
+  return auth ? readSession(store, auth, request.session, new Date()) : request.user;
+}
 
 function openStore() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -79,21 +93,21 @@ function respond(request: ApiRequest, token: unknown): Envelope {
   if (!authorized(token)) return fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.');
   const store = openStore();
   if (!store.sheetInfo(SHEET.projects)) return fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.');
-  if (request.method === 'POST' && request.path === '/admin/setup') return adminSetup(store, request.user);
-  if (request.method === 'GET' && request.path.startsWith('/admin/export?')) return adminExport(store, request.user, request.path);
+  if (request.method === 'POST' && request.path === '/admin/setup') return adminSetup(store, callerId(store, request));
+  if (request.method === 'GET' && request.path.startsWith('/admin/export?')) return adminExport(store, callerId(store, request), request.path);
   // Public web requests must never send email as the spreadsheet owner.
   if (/\/remind(?:-due)?$/.test(request.path)) return fail(403, 'OWNER_ONLY', 'Email reminders are available only to the spreadsheet owner.');
-  return handle(new Api(store, () => new Date(), noMailer), request);
+  return handle(new Api(store, () => new Date(), noMailer, authOptions()), request);
 }
 
 export function doGet(e: GoogleAppsScript.Events.DoGet) {
   const path = e?.parameter?.path;
   if (!path) return json({ ok: true, status: 200, data: { name: 'Project Flow sheets API', usage: 'GET ?path=/health&token=…' } });
-  return json(respond({ method: 'GET', path, user: e.parameter.user }, e.parameter.token));
+  return json(respond({ method: 'GET', path, user: e.parameter.user, session: e.parameter.session }, e.parameter.token));
 }
 
 export function doPost(e: GoogleAppsScript.Events.DoPost) {
-  let payload: { method?: string; path?: string; body?: unknown; token?: string; user?: string; requests?: { method?: string; path: string }[] };
+  let payload: { method?: string; path?: string; body?: unknown; token?: string; user?: string; session?: string; requests?: { method?: string; path: string }[] };
   try {
     payload = JSON.parse(e.postData.contents);
   } catch {
@@ -104,11 +118,11 @@ export function doPost(e: GoogleAppsScript.Events.DoPost) {
     if (!authorized(payload.token)) return json([fail(401, 'UNAUTHORIZED', 'Missing or invalid API token.')]);
     const store = openStore();
     if (!store.sheetInfo(SHEET.projects)) return json(payload.requests.map(() => fail(503, 'NOT_SET_UP', 'Run "Project Flow > Set up sheets" in the spreadsheet first.')));
-    const requests = payload.requests.slice(0, 20).map(q => ({ method: 'GET', path: q.path, user: payload.user }));
-    return json(handleBatch(new Api(store, () => new Date(), noMailer), requests));
+    const requests = payload.requests.slice(0, 20).map(q => ({ method: 'GET', path: q.path, user: payload.user, session: payload.session }));
+    return json(handleBatch(new Api(store, () => new Date(), noMailer, authOptions()), requests));
   }
   if (!payload.method || !payload.path) return json(fail(400, 'BAD_REQUEST', 'method and path are required.'));
-  return json(respond({ method: payload.method, path: payload.path, body: payload.body, user: payload.user }, payload.token));
+  return json(respond({ method: payload.method, path: payload.path, body: payload.body, user: payload.user, session: payload.session }, payload.token));
 }
 
 export function onOpen() {

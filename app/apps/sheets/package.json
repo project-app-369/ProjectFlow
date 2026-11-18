@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "tsx src/local-server.ts",
+    "dev:secure": "node scripts/dev-secure.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "export-seed": "tsx scripts/export-seed.ts"

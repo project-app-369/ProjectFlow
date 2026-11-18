@@ -12,6 +12,8 @@ declare const Deno: { env: { get(name: string): string | undefined } };
 const connectionString = Deno.env.get('SUPABASE_DB_URL');
 if (!connectionString) throw new Error('Supabase did not provide SUPABASE_DB_URL.');
 const sql = postgres(connectionString, { prepare: false, max: 1, idle_timeout: 10, connect_timeout: 10 });
+// When SESSION_SECRET is set (supabase secrets set SESSION_SECRET=...), sign-in with a password is required and a stated user is ignored.
+const sessionSecret = Deno.env.get('SESSION_SECRET');
 const backupSheet = 'https://docs.google.com/spreadsheets/d/1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY/edit';
 const headers = {
   'content-type': 'application/json; charset=utf-8',
@@ -52,12 +54,12 @@ async function writeSnapshot(tx: Tx, before: StoreSnapshot, after: StoreSnapshot
   }
 }
 
-interface Payload extends Partial<ApiRequest> { requests?: { path: string }[] }
+interface Payload extends Partial<ApiRequest> { requests?: { path: string }[]; session?: string }
 async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
   const batch = payload.method === 'BATCH' && Array.isArray(payload.requests);
   const requests: ApiRequest[] = batch
-    ? (payload.requests ?? []).slice(0, 20).map(r => ({ method: 'GET', path: r.path, user: payload.user }))
-    : [{ method: payload.method ?? 'GET', path: payload.path ?? '', body: payload.body, user: payload.user }];
+    ? (payload.requests ?? []).slice(0, 20).map(r => ({ method: 'GET', path: r.path, user: payload.user, session: payload.session }))
+    : [{ method: payload.method ?? 'GET', path: payload.path ?? '', body: payload.body, user: payload.user, session: payload.session }];
   if (!requests.length || requests.some(r => !r.path.startsWith('/'))) return fail(400, 'BAD_REQUEST', 'An absolute API path is required.');
   if (requests.some(r => /\/remind(?:-due)?(?:\?|$)/.test(r.path))) return fail(403, 'OWNER_ONLY', 'Email reminders remain with the Sheet owner.');
   const writing = requests.some(r => r.method !== 'GET');
@@ -68,7 +70,7 @@ async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
     if (!before.sheets.length) return fail(503, 'MIGRATION_REQUIRED', 'Project Flow data has not been imported.');
     const store = new MemoryStore(backupSheet);
     store.loadSnapshot(before);
-    const api = new Api(store, () => new Date(), noMailer);
+    const api = new Api(store, () => new Date(), noMailer, sessionSecret ? { secret: sessionSecret } : undefined);
     let result = batch ? handleBatch(api, requests) : handle(api, requests[0]);
     if (!batch && requests[0].path === '/health' && !Array.isArray(result) && result.ok) {
       result = { ok: true, status: 200, data: { status: 'ok', database: 'supabase', api: 'v3', backupSpreadsheet: backupSheet } };
@@ -86,7 +88,7 @@ export default {
       const url = new URL(request.url);
       const payload = request.method === 'POST'
         ? await request.json() as Payload
-        : { method: 'GET', path: url.searchParams.get('path') ?? '', user: url.searchParams.get('user') ?? undefined };
+        : { method: 'GET', path: url.searchParams.get('path') ?? '', user: url.searchParams.get('user') ?? undefined, session: url.searchParams.get('session') ?? undefined };
       const result = await serve(payload);
       return new Response(JSON.stringify(result), { status: 200, headers });
     } catch (error) {

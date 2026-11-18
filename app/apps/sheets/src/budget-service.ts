@@ -16,6 +16,8 @@ const fields = {
   parentWbs: parentCode,
   discipline: txt(60),
   manhours: z.number().min(0).max(100_000_000).nullish().transform(v => v ?? null),
+  actualHours: z.number().min(0).max(100_000_000).nullish().transform(v => v ?? null),
+  earnedHours: z.number().min(0).max(100_000_000).nullish().transform(v => v ?? null),
   planStart: isoOpt, planFinish: isoOpt,
   notes: txt(500),
 };
@@ -47,6 +49,9 @@ export interface WbsNode {
   ownHours: number;
   /** Leaf: its own hours. Parent: the sum of everything below it. */
   hours: number;
+  /** Manhours spent and value earned, typed on a leaf and summed up the tree; null where nothing was reported. */
+  actualHours: number | null; earnedHours: number | null;
+  ownActual: number | null; ownEarned: number | null;
   /** Earliest start and latest finish of the dates at or below this row. */
   start: string | null; finish: string | null;
   top: string;
@@ -82,19 +87,25 @@ export class BudgetService {
         wbs: code, name: String(r.name ?? ''), parentWbs: (r.parentWbs as string | null) ?? null, discipline: (r.discipline as string | null) ?? null,
         planStart: (r.planStart as string | null) ?? null, planFinish: (r.planFinish as string | null) ?? null, notes: (r.notes as string | null) ?? null,
         level, children: 0, leaf: true, ownHours: Number(r.manhours ?? 0) || 0, hours: 0, start: null, finish: null, top: level === 1 ? code : top,
+        actualHours: null, earnedHours: null, ownActual: r.actualHours == null ? null : Number(r.actualHours), ownEarned: r.earnedHours == null ? null : Number(r.earnedHours),
       };
       out.push(node);
       const children = (kids.get(code) ?? []).filter(c => !seen.has(String(c.wbs)));
       node.children = children.length;
       node.leaf = children.length === 0;
       let sum = 0; let start = node.planStart; let finish = node.planFinish;
+      let actual: number | null = null; let earned: number | null = null;
       for (const c of children) {
         const n = walk(c, level + 1, node.top);
         sum += n.hours;
+        if (n.actualHours !== null) actual = (actual ?? 0) + n.actualHours;
+        if (n.earnedHours !== null) earned = (earned ?? 0) + n.earnedHours;
         if (n.start && (!start || n.start < start)) start = n.start;
         if (n.finish && (!finish || n.finish > finish)) finish = n.finish;
       }
       node.hours = node.leaf ? node.ownHours : round(sum);
+      node.actualHours = node.leaf ? node.ownActual : actual === null ? null : round(actual);
+      node.earnedHours = node.leaf ? node.ownEarned : earned === null ? null : round(earned);
       node.start = start; node.finish = finish;
       out[idx] = node;
       return node;
@@ -111,10 +122,17 @@ export class BudgetService {
     const byDiscipline: Record<string, number> = {};
     for (const n of leaves) byDiscipline[n.discipline ?? UNASSIGNED] = round((byDiscipline[n.discipline ?? UNASSIGNED] ?? 0) + n.ownHours);
     const dates = scheduled.flatMap(n => [n.planStart!, n.planFinish!]).sort();
+    const reported = leaves.filter(n => n.ownActual !== null);
+    const actual = round(reported.reduce((s, n) => s + (n.ownActual ?? 0), 0));
+    const earned = round(reported.reduce((s, n) => s + (n.ownEarned ?? 0), 0));
+    const budgetOfReported = reported.reduce((s, n) => s + n.ownHours, 0);
     return {
       items,
       summary: {
         totalHours: round(total), activities: leaves.length, nodes: items.length,
+        /** Manhours spent and earned, over the activities that report them; the cost performance index is earned / spent (1 or more is on budget). */
+        actualHours: reported.length ? actual : null, earnedHours: reported.length ? earned : null, cpi: actual > 0 ? Math.round((earned / actual) * 1000) / 1000 : null,
+        progressPct: total > 0 && reported.length ? Math.round((earned / total) * 1000) / 10 : null, reportedActivities: reported.length, budgetOfReported: round(budgetOfReported),
         scheduledHours: round(scheduled.reduce((s, n) => s + n.ownHours, 0)), unscheduledHours: round(total - scheduled.reduce((s, n) => s + n.ownHours, 0)),
         byDiscipline, start: dates[0] ?? null, finish: dates[dates.length - 1] ?? null,
         topLevel: items.filter(n => n.level === 1).map(n => ({ wbs: n.wbs, name: n.name, hours: n.hours })),
@@ -125,15 +143,15 @@ export class BudgetService {
   csv(projectId: string) {
     return {
       filename: 'construction-budget.csv',
-      csv: toCsv([['WBS', 'Activity', 'Parent', 'Level', 'Discipline', 'Budget manhours', 'Own manhours', 'Plan start', 'Plan finish', 'Notes'],
-        ...this.tree(projectId).map(n => [n.wbs, n.name, n.parentWbs, n.level, n.discipline, n.hours, n.leaf ? n.ownHours : null, n.planStart, n.planFinish, n.notes])]),
+      csv: toCsv([['WBS', 'Activity', 'Parent', 'Level', 'Discipline', 'Budget manhours', 'Own manhours', 'Actual manhours', 'Earned manhours', 'Plan start', 'Plan finish', 'Notes'],
+        ...this.tree(projectId).map(n => [n.wbs, n.name, n.parentWbs, n.level, n.discipline, n.hours, n.leaf ? n.ownHours : null, n.actualHours, n.earnedHours, n.planStart, n.planFinish, n.notes])]),
     };
   }
 
   histogram(projectId: string, raw: unknown) {
     const q = parse(histogramQuery, raw);
     const nodes = this.tree(projectId);
-    const label = new Map(nodes.filter(n => n.level === 1).map(n => [n.wbs, `${n.wbs} ${n.name}`]));
+    const label = new Map(nodes.filter(n => n.level === 1).map(n => [n.wbs, n.wbs.replace(/[^a-z0-9]/gi, '').toLowerCase() === n.name.replace(/[^a-z0-9]/gi, '').toLowerCase() ? n.name : `${n.wbs} ${n.name}`]));
     const leaves = nodes.filter(n => n.leaf && n.ownHours > 0);
     const dated = leaves.filter(n => n.planStart && n.planFinish && n.planFinish >= n.planStart);
     const unscheduledHours = round(leaves.filter(n => !dated.includes(n)).reduce((s, n) => s + n.ownHours, 0));

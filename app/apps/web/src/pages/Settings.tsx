@@ -1,20 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { SPREADSHEET_URL, apiMode, errorText, request, type ModuleInfo, type OperationState, type WorkspaceId } from '../api';
+import { apiMode, errorText, request, type ModuleInfo, type OperationState, type WorkspaceId } from '../api';
 import { Icon } from '../icons';
 import { fmtDate } from '../format';
 import { pathOf, topModules } from '../nav';
 import { CrumbContext, useAccess, useApp, usePrefs, useToast } from '../state';
 import { InstallButton, useInstall } from '../pwa';
-import { sheetHref } from '../sheetLinks';
 import { Badge, Btn, Breadcrumb, PageHead } from '../ui';
 import ProjectsTab from './SettingsProjects';
 import UsersTab from './SettingsUsers';
 import AccessTab from './SettingsAccess';
+import ProjectAccessTab from './SettingsProjectAccess';
+import AccessLogTab from './SettingsAccessLog';
 
-type TabId = 'projects' | 'users' | 'access' | 'modules' | 'general' | 'data';
-const ALL_TABS: [TabId, string][] = [['projects', 'Projects'], ['users', 'Users'], ['access', 'Party access'], ['modules', 'Modules'], ['general', 'General'], ['data', 'Data sources']];
+type TabId = 'projects' | 'users' | 'access' | 'project-access' | 'log' | 'modules' | 'general' | 'data';
+const ALL_TABS: [TabId, string][] = [['projects', 'Projects'], ['users', 'Users'], ['access', 'Party access'], ['project-access', 'Project access'], ['log', 'Access log'], ['modules', 'Modules'], ['general', 'General'], ['data', 'Data sources']];
 const isOn = (s: OperationState) => s === 'Enabled' || s === 'Pilot' || s === 'Locked' || s === 'Read-only';
 
 export default function Settings() {
@@ -25,7 +26,7 @@ export default function Settings() {
   const TABS = ALL_TABS.filter(([id]) => id !== 'projects' || !!me);
   const current = TABS.find(([id]) => id === tab);
   if (!current) return <Navigate to={`/settings/${me ? 'projects' : 'modules'}`} replace />;
-  const needsProject = (tab === 'modules' || tab === 'data') && !project.id;
+  const needsProject = (tab === 'modules' || tab === 'data' || tab === 'project-access') && !project.id;
   const adminOnly = (tab === 'users' || tab === 'access') && !me?.isAdmin;
 
   return (
@@ -38,7 +39,7 @@ export default function Settings() {
       </div>
       {adminOnly ? <div className="panel empty">This section is available to administrators.{apiMode === 'sheets' ? ' Select Admin (demo) from the profile menu to review it.' : ''}</div>
         : needsProject ? <div className="panel empty">Select a project first. <Btn kind="small" onClick={() => navigate('/settings/projects')}>Open projects</Btn></div>
-        : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'access' ? <AccessTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
+        : tab === 'projects' ? <ProjectsTab /> : tab === 'users' ? <UsersTab /> : tab === 'access' ? <AccessTab /> : tab === 'project-access' ? <ProjectAccessTab /> : tab === 'log' ? <AccessLogTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'general' ? <GeneralTab /> : <DataTab />}
     </CrumbContext.Provider>
   );
 }
@@ -89,7 +90,7 @@ function ModulesTab() {
                   {m.description && <>{m.description} </>}
                   <Badge tone={tone[m.availability]}>{m.availability}</Badge> <Badge tone="indigo">{m.phase}</Badge>
                   {m.core && ' · core, always on'}
-                  {m.sheet && <> · <a href={sheetHref(m.sheet)} target="_blank" rel="noreferrer">Sheet: {m.sheet.name} ↗</a></>}
+                  
                   {m.sheetCapable && !m.sheet && m.effective && ' · no sheet yet'}
                   {!['Enabled', 'Disabled'].includes(m.state) && ` · ${m.state}`}
                 </small>
@@ -142,33 +143,9 @@ function GeneralTab() {
 
 function DataTab() {
   const { project } = useApp();
-  const toast = useToast();
   const health = useQuery({ queryKey: ['health'], queryFn: () => request<{ status: string; database: string; spreadsheet?: string }>('/health') });
-  // The configured link is the exact workbook; the API reports its own only when none is configured (the local simulator reports a placeholder).
-  const sheetUrl = SPREADSHEET_URL || (health.data?.spreadsheet && !/LOCAL-SIMULATOR/.test(health.data.spreadsheet) ? health.data.spreadsheet : '');
-  const sheetId = sheetUrl.match(/\/d\/([\w-]+)/)?.[1] ?? '';
-  const copy = (text: string, what: string) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copied.`), () => toast('Copy is not available in this browser.'));
   return (
     <>
-      {apiMode === 'sheets' && (
-        <section className="panel sheet-card">
-          <div className="panel-head"><div><h2>Google Sheet</h2><p>Every register, setting and user of the app is a tab of this one spreadsheet.</p></div></div>
-          {sheetUrl ? (
-            <div className="sheet-card-body">
-              <span className="sheet-glyph" aria-hidden="true"><Icon name="sheet" /></span>
-              <div className="sheet-card-text">
-                <strong>Project Flow data</strong>
-                <a href={sheetUrl} target="_blank" rel="noreferrer" className="sheet-link">{sheetUrl}</a>
-                {sheetId && <small className="muted">Spreadsheet ID <code>{sheetId}</code></small>}
-              </div>
-              <div className="sheet-card-actions">
-                <a className="btn small primary" href={sheetUrl} target="_blank" rel="noreferrer"><Icon name="sheet" />Open the sheet</a>
-                <Btn kind="small" icon="copy" iconOnly={false} onClick={() => copy(sheetUrl, 'Link')}>Copy link</Btn>
-              </div>
-            </div>
-          ) : <div className="empty">No spreadsheet link is set. Add VITE_SPREADSHEET_URL to the web environment file.</div>}
-        </section>
-      )}
       <section className="panel">
         <div className="panel-head"><h2>Data sources</h2></div>
         <div className="panel-body">

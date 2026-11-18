@@ -1,5 +1,7 @@
 import { isEffective } from '../../api/src/registry/catalog';
+import { AccessService } from './access-service';
 import { AdminService } from './admin-service';
+import type { Actor, AuthOptions } from './auth';
 import { FacilitiesService } from './facilities-service';
 import { InterfacesService } from './interfaces-service';
 import { RegistersService } from './registers-service';
@@ -18,6 +20,9 @@ import type { Store } from './store';
 export class Api {
   readonly svc: Service;
   readonly admin: AdminService;
+  readonly access: AccessService;
+  /** Set when the deployment requires sign-in: requests then carry a session token, not a stated user. */
+  readonly auth?: AuthOptions;
   readonly reg: RegistersService;
   readonly tasks: TasksService;
   readonly snapshots: SnapshotsService;
@@ -29,9 +34,12 @@ export class Api {
   readonly interfaces: InterfacesService;
   readonly facilities: FacilitiesService;
 
-  constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer) {
+  constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer, auth?: AuthOptions) {
     this.svc = new Service(store, clock);
-    this.admin = new AdminService(this.svc);
+    this.auth = auth?.secret ? auth : undefined;
+    this.admin = new AdminService(this.svc, this.auth);
+    this.access = new AccessService(this.svc, a => this.admin.hiddenFor(a));
+    this.admin.access = this.access;
     this.reg = new RegistersService(this.svc);
     this.tasks = new TasksService(this.svc);
     this.snapshots = new SnapshotsService(this.svc);
@@ -48,10 +56,11 @@ export class Api {
    * Dashboard widgets draw on other modules. A widget whose source module is off comes back as null,
    * so the client can show an explicit unavailable state (spec §6.1 acceptance).
    */
-  dashboard(projectId: string) {
+  dashboard(projectId: string, actor?: Actor) {
     const project = this.svc.project(projectId);
     const states = this.svc.states(projectId);
-    const on = (key: string) => isEffective(key, states);
+    // a widget also stays empty for someone who may not open its source screen: a count is still the screen's data
+    const on = (key: string) => isEffective(key, states) && (!actor || this.access.level(actor, projectId, key) !== 'none');
     return {
       project,
       overallProgress: on('planning.overall-progress') ? this.svc.overall(projectId) : null,

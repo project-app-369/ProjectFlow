@@ -12,9 +12,15 @@ const stamp = (...keys: string[]): Column[] => keys.map(key => ({ key, type: 'da
  */
 export const COLUMNS = {
   projects: [...text('id', 'code', 'name', 'shortName', 'client', 'contract', 'location', 'lifecycle'), ...date('cutoff'), ...stamp('createdAt', 'updatedAt')],
-  users: [...text('id', 'name', 'email', 'isAdmin', 'status'), ...stamp('createdAt'), ...text('title', 'company', 'party', 'passwordHash'), ...stamp('passwordChangedAt')],
+  users: [...text('id', 'name', 'email', 'isAdmin', 'status'), ...stamp('createdAt'), ...text('title', 'company', 'party', 'passwordHash'), ...stamp('passwordChangedAt'), ...num('failedLogins'), ...stamp('lockedUntil', 'lastLoginAt')],
   /** Which screens each party (Contractor, Client, Subcontractor) sees; a module with no row is visible to everyone. */
   partyAccess: text('moduleKey', 'party', 'visible'),
+  /** What each project role may do in each module: none, read or write. No row means the role's own default. */
+  roleAccess: text('projectId', 'role', 'moduleKey', 'level'),
+  /** The same for one person, which overrides their role. */
+  personAccess: text('projectId', 'userId', 'moduleKey', 'level'),
+  /** Who changed whom or what, and who signed in: the trail of user and access management. */
+  accessLog: [...text('id'), ...stamp('at'), ...text('actor', 'actorName', 'action', 'target', 'detail', 'projectId')],
   memberships: text('projectId', 'userId', 'role', 'title'),
   modules: [...text('projectId', 'moduleKey', 'path', 'state'), ...stamp('updatedAt')],
   moduleChanges: [...text('projectId', 'id'), ...stamp('at'), ...text('moduleKey', 'fromState', 'toState', 'reason', 'actor')],
@@ -56,7 +62,8 @@ export const COLUMNS = {
   cpnItems: [...text('projectId', 'code', 'name', 'kind'), ...num('weight', 'plan', 'actual', 'lastPlan', 'lastActual', 'basePlan', 'baseActual', 'baseWeight')],
   /** The WBS of a facility with its planned dates and its progress at the cut-off. */
   facilityWbs: [...text('projectId', 'facilityId', 'code', 'name'), ...num('level'), ...text('father'), ...date('start', 'finish'), ...num('weight', 'plan', 'actual'), ...text('shared')],
-  budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt')],
+  /** Manhours per WBS row: the budget (`manhours`), what has been spent (`actualHours`) and the value earned for it (`earnedHours`). */
+  budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt'), ...num('actualHours', 'earnedHours')],
   knowledge: [
     ...text('projectId', 'id', 'domain', 'category', 'title', 'summary', 'body', 'tags', 'sources', 'status'),
     ...stamp('createdAt', 'updatedAt'), ...text('createdBy', 'updatedBy'),
@@ -117,6 +124,9 @@ export const SHEET = {
   projects: 'Settings - Projects',
   users: 'Settings - Users',
   partyAccess: 'Settings - Party access',
+  roleAccess: 'Settings - Role access',
+  personAccess: 'Settings - Person access',
+  accessLog: 'Settings - Access log',
   memberships: 'Settings - Memberships',
   modules: 'Settings - Modules',
   moduleChanges: 'Settings - Module changes',
@@ -174,7 +184,7 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
 export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'riskActions', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];

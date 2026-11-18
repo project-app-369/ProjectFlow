@@ -1,4 +1,5 @@
 import { HttpError } from './http';
+import { b64url, fromB64url, hmacSha256, safeEqual, sha256 } from './hash';
 import { COLUMNS, SHEET } from './datasets';
 import type { Row, Store } from './store';
 
@@ -45,6 +46,38 @@ export function resolveActor(store: Store, userId: string | undefined): Actor {
   return { id: String(user.id), name: String(user.name), email: (user.email as string) ?? null, isAdmin: user.isAdmin === 'Yes', status: String(user.status), party: PARTIES.find(p => p === user.party) ?? null, roles };
 }
 
+/**
+ * Real sign-in. When a deployment gives the API a signing secret, requests must carry a session token that the API issued at
+ * login, and the `user` a caller states is ignored. Without a secret the API stays in demo mode (the caller names the user).
+ */
+export interface AuthOptions { secret: string; /** How long a session lasts, in minutes. Default 12 hours. */ ttlMinutes?: number }
+export const DEFAULT_SESSION_MINUTES = 12 * 60;
+
+const authRequired = () => new HttpError(401, { code: 'AUTH_REQUIRED', message: 'Sign in to continue.' });
+
+/** Changes whenever the password does, so changing a password ends every session that was signed in with the old one. */
+const passwordStamp = (u: Row) => sha256(`pf-session:${String(u.passwordHash ?? '')}`).slice(0, 12);
+
+/** `pf1.<payload>.<signature>`; the payload names the user, the expiry and the password stamp. Stateless: nothing is stored. */
+export function signSession(auth: AuthOptions, user: Row, now: Date) {
+  const expires = Math.floor(now.getTime() / 1000) + (auth.ttlMinutes ?? DEFAULT_SESSION_MINUTES) * 60;
+  const body = b64url(JSON.stringify({ u: user.id, e: expires, s: passwordStamp(user) }));
+  return { token: `pf1.${body}.${hmacSha256(auth.secret, `pf1.${body}`)}`, expiresAt: new Date(expires * 1000).toISOString() };
+}
+
+/** The id of the user a valid session token belongs to. Any defect (format, signature, expiry, a changed password) is the same 401. */
+export function readSession(store: Store, auth: AuthOptions, token: string | undefined, now: Date): string {
+  const parts = (token ?? '').split('.');
+  if (parts.length !== 3 || parts[0] !== 'pf1') throw authRequired();
+  if (!safeEqual(parts[2], hmacSha256(auth.secret, `pf1.${parts[1]}`))) throw authRequired();
+  let claims: { u?: string; e?: number; s?: string };
+  try { claims = JSON.parse(fromB64url(parts[1])); } catch { throw authRequired(); }
+  if (!claims.u || typeof claims.e !== 'number' || claims.e * 1000 < now.getTime()) throw authRequired();
+  const user = store.readRows(SHEET.users, COLUMNS.users).find(u => u.id === claims.u);
+  if (!user || user.status !== 'Active' || !safeEqual(String(claims.s ?? ''), passwordStamp(user))) throw authRequired();
+  return String(user.id);
+}
+
 export const forbidden = (code: string, message: string) => new HttpError(403, { code, message });
 
 export function requireAdmin(actor: Actor) {
@@ -80,4 +113,5 @@ export function requireConfigure(actor: Actor, projectId: string) {
 export const userRow = (u: Row) => ({
   id: u.id, name: u.name, email: u.email, isAdmin: u.isAdmin === 'Yes', status: u.status, createdAt: u.createdAt,
   title: u.title ?? null, company: u.company ?? null, party: u.party ?? null, hasPassword: !!u.passwordHash, passwordChangedAt: u.passwordChangedAt ?? null,
+  lastLoginAt: u.lastLoginAt ?? null, lockedUntil: u.lockedUntil ?? null,
 });

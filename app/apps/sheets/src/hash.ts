@@ -22,8 +22,9 @@ const utf8 = (s: string) => {
   return out;
 };
 
-export function sha256(text: string): string {
-  const bytes = utf8(text);
+/** SHA-256 of raw bytes. */
+function digestBytes(input: number[]): number[] {
+  const bytes = [...input];
   const bits = bytes.length * 8;
   bytes.push(0x80);
   while (bytes.length % 64 !== 56) bytes.push(0);
@@ -46,7 +47,61 @@ export function sha256(text: string): string {
     }
     h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += hh;
   }
-  return [...h].map(x => x.toString(16).padStart(8, '0')).join('');
+  const out: number[] = [];
+  for (const x of h) out.push((x >>> 24) & 255, (x >>> 16) & 255, (x >>> 8) & 255, x & 255);
+  return out;
+}
+
+const hex = (bytes: number[]) => bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+export const sha256 = (text: string): string => hex(digestBytes(utf8(text)));
+
+/** HMAC-SHA256 (RFC 2104) as hex; signs the session tokens, so it must behave the same in Node, Deno and Apps Script. */
+export function hmacSha256(key: string, message: string): string {
+  let k = utf8(key);
+  if (k.length > 64) k = digestBytes(k);
+  while (k.length < 64) k.push(0);
+  const inner = digestBytes([...k.map(b => b ^ 0x36), ...utf8(message)]);
+  return hex(digestBytes([...k.map(b => b ^ 0x5c), ...inner]));
+}
+
+/** Compares two strings in time that does not depend on where they first differ. */
+export function safeEqual(a: string, b: string): boolean {
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+
+/** URL-safe base64 of UTF-8 text, without padding. */
+export function b64url(text: string): string {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const b = utf8(text);
+  let out = '';
+  for (let i = 0; i < b.length; i += 3) {
+    const n = (b[i] << 16) | ((b[i + 1] ?? 0) << 8) | (b[i + 2] ?? 0);
+    out += A[(n >> 18) & 63] + A[(n >> 12) & 63] + (i + 1 < b.length ? A[(n >> 6) & 63] : '') + (i + 2 < b.length ? A[n & 63] : '');
+  }
+  return out;
+}
+
+export function fromB64url(s: string): string {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const bytes: number[] = [];
+  let acc = 0, bits = 0;
+  for (const ch of s) {
+    const v = A.indexOf(ch);
+    if (v < 0) throw new Error('bad base64url');
+    acc = (acc << 6) | v; bits += 6;
+    if (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 255); }
+  }
+  let out = '';
+  for (let i = 0; i < bytes.length;) {
+    const c = bytes[i++];
+    if (c < 0x80) out += String.fromCharCode(c);
+    else if (c < 0xe0) out += String.fromCharCode(((c & 31) << 6) | (bytes[i++] & 63));
+    else if (c < 0xf0) out += String.fromCharCode(((c & 15) << 12) | ((bytes[i++] & 63) << 6) | (bytes[i++] & 63));
+    else out += String.fromCodePoint(((c & 7) << 18) | ((bytes[i++] & 63) << 12) | ((bytes[i++] & 63) << 6) | (bytes[i++] & 63));
+  }
+  return out;
 }
 
 /** `salt$hash`, hashed a few thousand times so a leaked sheet is not a lookup table. */

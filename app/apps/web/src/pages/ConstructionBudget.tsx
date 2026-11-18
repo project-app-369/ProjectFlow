@@ -68,8 +68,8 @@ export default function ConstructionBudget() {
         <Stat label="Scheduled" value={s ? hrs(s.scheduledHours) : '—'} foot="Activities with start and finish" icon="calendar" />
         <Stat label="Not scheduled" value={s ? hrs(s.unscheduledHours) : '—'} foot={<span className={s?.unscheduledHours ? 'warning' : ''}>Add dates to see these in the histogram</span>} icon="clock" />
         <Stat label="Peak" value={h?.peak ? hrs(h.peak.hours) : '—'} foot={h?.peak ? `${by === 'week' ? 'Week' : 'Month'} of ${fmtShort(h.peak.start)}` : 'No scheduled hours yet'} icon="chart" />
-        <Stat label="Activities" value={s?.activities ?? '—'} foot="Budgeted work items" icon="box" />
-        <Stat label="WBS nodes" value={s?.nodes ?? '—'} foot="Hierarchy entries" icon="layers" />
+        <Stat label="Spent" value={s?.actualHours != null ? hrs(s.actualHours) : '—'} foot={s?.progressPct != null ? `${s.progressPct}% of the budget earned` : 'No hours reported yet'} icon="clock" />
+        <Stat label="Cost performance" value={s?.cpi ?? '—'} foot={s?.cpi == null ? 'Needs spent hours' : <span className={s.cpi >= 1 ? 'positive' : s.cpi >= 0.95 ? 'warning' : 'negative'}>Earned ÷ spent · {s.cpi >= 1 ? 'on or under budget' : 'over budget'}</span>} icon="chart" />
       </div>
 
       <div className="panel" style={{ marginBottom: 22 }}>
@@ -114,7 +114,7 @@ export default function ConstructionBudget() {
         {budget.error ? <ErrorBox error={budget.error} /> : budget.isPending ? <Loading /> : (
           <div className="table-wrap">
             <table className="wbs">
-              <thead><tr><th>WBS</th><th>ACTIVITY</th><th>DISCIPLINE</th><th>PLAN</th><th style={{ textAlign: 'right' }}>BUDGET</th><th>SHARE</th>{(access.canWrite || access.canManage) && <th />}</tr></thead>
+              <thead><tr><th>WBS</th><th>ACTIVITY</th><th>DISCIPLINE</th><th>PLAN</th><th style={{ textAlign: 'right' }}>BUDGET</th><th style={{ textAlign: 'right' }}>SPENT</th><th style={{ textAlign: 'right' }}>CPI</th><th>SHARE</th>{(access.canWrite || access.canManage) && <th />}</tr></thead>
               <tbody>
                 {visible.map(n => (
                   <tr key={n.wbs} className={n.leaf ? '' : 'wbs-parent'}>
@@ -125,6 +125,8 @@ export default function ConstructionBudget() {
                     <td>{n.discipline ?? <span className="tiny muted">—</span>}</td>
                     <td>{n.start || n.finish ? `${n.start ? fmtShort(n.start) : '…'} → ${n.finish ? fmtShort(n.finish) : '…'}` : <span className="tiny muted">—</span>}{n.leaf && n.ownHours > 0 && !(n.planStart && n.planFinish) && <span className="warning tiny"> · not in histogram</span>}</td>
                     <td style={{ textAlign: 'right' }} className="mono"><strong>{n.hours.toLocaleString('en-GB', { maximumFractionDigits: 1 })}</strong>{!n.leaf && n.ownHours > 0 && <small className="warning" style={{ display: 'block' }} title="Hours typed on a row that has activities below it are ignored">own {n.ownHours} ignored</small>}</td>
+                    <td style={{ textAlign: 'right' }} className="mono">{n.actualHours != null ? n.actualHours.toLocaleString('en-GB', { maximumFractionDigits: 1 }) : <span className="tiny muted">—</span>}</td>
+                    <td style={{ textAlign: 'right' }} className="mono">{n.actualHours && n.earnedHours != null ? <span className={n.earnedHours / n.actualHours >= 1 ? 'positive' : n.earnedHours / n.actualHours >= 0.95 ? '' : 'negative'}>{(n.earnedHours / n.actualHours).toFixed(2)}</span> : <span className="tiny muted">—</span>}</td>
                     <td style={{ minWidth: 110 }}><div className="progress-line"><div className="progress-fill" style={{ width: `${Math.min(100, (n.hours / total) * 100)}%` }} /></div><span className="tiny muted">{((n.hours / total) * 100).toFixed(1)}%</span></td>
                     {(access.canWrite || access.canManage) && (
                       <td><div className="actions" style={{ flexWrap: 'nowrap' }}>
@@ -135,9 +137,9 @@ export default function ConstructionBudget() {
                     )}
                   </tr>
                 ))}
-                {!visible.length && <tr><td colSpan={7} className="empty">{items.length ? 'Nothing matches the search.' : 'No budget yet. Add activities one by one, or paste a WBS from a spreadsheet with Import WBS.'}</td></tr>}
+                {!visible.length && <tr><td colSpan={9} className="empty">{items.length ? 'Nothing matches the search.' : 'No budget yet. Add activities one by one, or paste a WBS from a spreadsheet with Import WBS.'}</td></tr>}
               </tbody>
-              {items.length > 0 && !filter && <tfoot><tr><td colSpan={4}><strong>Total budget</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.totalHours.toLocaleString('en-GB', { maximumFractionDigits: 1 })}</strong></td><td colSpan={2} /></tr></tfoot>}
+              {items.length > 0 && !filter && <tfoot><tr><td colSpan={4}><strong>Total budget</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.totalHours.toLocaleString('en-GB', { maximumFractionDigits: 1 })}</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.actualHours != null ? s!.actualHours.toLocaleString('en-GB', { maximumFractionDigits: 1 }) : ''}</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.cpi != null ? s!.cpi.toFixed(2) : ''}</strong></td><td colSpan={2} /></tr></tfoot>}
             </table>
           </div>
         )}
@@ -158,7 +160,7 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
   const toast = useToast();
   const [v, setV] = useState({
     wbs: node?.wbs ?? '', name: node?.name ?? '', parentWbs: node ? node.parentWbs ?? '' : parent ?? '', discipline: node?.discipline ?? '',
-    manhours: node ? String(node.ownHours || '') : '', planStart: node?.planStart ?? '', planFinish: node?.planFinish ?? '', notes: node?.notes ?? '',
+    manhours: node ? String(node.ownHours || '') : '', actualHours: node?.ownActual != null ? String(node.ownActual) : '', earnedHours: node?.ownEarned != null ? String(node.ownEarned) : '', planStart: node?.planStart ?? '', planFinish: node?.planFinish ?? '', notes: node?.notes ?? '',
   });
   const [error, setError] = useState('');
   const up = (k: keyof typeof v, val: string) => setV(s => ({ ...s, [k]: val }));
@@ -171,7 +173,7 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
 
   const save = useMutation({
     mutationFn: () => {
-      const body: BudgetInput = { name: v.name, parentWbs: v.parentWbs || null, discipline: v.discipline || null, manhours: v.manhours === '' ? null : Number(v.manhours), planStart: v.planStart || null, planFinish: v.planFinish || null, notes: v.notes || null };
+      const body: BudgetInput = { name: v.name, parentWbs: v.parentWbs || null, discipline: v.discipline || null, manhours: v.manhours === '' ? null : Number(v.manhours), actualHours: v.actualHours === '' ? null : Number(v.actualHours), earnedHours: v.earnedHours === '' ? null : Number(v.earnedHours), planStart: v.planStart || null, planFinish: v.planFinish || null, notes: v.notes || null };
       return node ? request(`${base}/${encodeURIComponent(node.wbs)}`, { method: 'PATCH', body: JSON.stringify(body) }) : request(base, { method: 'POST', body: JSON.stringify({ ...body, wbs: v.wbs }) });
     },
     onSuccess: () => { toast(node ? 'Activity updated.' : 'Activity added.'); onSaved(); },
@@ -194,6 +196,12 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
           <Field label="Discipline"><input list="budget-disciplines" value={v.discipline} maxLength={60} onChange={e => up('discipline', e.target.value)} /><datalist id="budget-disciplines">{disciplines.map(d => <option key={d} value={d} />)}</datalist></Field>
           <Field label="Budget manhours" hint={hasChildren ? 'This row has activities below it: its budget is their sum, so hours typed here are ignored' : undefined}>
             <input type="number" min={0} step="any" value={v.manhours} disabled={hasChildren} onChange={e => up('manhours', e.target.value)} />
+          </Field>
+          <Field label="Spent manhours" hint={hasChildren ? 'Summed from the activities below' : 'Hours worked so far'}>
+            <input type="number" min={0} step="any" value={v.actualHours} disabled={hasChildren} onChange={e => up('actualHours', e.target.value)} />
+          </Field>
+          <Field label="Earned manhours" hint={hasChildren ? 'Summed from the activities below' : 'Budget × progress achieved; earned ÷ spent is the cost performance index'}>
+            <input type="number" min={0} step="any" value={v.earnedHours} disabled={hasChildren} onChange={e => up('earnedHours', e.target.value)} />
           </Field>
           <Field label="Plan start"><input type="date" value={v.planStart} onChange={e => up('planStart', e.target.value)} /></Field>
           <Field label="Plan finish" hint="With a start date, this spreads the hours over time"><input type="date" value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></Field>

@@ -1,22 +1,18 @@
-import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { request, type DirectoryUser } from './api';
 import { initials } from './format';
 import { Icon } from './icons';
 import { useAccess, useApp } from './state';
 
 /**
- * The person in the header. Opens a menu with the profile, the demo "switch user" list (this is how the user type is
- * changed in the pre-build, since there is no sign-in) and sign out.
+ * The person in the header. Opens a menu with the profile, and sign out.
  */
 export function ProfileMenu({ flags }: { flags?: number }) {
-  const { me, switchUser, signOut } = useApp();
+  const { me, signOut } = useApp();
   const access = useAccess();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const directory = useQuery({ queryKey: ['directory'], queryFn: () => request<DirectoryUser[]>('/directory'), enabled: open && !!me });
 
   useEffect(() => {
     if (!open) return;
@@ -55,19 +51,6 @@ export function ProfileMenu({ flags }: { flags?: number }) {
             </div>
           </div>
           {me && <button type="button" role="menuitem" className="pop-item" onClick={() => go('/profile')}><Icon name="user" />My profile</button>}
-          {me && (
-            <div className="pop-section" role="group" aria-label="Switch user type">
-              <div className="pop-label">Switch user type</div>
-              {directory.isPending ? <div className="pop-note">Loading…</div> : (directory.data ?? []).map(u => (
-                <button key={u.id} type="button" role="menuitemradio" aria-checked={u.id === me.id} className={`pop-item ${u.id === me.id ? 'on' : ''}`}
-                  onClick={() => { setOpen(false); if (u.id !== me.id) { switchUser(u.id); navigate('/'); } }}>
-                  <span className="avatar mini">{initials(u.name)}</span>
-                  <span className="pop-user"><span>{u.name}</span>{(u.party || u.title) && <small>{[u.party, u.title].filter(Boolean).join(' · ')}</small>}</span>
-                  {u.id === me.id && <Icon name="tick" />}
-                </button>
-              ))}
-            </div>
-          )}
           {me && <button type="button" role="menuitem" className="pop-item danger" onClick={() => { setOpen(false); signOut(); }}><Icon name="switch" />Sign out</button>}
         </div>
       )}

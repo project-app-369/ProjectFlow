@@ -61,11 +61,11 @@ export function SectionRisks({ section }: { section: keyof typeof SECTIONS }) {
 
   const high = (rows: Row[], min: number) => rows.filter(r => r.rank >= min).length;
   return (
-    <>
+    <div className="risk-pair">
       <Card title="Risks" icon="risk" rows={riskRows} loading={risks.isPending} off={!!risks.error} foot={{ to: '/m/management.risks', label: 'Open risk register' }}
         sub={`${riskRows.length} open in ${def.label} · ${high(riskRows, levels.length)} ${levels[0]?.toLowerCase() ?? 'high'}`} empty={`No open risks for ${def.label}.`} />
       <Card title="Concerns" icon="flag" rows={concernRows} loading={issues.isPending} off={!!issues.error} foot={{ to: '/m/management.issues', label: 'Open issues' }}
         sub={`${concernRows.length} open in ${def.label} · ${high(concernRows, 3)} critical or high`} empty={`No open concerns for ${def.label}.`} />
-    </>
+    </div>
   );
 }

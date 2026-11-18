@@ -63,10 +63,13 @@ export function useAccess() {
   const role: Role | null = me ? me.memberships.find(m => m.projectId === project.id)?.role ?? null : 'Project Manager';
   const isAdmin = !me || me.isAdmin;
   const live = !asOf; // a snapshot is read-only for everyone
+  const key = useContext(ModuleKeyContext);
+  // a role or personal setting can make this one screen read-only for the person, whatever their role allows elsewhere
+  const readOnlyHere = !!me && !!key && !!me.moduleAccess?.[project.id]?.readOnly.includes(key);
   return {
-    isAdmin, role, hasUsers: !!me, readOnly: !live,
-    canWrite: live && !!role && role !== 'Client',
-    canManage: live && (role === 'Project Manager' || role === 'Manager'),
+    isAdmin, role, hasUsers: !!me, readOnly: !live || readOnlyHere,
+    canWrite: live && !readOnlyHere && !!role && role !== 'Client',
+    canManage: live && !readOnlyHere && (role === 'Project Manager' || role === 'Manager'),
     canConfigure: live && (isAdmin || role === 'Project Manager'),
   };
 }
@@ -78,6 +81,8 @@ export const CrumbContext = createContext<Crumb[]>([]);
 
 /** The spreadsheet sheet behind the current screen, when the backend keeps data in Google Sheets. */
 export const SheetContext = createContext<SheetInfo | null>(null);
+/** The module the screen belongs to, so permission checks can be about this screen and not only the project role. */
+export const ModuleKeyContext = createContext<string | null>(null);
 
 /* ---------------- toast ---------------- */
 const ToastContext = createContext<(msg: string) => void>(() => {});

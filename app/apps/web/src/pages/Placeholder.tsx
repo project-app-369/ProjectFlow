@@ -4,7 +4,6 @@ import { request, type ModuleRecords, type SheetInfo } from '../api';
 import { pathOf } from '../nav';
 import { useApp, useToast } from '../state';
 import { Badge, Btn, ErrorBox, PageHead, PageSkeleton } from '../ui';
-import { sheetHref } from '../sheetLinks';
 
 /** Rows of a module's sheet, shown read-only; edit them in the spreadsheet itself. */
 function SheetRecords({ moduleKey }: { moduleKey: string }) {
@@ -50,7 +49,6 @@ export default function Placeholder({ moduleKey }: { moduleKey: string }) {
           {m.sheetCapable ? ' Its records can already be kept in a spreadsheet sheet, listed below once the sheet exists.' : ' It stays in the catalog so it can be switched on or off now.'}
         </p>
         <div className="actions" style={{ marginTop: 16 }}>
-          {m.sheet && <a className="btn small primary" href={sheetHref(m.sheet)} target="_blank" rel="noreferrer">Open sheet “{m.sheet.name}”</a>}
           {m.sheetCapable && !m.sheet && <Btn kind="small primary" onClick={() => generate.mutate()} disabled={generate.isPending}>{generate.isPending ? 'Generating…' : 'Generate sheet'}</Btn>}
           <Link className="btn small" to="/settings/modules">Open module settings</Link>
         </div>

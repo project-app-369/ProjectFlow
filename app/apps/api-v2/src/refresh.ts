@@ -11,7 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
-import { seedRows } from '../../sheets/src/seed';
+import { ensureAllSheets, seedRows } from '../../sheets/src/seed';
 import { seedData } from '../../sheets/src/seed-data';
 import { createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
@@ -28,6 +28,7 @@ export function refreshStore(store: MemoryStore, raw = seedData, now = new Date(
   const rows = seedRows(raw) as unknown as Record<string, Record<string, unknown>[]>;
   const pid = String((rows.project[0] as { id?: string }).id ?? 'sttp2b');
   const changes: Change[] = [];
+  ensureAllSheets(store); // new worksheets and columns (access, sign-in) that a database loaded earlier does not have yet
   for (const key of REFERENCE) {
     const name = SHEET[key], columns = COLUMNS[key];
     store.ensureSheet(name, columns);

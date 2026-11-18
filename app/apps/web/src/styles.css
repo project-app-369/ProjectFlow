@@ -1574,11 +1574,20 @@ a.list-card:hover{background:var(--surface-subtle)}
 a.list-card:hover p{text-decoration:underline}
 
 /* a section's progress card beside its Risks and Concerns cards */
-.section-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:var(--gap);margin-top:var(--gap);align-items:start}
+.section-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:var(--gap);margin-top:var(--gap);align-items:stretch}
+/* Risks and Concerns of a section: always one row, equal height, stacked only on narrow screens */
+.risk-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:stretch}
+.risk-pair>.panel{margin:0;display:flex;flex-direction:column}
+.risk-pair>.panel>.panel-foot{margin-top:auto}
+@media (max-width:760px){.risk-pair{grid-template-columns:minmax(0,1fr)}}
 
 /* every phase side by side in one row, wrapping only when the card is too narrow */
 .phase-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8.5rem),1fr));gap:var(--sp-4) var(--sp-4);padding:5px var(--card-px) var(--card-py)}
 .phase-row .apbar-figures>.apbar-label{white-space:normal;overflow-wrap:anywhere;line-height:1.25;min-height:2.5em}
+/* label, then actual and plan, then the variance, each on its own line so every phase lines up with its neighbours */
+.phase-row .apbar-figures{display:grid;grid-template-columns:auto 1fr;gap:var(--sp-1) var(--sp-4);align-items:baseline}
+.phase-row .apbar-figures>.apbar-label{grid-column:1/-1}
+.phase-row .apbar-figures>.apbar-gap{grid-column:1/-1;min-height:1.4em}
 
 /* Discipline column and the tick-several discipline filter of the Risk and Issue registers */
 .discipline-cell{display:block;max-width:15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

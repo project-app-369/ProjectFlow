@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { signed, statusTone, type Tone } from './format';
 import { Link } from 'react-router-dom';
-import { CrumbContext, SheetContext, type Crumb } from './state';
-import { sheetHref } from './sheetLinks';
+import { CrumbContext, type Crumb } from './state';
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
   return <span className={`pill ${tone ?? statusTone(String(children))}`}>{children}</span>;
@@ -61,7 +60,7 @@ export function ActualPlanBar({ actual, plan, label, compact, hideActual }: { ac
         {label && <span className="apbar-label">{label}</span>}
         {!hideActual && <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>}
         <span className="muted">{p == null ? '—' : `${p.toFixed(1)}%`} plan</span>
-        {gap != null && <span className={gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}>{signed(gap)}%</span>}
+        {gap != null && <span className={`apbar-gap ${gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}`}>{signed(gap)}%</span>}
       </div>
       <div className="apbar-track" role="img" aria-label={text} title={text}>
         {a != null && <div className={`apbar-fill ${gap != null && gap < 0 ? 'behind' : ''}`} style={{ width: at(a) }} />}
@@ -89,7 +88,6 @@ export function Breadcrumb({ parts }: { parts: Crumb[] }) {
 
 export function PageHead({ title, desc, actions }: { title: string; desc: ReactNode; actions?: ReactNode }) {
   const crumbs = useContext(CrumbContext);
-  const sheet = useContext(SheetContext);
   return (
     <>
       <Breadcrumb parts={crumbs} />
@@ -98,7 +96,6 @@ export function PageHead({ title, desc, actions }: { title: string; desc: ReactN
           <h1 title={typeof desc === 'string' ? desc : undefined}>{title}</h1>
         </div>
         <div className="actions">
-          {sheet && <a className="btn small icon-only" href={sheetHref(sheet)} target="_blank" rel="noreferrer" title={`Open the "${sheet.name}" sheet`} aria-label={`Open the "${sheet.name}" sheet`}><Icon name="sheet" /></a>}
           {actions}
         </div>
       </div>

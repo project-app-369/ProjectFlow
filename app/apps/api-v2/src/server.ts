@@ -18,6 +18,8 @@ let generation = 0;
 let versionCheck: Promise<string> | null = null;
 let loading: Promise<StoreSnapshot> | null = null;
 const gzip = promisify(gzipCb);
+/** When set, API v2 requires sign-in: requests carry a session token issued at login and a stated user is ignored. */
+const sessionSecret = process.env.SESSION_SECRET;
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS ?? 1500);
 
 const token = process.env.API_V2_TOKEN;
@@ -48,8 +50,8 @@ interface Payload extends Partial<ApiRequest> {
 async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
   const batch = payload.method === 'BATCH' && Array.isArray(payload.requests);
   const requests: ApiRequest[] = batch
-    ? (payload.requests ?? []).slice(0, 20).map(r => ({ method: 'GET', path: r.path, user: payload.user }))
-    : [{ method: payload.method ?? 'GET', path: payload.path ?? '', body: payload.body, user: payload.user }];
+    ? (payload.requests ?? []).slice(0, 20).map(r => ({ method: 'GET', path: r.path, user: payload.user, session: payload.session }))
+    : [{ method: payload.method ?? 'GET', path: payload.path ?? '', body: payload.body, user: payload.user, session: payload.session }];
   if (requests.some(r => !r.path.startsWith('/') || r.method === 'BATCH')) return fail(400, 'BAD_REQUEST', 'A method and absolute API path are required.');
   if (requests.some(r => /\/remind(?:-due)?(?:\?|$)/.test(r.path))) return fail(403, 'OWNER_ONLY', 'Email reminders remain with the Sheet owner.');
   const writing = requests.some(r => r.method.toUpperCase() !== 'GET');
@@ -97,7 +99,7 @@ async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
 function run(snapshot: StoreSnapshot, requests: ApiRequest[], batch: boolean) {
   const store = new MemoryStore(sheetUrl);
   store.loadSnapshot(snapshot);
-  const api = new Api(store, () => new Date(), noMailer);
+  const api = new Api(store, () => new Date(), noMailer, sessionSecret ? { secret: sessionSecret } : undefined);
   let result = batch ? handleBatch(api, requests) : handle(api, requests[0]);
   if (!batch && requests[0].path === '/health' && !Array.isArray(result) && result.ok) {
     result = { ok: true, status: 200, data: { status: 'ok', database: 'supabase', api: 'v2', backupSpreadsheet: sheetUrl } };
@@ -158,7 +160,7 @@ createServer(async (req, res) => {
   try {
     const payload = (req.method === 'POST'
       ? await bodyOf(req)
-      : { method: 'GET', path: url.searchParams.get('path'), user: url.searchParams.get('user'), token: url.searchParams.get('token') }) as Payload;
+      : { method: 'GET', path: url.searchParams.get('path'), user: url.searchParams.get('user'), token: url.searchParams.get('token'), session: url.searchParams.get('session') }) as Payload;
     const supplied = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? payload.token;
     result = supplied === token ? await serve(payload) : fail(401, 'UNAUTHORIZED', 'Missing or invalid API v2 token.');
   } catch (error) {

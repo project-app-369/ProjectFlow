@@ -15,6 +15,7 @@ export default function UsersTab() {
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState<UserRow | 'new' | null>(null);
+  const [reset, setReset] = useState<UserRow | null>(null);
   const [find, setFind] = useState('');
   const [party, setParty] = useState<Party | 'none' | ''>('');
   const users = useQuery({ queryKey: ['users', me?.id], queryFn: () => request<UserRow[]>('/users'), enabled: !!me?.isAdmin });
@@ -34,7 +35,8 @@ export default function UsersTab() {
     <>
       <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
         Accounts for everyone who can sign in. An administrator manages users and projects but sees a project's business data only after being added to it as a member.
-        Each person belongs to a party (Contractor, Client or Subcontractor); what each party sees is set under Party access. Sign-in is still choosing a name in this pre-build.
+        Each person belongs to a party (Contractor, Client or Subcontractor); what each party sees is set under Party access, and what each person may do in a project under Project access.
+        Where the deployment requires passwords, set or reset a person's password here; where it does not, sign-in is still choosing a name.
       </p>
       <section className="panel">
         <div className="panel-head">
@@ -52,7 +54,7 @@ export default function UsersTab() {
         {users.isPending ? <Loading /> : users.error ? <ErrorBox error={users.error} /> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>PERSON</th><th>TITLE · COMPANY</th><th>PARTY</th><th>ACCOUNT</th><th>ADMIN</th><th>PROJECT ROLES</th><th /></tr></thead>
+              <thead><tr><th>PERSON</th><th>TITLE · COMPANY</th><th>PARTY</th><th>ACCOUNT</th><th>ADMIN</th><th>SIGN-IN</th><th>PROJECT ROLES</th><th /></tr></thead>
               <tbody>
                 {shown.map(u => (
                   <tr key={u.id}>
@@ -69,6 +71,12 @@ export default function UsersTab() {
                       </select>
                     </td>
                     <td><input className="switch" type="checkbox" checked={u.isAdmin} aria-label={`${u.name} is an administrator`} onChange={e => quick.mutate({ id: u.id, isAdmin: e.target.checked })} /></td>
+                    <td data-label="Sign-in" style={{ whiteSpace: 'normal' }}>
+                      <span className="stack">
+                        {u.lockedUntil && new Date(u.lockedUntil).getTime() > Date.now() ? <Badge tone="red">Locked</Badge> : !u.hasPassword ? <Badge tone="amber">No password</Badge> : <small>{u.lastLoginAt ? `Last ${new Date(u.lastLoginAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'Never signed in'}</small>}
+                        <button type="button" className="link-button" onClick={() => setReset(u)}>{u.hasPassword ? 'Reset password' : 'Set password'}</button>
+                      </span>
+                    </td>
                     <td style={{ whiteSpace: 'normal' }}>{u.memberships.length ? u.memberships.map(m => <span key={m.projectId} style={{ marginRight: 6 }}><Badge tone="indigo">{m.projectCode} · {m.role}</Badge></span>) : <span className="tiny muted">None</span>}</td>
                     <td><div className="actions">{u.party && <Badge tone={PARTY_TONE[u.party]}>{u.party}</Badge>}<Badge tone={STATE_TONE[u.status]}>{u.status}</Badge><Btn kind="small" onClick={() => setForm(u)}>Edit</Btn></div></td>
                   </tr>
@@ -78,8 +86,27 @@ export default function UsersTab() {
           </div>
         )}
       </section>
+      {reset && <PasswordForm user={reset} onClose={() => setReset(null)} onSaved={() => { setReset(null); refresh(); qc.invalidateQueries({ queryKey: ['access-log'] }); toast('Password saved. Sessions signed in with the old one have ended and the lock is lifted.'); }} />}
       {form && <UserForm user={form === 'new' ? null : form} onClose={() => setForm(null)} onSaved={created => { setForm(null); refresh(); toast(created ? 'User created.' : 'User updated.'); }} />}
     </>
+  );
+}
+
+function PasswordForm({ user, onClose, onSaved }: { user: UserRow; onClose: () => void; onSaved: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const save = useMutation({
+    mutationFn: () => request(`/users/${user.id}/password`, { method: 'POST', body: JSON.stringify({ password }) }),
+    onSuccess: onSaved, onError: (e: Error) => setError(errorText(e)),
+  });
+  return (
+    <Modal title={`${user.hasPassword ? 'Reset' : 'Set'} password · ${user.name}`} size="sm" popout={false} onClose={onClose}
+      actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || password.length < 8} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save password'}</Btn></>}>
+      <div className="dialog-body">
+        <Field label="New password" hint="At least 8 characters. Tell the person in person or by phone, not in a shared channel; they can change it in their profile."><input type="password" value={password} autoComplete="new-password" autoFocus onChange={e => setPassword(e.target.value)} /></Field>
+        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+      </div>
+    </Modal>
   );
 }
 

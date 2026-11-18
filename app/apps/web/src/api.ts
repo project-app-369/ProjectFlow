@@ -25,9 +25,22 @@ const sheetsToken: string = import.meta.env.VITE_SHEETS_TOKEN ?? '';
 /** Demo identity (pre-build only): the chosen user id is sent with every request; it is not authentication. */
 const USER_KEY = 'projectflow.user';
 const DEFAULT_DEMO_USER_ID = 'u-admin';
+/**
+ * How the backend identifies people: `demo` (pick a name, the old pre-build) or `password` (e-mail and password, a signed session).
+ * Learned from GET /auth/config and remembered, so the demo default below is never applied where passwords are required.
+ */
+export type AuthMode = 'demo' | 'password';
+const MODE_KEY = 'projectflow.authmode';
+const SESSION_KEY = 'projectflow.session';
+export const getAuthMode = (): AuthMode => { try { return localStorage.getItem(MODE_KEY) === 'password' ? 'password' : 'demo'; } catch { return 'demo'; } };
+export const setAuthMode = (mode: AuthMode) => { try { localStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable */ } };
+export const getSession = (): string | null => { try { return localStorage.getItem(SESSION_KEY); } catch { return null; } };
+export const setSession = (token: string | null) => { try { if (token) localStorage.setItem(SESSION_KEY, token); else localStorage.removeItem(SESSION_KEY); } catch { /* storage unavailable */ } };
+
 export const getUserId = (): string | null => {
-  try { return localStorage.getItem(USER_KEY) ?? (apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null); }
-  catch { return apiMode === 'sheets' ? DEFAULT_DEMO_USER_ID : null; }
+  const demo = apiMode === 'sheets' && getAuthMode() === 'demo' ? DEFAULT_DEMO_USER_ID : null;
+  try { return localStorage.getItem(USER_KEY) ?? demo; }
+  catch { return demo; }
 };
 export const setUserId = (id: string | null) => { try { if (id) localStorage.setItem(USER_KEY, id); else localStorage.removeItem(USER_KEY); } catch { /* storage unavailable */ } };
 
@@ -46,7 +59,7 @@ interface Envelope { ok: boolean; status: number; data?: unknown; error?: { code
 function unwrap<T>(envelope: Envelope | null, httpStatus: number): T {
   if (!envelope) throw new ApiError('The sheets API returned something other than JSON. Check the web app deployment and its access setting.', 'BAD_RESPONSE', httpStatus);
   if (!envelope.ok) {
-    if (envelope.error?.code === 'USER_REQUIRED') window.dispatchEvent(new Event('projectflow:signed-out'));
+    if (envelope.error?.code === 'USER_REQUIRED' || envelope.error?.code === 'AUTH_REQUIRED') window.dispatchEvent(new Event('projectflow:signed-out'));
     throw new ApiError(envelope.error?.message ?? 'Request failed.', envelope.error?.code, envelope.status, envelope.error?.issues);
   }
   return envelope.data as T;
@@ -54,7 +67,8 @@ function unwrap<T>(envelope: Envelope | null, httpStatus: number): T {
 
 async function getOne<T>(path: string): Promise<T> {
   const user = getUserId() ?? undefined;
-  const res = await fetch(`${sheetsUrl}?${new URLSearchParams({ path, ...(sheetsToken && { token: sheetsToken }), ...(user && { user }) })}`);
+  const session = getSession() ?? undefined;
+  const res = await fetch(`${sheetsUrl}?${new URLSearchParams({ path, ...(sheetsToken && { token: sheetsToken }), ...(user && { user }), ...(session && { session }) })}`);
   return unwrap<T>((await res.json().catch(() => null)) as Envelope | null, res.status);
 }
 
@@ -93,7 +107,7 @@ async function send(jobs: Job[]) {
     const res = await fetch(sheetsUrl, {
       method: 'POST',
       headers: { 'content-type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ method: 'BATCH', requests: jobs.map(j => ({ method: 'GET', path: j.path })), token: sheetsToken || undefined, user: getUserId() ?? undefined }),
+      body: JSON.stringify({ method: 'BATCH', requests: jobs.map(j => ({ method: 'GET', path: j.path })), token: sheetsToken || undefined, user: getUserId() ?? undefined, session: getSession() ?? undefined }),
     });
     const envelopes = (await res.json().catch(() => null)) as Envelope[] | null;
     if (!Array.isArray(envelopes) || envelopes.length !== jobs.length) { batchSupported = false; return alone(); }
@@ -116,7 +130,7 @@ async function requestSheets<T>(path: string, init?: RequestInit): Promise<T> {
     method: 'POST',
     // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script cannot answer one).
     headers: { 'content-type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined, token: sheetsToken || undefined, user: getUserId() ?? undefined }),
+    body: JSON.stringify({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined, token: sheetsToken || undefined, user: getUserId() ?? undefined, session: getSession() ?? undefined }),
   });
   return unwrap<T>((await res.json().catch(() => null)) as Envelope | null, res.status);
 }
@@ -182,11 +196,21 @@ export interface Project {
 export interface Snapshot { cutoff: string; createdAt: string; createdBy: string; note: string | null; rowCount: number }
 export const PARTIES = ['Contractor', 'Client', 'Subcontractor'] as const;
 export type Party = (typeof PARTIES)[number];
+export interface AuthConfig { mode: AuthMode; passwordMinLength: number; lockAfter: number; lockMinutes: number }
+export interface LoginResult { token: string; expiresAt: string; user: Me }
+export type AccessLevel = 'none' | 'read' | 'write';
+export const ACCESS_LEVELS: AccessLevel[] = ['none', 'read', 'write'];
+export interface AccessModule { key: string; label: string; workspace: WorkspaceId; parent: string | null; depth: number; availability: string }
+export interface RoleMatrix { roles: Role[]; caps: Record<Role, AccessLevel>; modules: (AccessModule & { levels: Record<Role, AccessLevel | null> })[] }
+export interface PersonMatrix { userId: string; name: string; role: Role; cap: AccessLevel; party: Party | null; modules: (AccessModule & { byRole: AccessLevel; override: AccessLevel | null; effective: AccessLevel })[] }
+export interface AccessLogEntry { id: string; at: string; actor: string | null; actorName: string | null; action: string; target: string; detail: string; projectId: string | null }
 export interface Me {
   id: string; name: string; email: string | null; isAdmin: boolean; status: string; party: Party | null; title: string | null; company: string | null;
   hasPassword: boolean; passwordChangedAt: string | null;
   /** Modules the person's party does not see. */
   hiddenModules: string[];
+  /** Per project: the screens this person cannot open (party, role and personal settings together) and those they can only read. */
+  moduleAccess?: Record<string, { hidden: string[]; readOnly: string[] }>;
   memberships: { projectId: string; role: Role }[];
 }
 export interface DirectoryUser { id: string; name: string; party?: Party | null; title?: string | null }
@@ -196,7 +220,7 @@ export type AccountState = 'Invited' | 'Active' | 'Suspended' | 'Deactivated';
 export const ACCOUNT_STATES: AccountState[] = ['Invited', 'Active', 'Suspended', 'Deactivated'];
 export interface UserRow {
   id: string; name: string; email: string; isAdmin: boolean; status: AccountState; createdAt: string | null;
-  title: string | null; company: string | null; party: Party | null; hasPassword: boolean;
+  title: string | null; company: string | null; party: Party | null; hasPassword: boolean; lastLoginAt?: string | null; lockedUntil?: string | null;
   memberships: { projectId: string; projectCode: string; role: Role; title: string | null }[];
 }
 export interface Member { userId: string; name: string; email: string | null; status: string; role: Role; title: string | null }
@@ -455,15 +479,19 @@ export interface WbsNode {
   ownHours: number;
   /** Leaf: its own hours. Parent: the sum below it. */
   hours: number;
+  /** Manhours spent and value earned: typed on an activity, summed up the tree; null where nothing was reported. */
+  actualHours: number | null; earnedHours: number | null; ownActual: number | null; ownEarned: number | null;
   start: string | null; finish: string | null; top: string;
 }
 export interface BudgetSummary {
   totalHours: number; activities: number; nodes: number; scheduledHours: number; unscheduledHours: number;
+  /** Spent and earned over the activities that report them; cpi = earned / spent. */
+  actualHours: number | null; earnedHours: number | null; cpi: number | null; progressPct: number | null; reportedActivities: number; budgetOfReported: number;
   byDiscipline: Record<string, number>; start: string | null; finish: string | null; topLevel: { wbs: string; name: string; hours: number }[];
 }
 export interface BudgetResponse { items: WbsNode[]; summary: BudgetSummary }
 export interface BudgetInput {
-  wbs?: string; name?: string; parentWbs?: string | null; discipline?: string | null; manhours?: number | null; planStart?: string | null; planFinish?: string | null; notes?: string | null;
+  wbs?: string; name?: string; parentWbs?: string | null; discipline?: string | null; manhours?: number | null; actualHours?: number | null; earnedHours?: number | null; planStart?: string | null; planFinish?: string | null; notes?: string | null;
 }
 export interface BudgetHistogram {
   by: 'week' | 'month'; group: 'wbs' | 'discipline'; from: string | null; to: string | null;

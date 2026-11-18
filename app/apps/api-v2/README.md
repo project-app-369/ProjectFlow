@@ -22,6 +22,16 @@ For local UI testing, start API v2 and then run `pnpm --filter @projectflow/web 
 
 `--seed` is available for a disposable development database, but **production migration must use the live Sheet archive** so edits after the original workbook extraction are retained.
 
+## Sign-in
+
+Set `SESSION_SECRET` (a long random string, kept private) in `.env.local` or the host's environment to require e-mail and password: the server then issues signed 12-hour session tokens at `POST /auth/login`, takes the acting user from the token and ignores a stated `user`. Without it API v2 stays in demo mode. Nobody can sign in before a password exists, so set the first administrator's from the command line (the password comes from the environment so it stays out of the shell history):
+
+```bash
+NEW_PASSWORD='a long password' pnpm --filter @projectflow/api-v2 db:set-password -- admin@example.com
+```
+
+After that administrators set and reset passwords under Settings → Users. Run `pnpm --filter @projectflow/api-v2 db:refresh -- --apply` once after upgrading so the database gets the new Role access, Person access and Access log worksheets. The Edge Function (`src/edge-v3.ts`) reads the same `SESSION_SECRET` (`supabase secrets set SESSION_SECRET=…`) and must be redeployed to use it. Changing a password ends the person's sessions; suspending an account does too.
+
 ## Storage and safety
 
 `projectflow_v2.datasets` stores worksheet metadata and `projectflow_v2.dataset_rows` stores typed row objects in JSONB with stable order. This transitional schema preserves all current fields, including the module-specific sheets; it does not claim the older partial NestJS schema has full app parity. API v2 loads the affected dataset state, applies the existing route validation and authorization logic, then commits changed datasets in one PostgreSQL transaction. A PostgreSQL advisory lock serializes writes across API instances. Each instance keeps its last snapshot and reuses it while the dataset version (count and latest `updated_at` of `projectflow_v2.datasets`) is unchanged, so a read costs one query instead of loading every row; a write by any instance changes the version. The API refuses to start without a database URL and server-side token.

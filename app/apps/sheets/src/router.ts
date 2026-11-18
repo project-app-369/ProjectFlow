@@ -1,9 +1,15 @@
 import type { Api } from './api';
-import { requireConfigure, requireMember, requireWrite, resolveActor, type Actor } from './auth';
+import { readSession, requireConfigure, requireMember, requireWrite, resolveActor, type Actor } from './auth';
 import type { Resource } from './crud';
 import { HttpError } from './http';
 
-export interface ApiRequest { method: string; path: string; body?: unknown; /** Id of the acting user (demo identity, see auth.ts). */ user?: string }
+export interface ApiRequest {
+  method: string; path: string; body?: unknown;
+  /** Id of the acting user (demo identity, see auth.ts). Ignored when the deployment requires sign-in. */
+  user?: string;
+  /** Session token from POST /auth/login; the acting user is taken from it when the deployment requires sign-in. */
+  session?: string;
+}
 /** Apps Script web apps always answer HTTP 200, so the real status travels inside the envelope. */
 export type Envelope = { ok: true; status: number; data: unknown } | { ok: false; status: number; error: { code: string; message: string; issues?: unknown } };
 
@@ -56,6 +62,8 @@ const CONCERNS = 'procurement.concerns';
 const ROUTES: Route[] = [
   route('GET', 'health', c => c.api.svc.health(), { access: 'public' }),
   route('GET', 'directory', c => c.api.admin.directory(), { access: 'public' }),
+  route('GET', 'auth/config', c => c.api.admin.authConfig(), { access: 'public' }),
+  route('POST', 'auth/login', c => c.api.admin.login(c.body), { access: 'public' }),
   route('GET', 'me', c => c.api.admin.me(c.actor)),
   route('PATCH', 'me', c => c.api.admin.updateProfile(c.body, c.actor)),
   route('POST', 'me/password', c => c.api.admin.changePassword(c.body, c.actor)),
@@ -75,6 +83,12 @@ const ROUTES: Route[] = [
   route('GET', 'users', c => c.api.admin.listUsers(c.actor)),
   route('POST', 'users', c => c.api.admin.createUser(c.body, c.actor), { status: 201 }),
   route('PATCH', 'users/(?<id>[^/]+)', c => c.api.admin.updateUser(c.p.id, c.body, c.actor)),
+  route('POST', 'users/(?<id>[^/]+)/password', c => c.api.admin.resetPassword(c.p.id, c.body, c.actor)),
+  route('GET', 'access-log', c => c.api.access.entries(c.actor, c.q)),
+  route('GET', `${PID}/access/roles`, c => c.api.access.roleMatrix(c.p.pid, c.actor), { access: 'user' }),
+  route('PUT', `${PID}/access/roles`, c => c.api.access.setRoleAccess(c.p.pid, c.body, c.actor), { access: 'user' }),
+  route('GET', `${PID}/access/users/(?<uid>[^/]+)`, c => c.api.access.personMatrix(c.p.pid, c.p.uid, c.actor), { access: 'user' }),
+  route('PUT', `${PID}/access/users/(?<uid>[^/]+)`, c => c.api.access.setPersonAccess(c.p.pid, c.p.uid, c.body, c.actor), { access: 'user' }),
 
   // module registry
   route('GET', 'modules', c => c.api.svc.catalog()),
@@ -84,7 +98,7 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/modules/(?<key>[^/]+)/records`, c => c.api.svc.records(c.p.pid, c.p.key), { module: p => p.key }),
   route('GET', `${PID}/module-changes`, c => c.api.svc.moduleChanges(c.p.pid), { access: 'projectAny' }),
 
-  route('GET', `${PID}/dashboard`, c => c.api.dashboard(c.p.pid), { module: 'dashboard' }),
+  route('GET', `${PID}/dashboard`, c => c.api.dashboard(c.p.pid, c.actor), { module: 'dashboard' }),
 
   // planning
   route('GET', `${PID}/schedule/overall-progress`, c => c.api.svc.overall(c.p.pid), { module: OVERALL }),
@@ -241,12 +255,17 @@ export function handle(api: Api, req: ApiRequest): Envelope {
       const m = r.pattern.exec(pathname);
       if (!m) continue;
       const params = Object.fromEntries(Object.entries(m.groups ?? {}).map(([k, v]) => [k, decodeURIComponent(v)]));
-      const actor = r.access === 'public' ? (undefined as unknown as Actor) : resolveActor(api.svc.store, req.user);
+      // with a signing secret the user comes from the session token the API issued; a stated `user` is never believed
+      const actor = r.access === 'public' ? (undefined as unknown as Actor) : resolveActor(api.svc.store, api.auth ? readSession(api.svc.store, api.auth, req.session, api.svc.clock()) : req.user);
       if (r.hasProject) api.svc.project(params.pid); // unknown projects are a 404 before any permission talk
       if (r.access === 'member') requireMember(actor, params.pid);
       if (r.access === 'projectAny' && !actor.isAdmin) requireMember(actor, params.pid);
       const key = typeof r.module === 'function' ? r.module(params) : r.module;
-      if (key) { api.admin.assertParty(actor, key); api.svc.assertAccess(params.pid, key, method !== 'GET'); }
+      if (key) {
+        api.admin.assertParty(actor, key);
+        api.svc.assertAccess(params.pid, key, method !== 'GET');
+        if (r.hasProject) api.access.assert(actor, params.pid, key, method !== 'GET'); // role matrix and personal settings
+      }
       const ctx = { api, actor, p: params, q: query, body: req.body };
       if (r.hasProject && query.asOf) {
         // ?asOf=<cut-off date> reads the saved snapshot of that date; snapshots are read-only

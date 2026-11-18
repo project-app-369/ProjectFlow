@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { apiMode, getUserId, request, requestBatch, setCurrentAsOf, setUserId, type DirectoryUser, type Me, type ModulesResponse, type Project } from './api';
+import { apiMode, errorText, getAuthMode, getSession, getUserId, request, requestBatch, setAuthMode, setCurrentAsOf, setSession, setUserId, type AuthConfig, type DirectoryUser, type LoginResult, type Me, type ModulesResponse, type Project } from './api';
 import { Layout } from './Layout';
 import { crumbsOf, defaultKey, landing, SHEETS_KEYS } from './nav';
 import Dashboard from './pages/Dashboard';
@@ -35,8 +35,8 @@ const Profile = lazyPage(() => import('./pages/Profile'));
 const CriticalPathNetwork = lazyPage(() => import('./pages/Cpn').then(m => ({ default: m.CriticalPathNetwork })));
 const FacilityProgressPage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilityProgressPage })));
 const FacilitySchedulePage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilitySchedulePage })));
-import { AppDataProvider, CrumbContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
-import { ErrorBox, Loading, PageHead } from './ui';
+import { AppDataProvider, CrumbContext, ModuleKeyContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
+import { Btn, ErrorBox, Field, Loading, PageHead } from './ui';
 
 const PAGES: Record<string, () => ReactNode> = {
   dashboard: () => <Dashboard />,
@@ -91,7 +91,9 @@ function ModuleRoute() {
   return (
     <CrumbContext.Provider value={crumbsOf(modules, key)}>
       <SheetContext.Provider value={m.sheet ?? null}>
-        {page ? page() : <Placeholder moduleKey={key} />}
+        <ModuleKeyContext.Provider value={key}>
+          {page ? page() : <Placeholder moduleKey={key} />}
+        </ModuleKeyContext.Provider>
       </SheetContext.Provider>
     </CrumbContext.Provider>
   );
@@ -131,6 +133,37 @@ function SignIn({ onSignIn }: { onSignIn: (id: string) => void }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Sign-in when the backend requires passwords: e-mail and password for a signed session. */
+function Login({ onSignIn, config }: { onSignIn: (id: string) => void; config?: AuthConfig }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true); setError('');
+    try {
+      const r = await request<LoginResult>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      setSession(r.token);
+      onSignIn(r.user.id);
+    } catch (e) { setError(errorText(e)); setPassword(''); } finally { setBusy(false); }
+  };
+  return (
+    <div className="signin">
+      <form className="panel signin-card" onSubmit={e => { e.preventDefault(); if (email && password && !busy) void submit(); }}>
+        <div className="brand" style={{ padding: '0 0 18px' }}><span className="brandmark" />Project Flow</div>
+        <h1>Sign in</h1>
+        <p className="page-sub" style={{ marginBottom: 18 }}>Use your work e-mail and your password. Ask an administrator if you do not have one yet.</p>
+        <div className="form-grid">
+          <Field label="E-mail" full><input type="email" value={email} autoComplete="username" autoFocus onChange={e => setEmail(e.target.value)} /></Field>
+          <Field label="Password" full hint={config ? `${config.lockAfter} wrong attempts lock the account for ${config.lockMinutes} minutes.` : undefined}><input type="password" value={password} autoComplete="current-password" onChange={e => setPassword(e.target.value)} /></Field>
+        </div>
+        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        <div style={{ marginTop: 18 }}><Btn kind="primary" type="submit" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</Btn></div>
+      </form>
     </div>
   );
 }
@@ -176,7 +209,7 @@ function Session({ userId, signOut, switchUser }: { userId: string | null; signO
   // Screens that the person's party is not given (Settings -> Party access) behave as switched off for them.
   const visibleModules = useMemo<ModulesResponse>(() => {
     const data = modules.data ?? { workspaces: [], modules: [] };
-    const hidden = new Set(meData?.hiddenModules ?? []);
+    const hidden = new Set([...(meData?.hiddenModules ?? []), ...(meData?.moduleAccess?.[project?.id ?? '']?.hidden ?? [])]);
     return hidden.size ? { ...data, modules: data.modules.map(m => (hidden.has(m.key) ? { ...m, effective: false } : m)) } : data;
   }, [modules.data, meData]);
   const value = useMemo(() => ({
@@ -210,13 +243,23 @@ function Session({ userId, signOut, switchUser }: { userId: string | null; signO
 export function App() {
   const qc = useQueryClient();
   const [userId, setUser] = useState<string | null>(getUserId);
-  const signOut = useCallback(() => { setCurrentAsOf(null); setUserId(null); setUser(null); qc.clear(); }, [qc]);
+  const signOut = useCallback(() => { setCurrentAsOf(null); setSession(null); setUserId(null); setUser(null); qc.clear(); }, [qc]);
   const signIn = (id: string) => { qc.clear(); setCurrentAsOf(null); setUserId(id); setUser(id); };
+  // how this backend identifies people: remembered, so a reload does not flash the wrong screen
+  const auth = useQuery({
+    queryKey: ['auth-config'], enabled: apiMode === 'sheets', staleTime: 0, retry: 1,
+    queryFn: () => request<AuthConfig>('/auth/config'),
+    placeholderData: { mode: getAuthMode(), passwordMinLength: 8, lockAfter: 5, lockMinutes: 15 } as AuthConfig,
+  });
+  const mode = apiMode === 'sheets' ? auth.data?.mode ?? 'demo' : 'demo';
+  useEffect(() => { if (auth.data && !auth.isPlaceholderData) setAuthMode(auth.data.mode); }, [auth.data, auth.isPlaceholderData]);
   useEffect(() => {
     window.addEventListener('projectflow:signed-out', signOut);
     return () => window.removeEventListener('projectflow:signed-out', signOut);
   }, [signOut]);
 
+  if (apiMode === 'sheets' && auth.isPlaceholderData && auth.isFetching) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
+  if (apiMode === 'sheets' && mode === 'password' && (!userId || !getSession())) return <Login onSignIn={signIn} config={auth.data} />;
   if (apiMode === 'sheets' && !userId) return <SignIn onSignIn={signIn} />;
   return <Session key={userId ?? 'none'} userId={userId} signOut={signOut} switchUser={signIn} />;
 }

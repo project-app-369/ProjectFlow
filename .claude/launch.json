@@ -98,6 +98,28 @@
         "dev:v2"
       ],
       "port": 5173
+    },
+    {
+      "name": "app-web-v3",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/web",
+        "dev:v3",
+        "--port",
+        "5173"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "app-sheets-sim-secure",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/sheets",
+        "dev:secure"
+      ],
+      "port": 3200
     }
   ]
 }

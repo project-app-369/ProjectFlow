@@ -131,7 +131,13 @@ export class Service {
   assertAccess(projectId: string, key: string, write: boolean) {
     const states = this.states(projectId);
     if (!isEffective(key, states)) throw new HttpError(403, { code: 'MODULE_DISABLED', message: `Module "${key}" is not enabled for this project.` });
-    if (write && !allowsWrites(states[key])) throw new HttpError(403, { code: 'MODULE_READ_ONLY', message: `Module "${key}" is ${states[key]} and does not accept changes.` });
+    if (write) {
+      // a Locked or Read-only screen freezes every screen under it, not only itself
+      for (let m = MANIFEST_BY_KEY.get(key); m; m = m.parent ? MANIFEST_BY_KEY.get(m.parent) : undefined) {
+        const state = states[m.key] ?? 'Disabled';
+        if (!allowsWrites(state)) throw new HttpError(403, { code: 'MODULE_READ_ONLY', message: m.key === key ? `Module "${key}" is ${state} and does not accept changes.` : `Module "${key}" is under "${m.key}", which is ${state}, so it does not accept changes.` });
+      }
+    }
   }
 
   /** Rows of the module's sheet for one project, for modules without a dedicated screen yet. */
@@ -139,6 +145,8 @@ export class Service {
     const target = moduleSheet(key, MANIFESTS);
     if (!target) throw new HttpError(409, { code: 'NO_SHEET', message: 'This module does not keep a register of its own.' });
     const scoped = target.columns.some(c => c.key === 'projectId');
+    // a sheet without a project column holds personal rows (tasks): they are shown only by their own owner-scoped routes
+    if (!scoped) throw new HttpError(403, { code: 'PERSONAL_DATA', message: 'This module holds personal records, which are available only through their own screen.' });
     const items = this.store.readRows(target.sheet, target.columns).filter(r => !scoped || r.projectId === projectId);
     return { sheet: this.store.sheetInfo(target.sheet), columns: target.columns.map(c => c.key).filter(k => k !== 'projectId'), items };
   }

@@ -45,7 +45,7 @@ export function ProgressOverall() {
           </div>
         </div>
       ) : null}
-      <div className="section-trio">
+      <div style={{ marginTop: 'var(--gap)' }}>
         <Deferred height="20rem"><SectionRisks section="planning" /></Deferred>
       </div>
     </>

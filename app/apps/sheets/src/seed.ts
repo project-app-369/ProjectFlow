@@ -146,6 +146,7 @@ export function seedRows(raw: SeedData) {
     facilityCurves: withProject([...facilityOf(raw).curves, ...cpnOf(raw).curves]),
     workingSchedule: withProject(workingScheduleOf(raw)),
     cpnItems: withProject(cpnOf(raw).items),
+    budget: withProject((raw as unknown as { budget?: RawRow[] }).budget ?? []),
     facilityScopes: withProject(facilityOf(raw).scopes),
     facilityWbs: withProject(facilityOf(raw).wbs),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
@@ -236,18 +237,27 @@ export function knowledgeSeed(milestones: RawRow[], now: string): Row[] {
 /** Creates one sheet per dataset, grouped by area, and returns the sheet names that were not there before. */
 export function ensureAllSheets(store: Store) {
   const sheets: [string, readonly { key: string; type: string }[]][] = [
-    [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.partyAccess, COLUMNS.partyAccess], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
+    [SHEET.projects, COLUMNS.projects], [SHEET.users, COLUMNS.users], [SHEET.partyAccess, COLUMNS.partyAccess], [SHEET.roleAccess, COLUMNS.roleAccess], [SHEET.personAccess, COLUMNS.personAccess], [SHEET.accessLog, COLUMNS.accessLog], [SHEET.memberships, COLUMNS.memberships], [SHEET.modules, COLUMNS.modules], [SHEET.moduleChanges, COLUMNS.moduleChanges],
     [SHEET.tasks, COLUMNS.tasks], [SHEET.subtasks, COLUMNS.subtasks],
     [SHEET.facilityCurves, COLUMNS.facilityCurves], [SHEET.facilityScopes, COLUMNS.facilityScopes], [SHEET.facilityWbs, COLUMNS.facilityWbs], [SHEET.workingSchedule, COLUMNS.workingSchedule], [SHEET.cpnItems, COLUMNS.cpnItems],
     [SHEET.scurve, COLUMNS.scurve], [SHEET.scurveWeekly, COLUMNS.scurveWeekly], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
     [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
     [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
     [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
-    [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData],
+    [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData], [SHEET.budget, COLUMNS.budget],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
   store.addMissingColumns(SHEET.milestones, COLUMNS.milestones); // the optional Major column
+  store.addMissingColumns(SHEET.budget, COLUMNS.budget); // the actual and earned manhours
   store.addMissingColumns(SHEET.users, COLUMNS.users); // workbooks made before profiles lack title, company, party and password columns
+}
+
+/** The construction manhour budget with the hours spent (MPI tracking workbook). Loaded once; a project that already has a budget keeps its own. */
+function appendSeedBudget(store: Store, raw: SeedData) {
+  const rows = seedRows(raw).budget;
+  if (!rows.length || store.readRows(SHEET.budget, COLUMNS.budget).some(r => r.projectId === PROJECT_ID)) return;
+  const now = new Date().toISOString();
+  store.appendRows(SHEET.budget, COLUMNS.budget, rows.map(r => ({ ...r, updatedAt: now })));
 }
 
 function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: string) {
@@ -320,6 +330,7 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
       if (!hadRiskMatrix) appendSeedGovernance(store, raw);
       if (!hadFacilityCurves) appendSeedFacilityProgress(store, raw);
       if (!hadWorkingSchedule) appendSeedSchedule(store, raw);
+      appendSeedBudget(store, raw); // only where the project has no budget yet
       return false;
     }
 
@@ -345,6 +356,7 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.facilityWbs, COLUMNS.facilityWbs, rows.facilityWbs);
     store.appendRows(SHEET.workingSchedule, COLUMNS.workingSchedule, rows.workingSchedule);
     store.appendRows(SHEET.cpnItems, COLUMNS.cpnItems, rows.cpnItems);
+    store.appendRows(SHEET.budget, COLUMNS.budget, rows.budget.map(r => ({ ...r, updatedAt: now })));
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
     appendSeedIssues(store, rows.issues, String(raw.project.cutoff), now);
     appendSeedGovernance(store, raw);
