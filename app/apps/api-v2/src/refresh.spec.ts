@@ -24,4 +24,20 @@ describe('reference data refresh', () => {
     expect(store.readRows(SHEET.issues, COLUMNS.issues)).toHaveLength(issues + 1);
     expect(refreshStore(store)).toEqual([]);
   });
+
+  it('loads the facility equipment once into a database that has none and never overwrites what people edit', () => {
+    const store = new MemoryStore('x');
+    seedStore(store, seedData);
+    store.deleteRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, { projectId: 'sttp2b' });
+    const first = refreshStore(store);
+    expect(first.map(c => c.dataset)).toEqual([expect.stringContaining(SHEET.facilityEquipment)]);
+    const seeded = store.readRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment).length;
+    expect(seeded).toBeGreaterThan(100);
+    store.updateRow(SHEET.facilityEquipment, COLUMNS.facilityEquipment, 'tag', 'MBD-2501', { method: 'Lift by Crane' }, { projectId: 'sttp2b' });
+    store.deleteRow(SHEET.facilityEquipment, COLUMNS.facilityEquipment, 'tag', 'MBD-2701', { projectId: 'sttp2b' });
+    expect(refreshStore(store)).toEqual([]);
+    const rows = store.readRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment);
+    expect(rows).toHaveLength(seeded - 1);
+    expect(rows.find(r => r.tag === 'MBD-2501')?.method).toBe('Lift by Crane');
+  });
 });

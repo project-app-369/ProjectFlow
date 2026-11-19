@@ -1685,3 +1685,59 @@ details.multi-form{min-width:7rem}
 .sk-chart>.sk-panel{min-height:300px}
 .sk-table{display:grid;gap:var(--sp-2);padding:var(--sp-3)}
 .sk-row{height:2.25rem}
+
+/* Construction → Facility layout: the 3D model beside the equipment list (ADR 0006 spacing: tokens only) */
+.fl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(18rem,22rem);gap:var(--gap);align-items:start}
+.fl-view{display:flex;flex-direction:column;min-width:0}
+.fl-stage{position:relative;height:clamp(24rem,68vh,46rem);margin:0 var(--card-px);border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--surface-subtle)}
+.fl-canvas{position:absolute;inset:0}
+.fl-overlay{position:absolute;inset:0;display:grid;place-content:center;gap:var(--sp-3);padding:var(--card-px);text-align:center;background:color-mix(in srgb,var(--surface) 78%,transparent);color:var(--muted);z-index:5}
+.fl-overlay.error{color:var(--red)}
+.fl-overlay .sk{width:min(14rem,60vw);margin:0 auto}
+.fl-credit{position:absolute;left:var(--sp-3);bottom:var(--sp-2);z-index:4;font-size:var(--fs-xs);color:var(--muted);text-decoration:none;opacity:.8;pointer-events:auto}
+.fl-credit:hover{opacity:1;text-decoration:underline}
+.fl-legend{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);padding:var(--card-py) var(--card-px);font-size:var(--fs-xs);color:var(--muted)}
+.fl-legend span{display:inline-flex;align-items:center;gap:var(--sp-2)}
+.fl-dot{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;flex:none}
+.fl-list{min-width:0;display:flex;flex-direction:column}
+.fl-groups{display:grid;gap:var(--sp-3);padding:0 0 var(--card-py);max-height:clamp(24rem,68vh,46rem);overflow:auto}
+.fl-group h3{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--card-px);font-size:var(--fs-md);position:sticky;top:0;background:var(--surface);z-index:1}
+.fl-group h3 .link-button{display:inline-flex;align-items:center;gap:var(--sp-2);font-weight:600}
+.fl-group h3 .icon{width:1rem;height:1rem}
+.fl-table{width:100%}
+.fl-row{cursor:pointer}
+.fl-row.selected td{background:color-mix(in srgb,var(--teal) 14%,transparent)}
+.fl-row:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.fl-sub{font-size:var(--fs-md);margin:var(--sp-4) 0 var(--sp-1)}
+.fl-text{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+@media (max-width:1100px){.fl-grid{grid-template-columns:minmax(0,1fr)}.fl-groups{max-height:none}}
+@media (max-width:720px){.fl-stage{height:clamp(20rem,52vh,30rem);margin:0 var(--card-px)}}
+
+.fl-view{position:relative}
+.fl-view:fullscreen{border-radius:0;padding:var(--card-py) 0;background:var(--surface);overflow:auto}
+.fl-view:fullscreen .fl-stage{height:auto;flex:1 1 auto;min-height:0}
+.fl-hud{position:absolute;right:calc(var(--card-px) + var(--sp-3));top:5.5rem;z-index:6;width:min(18rem,calc(100% - 2 * var(--card-px)));padding:var(--card-py) var(--card-px);border-radius:var(--r);background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);box-shadow:var(--shadow-sm,0 4px 16px #0002);font-size:var(--fs-sm)}
+.fl-hud-head{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-2)}
+.fl-hud p{margin:var(--sp-1) 0 var(--sp-3);color:var(--muted)}
+.fl-hud dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-2);margin:0}
+.fl-hud dt{font-size:var(--fs-xs);color:var(--muted)}.fl-hud dd{margin:0;font-weight:600}
+.fl-view.fl-expanded{position:fixed;inset:0;z-index:60;border-radius:0;padding:var(--card-py) 0;overflow:auto;box-shadow:none}
+.fl-view.fl-expanded .fl-stage{height:auto;flex:1 1 auto;min-height:0}
+.fl-row.selected td{background:color-mix(in srgb,var(--teal) 24%,transparent);font-weight:600}
+.fl-row.selected td:first-child{box-shadow:inset 3px 0 0 var(--teal)}
+.fl-hud .btn{margin-top:var(--sp-3)}
+.fl-stage-wrap{position:relative}
+.fl-stage-wrap .fl-hud{top:var(--sp-3);right:calc(var(--card-px) + var(--sp-3))}
+/* the equipment list is a narrow card: tight cells, the name wraps to two lines, dates are short */
+.fl-table{table-layout:auto;font-size:var(--fs-xs)}
+.fl-table th,.fl-table td{padding:var(--sp-2) .35rem}
+.fl-table th{letter-spacing:.02em}
+.fl-table th:nth-child(n+3),.fl-table td:nth-child(n+3){width:1%;white-space:nowrap}
+.fl-table th:first-child,.fl-table td:first-child{padding-left:var(--sp-4)}
+.fl-table th:last-child,.fl-table td:last-child{padding-right:var(--sp-3)}
+.fl-groups{overflow-x:hidden}
+.fl-table td:nth-child(2){white-space:normal;width:100%;min-width:4.5rem;line-height:1.25}
+.fl-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+@media (max-width:720px){.fl-table td:nth-child(2){width:auto}.fl-name{display:inline;-webkit-line-clamp:unset}}
+.fl-source{margin-top:var(--sp-5)}
+.dialog-body>.detail-grid{margin-top:0}

@@ -1,4 +1,4 @@
-import { MANIFESTS, defaultState } from '../../api/src/registry/catalog';
+import { MANIFESTS, MANIFEST_BY_KEY, defaultState } from '../../api/src/registry/catalog';
 import { COLUMNS, SHEET, pathOf, tabColorOf } from './datasets';
 import { milestoneFacility } from './registers-service';
 import { splitActions } from './risks-service';
@@ -147,6 +147,7 @@ export function seedRows(raw: SeedData) {
     workingSchedule: withProject(workingScheduleOf(raw)),
     cpnItems: withProject(cpnOf(raw).items),
     budget: withProject((raw as unknown as { budget?: RawRow[] }).budget ?? []),
+    facilityEquipment: withProject((raw as unknown as { facilityEquipment?: RawRow[] }).facilityEquipment ?? []),
     facilityScopes: withProject(facilityOf(raw).scopes),
     facilityWbs: withProject(facilityOf(raw).wbs),
     procCurves: withProject(((raw as unknown as { procCurves?: RawRow[] }).procCurves ?? []).map((r, i) => ({ id: `SC-${String(i + 1).padStart(2, '0')}`, ...r }))),
@@ -244,7 +245,7 @@ export function ensureAllSheets(store: Store) {
     [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
     [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
     [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
-    [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData], [SHEET.budget, COLUMNS.budget],
+    [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData], [SHEET.budget, COLUMNS.budget], [SHEET.facilityEquipment, COLUMNS.facilityEquipment],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
   store.addMissingColumns(SHEET.milestones, COLUMNS.milestones); // the optional Major column
@@ -258,6 +259,30 @@ function appendSeedBudget(store: Store, raw: SeedData) {
   if (!rows.length || store.readRows(SHEET.budget, COLUMNS.budget).some(r => r.projectId === PROJECT_ID)) return;
   const now = new Date().toISOString();
   store.appendRows(SHEET.budget, COLUMNS.budget, rows.map(r => ({ ...r, updatedAt: now })));
+}
+
+/**
+ * Switches a module on together with every ancestor that is Disabled (a module is only reachable when its parents are on too).
+ * Returns the module keys that were changed, deepest first.
+ */
+export function enableModuleChain(store: Store, key: string, now = new Date().toISOString()): string[] {
+  const changed: string[] = [];
+  const rows = store.readRows(SHEET.modules, COLUMNS.modules);
+  for (let m = MANIFEST_BY_KEY.get(key); m; m = m.parent ? MANIFEST_BY_KEY.get(m.parent) : undefined) {
+    for (const r of rows.filter(x => x.moduleKey === m.key && x.state === 'Disabled')) {
+      store.updateRow(SHEET.modules, COLUMNS.modules, 'moduleKey', m.key, { state: 'Enabled', updatedAt: now }, { projectId: String(r.projectId) });
+      if (!changed.includes(m.key)) changed.push(m.key);
+    }
+  }
+  return changed;
+}
+
+/** The large equipment of the 3D model with their dates (Expediting report). Loaded once; a project that already has rows keeps its own. */
+export function appendSeedFacilityEquipment(store: Store, raw: SeedData, now = new Date().toISOString()): number {
+  const rows = seedRows(raw).facilityEquipment;
+  if (!rows.length || store.readRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment).some(r => r.projectId === PROJECT_ID)) return 0;
+  store.appendRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, rows.map(r => ({ ...r, updatedAt: now })));
+  return rows.length;
 }
 
 function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: string) {
@@ -331,6 +356,7 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
       if (!hadFacilityCurves) appendSeedFacilityProgress(store, raw);
       if (!hadWorkingSchedule) appendSeedSchedule(store, raw);
       appendSeedBudget(store, raw); // only where the project has no budget yet
+      appendSeedFacilityEquipment(store, raw); // only where the project has no facility equipment yet
       return false;
     }
 
@@ -357,6 +383,7 @@ export function seedStore(store: Store, raw: SeedData, now = new Date().toISOStr
     store.appendRows(SHEET.workingSchedule, COLUMNS.workingSchedule, rows.workingSchedule);
     store.appendRows(SHEET.cpnItems, COLUMNS.cpnItems, rows.cpnItems);
     store.appendRows(SHEET.budget, COLUMNS.budget, rows.budget.map(r => ({ ...r, updatedAt: now })));
+    store.appendRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, rows.facilityEquipment.map(r => ({ ...r, updatedAt: now })));
     store.appendRows(SHEET.phaseProgress, COLUMNS.phaseProgress, rows.phaseProgress);
     appendSeedIssues(store, rows.issues, String(raw.project.cutoff), now);
     appendSeedGovernance(store, raw);

@@ -64,6 +64,11 @@ export const COLUMNS = {
   facilityWbs: [...text('projectId', 'facilityId', 'code', 'name'), ...num('level'), ...text('father'), ...date('start', 'finish'), ...num('weight', 'plan', 'actual'), ...text('shared')],
   /** Manhours per WBS row: the budget (`manhours`), what has been spent (`actualHours`) and the value earned for it (`earnedHours`). */
   budget: [...text('projectId', 'wbs', 'name', 'parentWbs', 'discipline'), ...num('manhours'), ...date('planStart', 'planFinish'), ...text('notes'), ...stamp('updatedAt'), ...num('actualHours', 'earnedHours')],
+  /**
+   * Large equipment of the 3D facility model, one row per tag. The page joins a row to the model by `tag` (the part's name in the GLB files),
+   * so the dates, installation method (Lift by Crane / Skidding), remarks and comments are edited here, in the sheet.
+   */
+  facilityEquipment: [...text('projectId', 'tag', 'name', 'deck', 'packageCode', 'vendor'), ...date('rosDate', 'etaDate'), ...text('status', 'packageStatus', 'method', 'remarks', 'comments', 'source'), ...stamp('updatedAt')],
   knowledge: [
     ...text('projectId', 'id', 'domain', 'category', 'title', 'summary', 'body', 'tags', 'sources', 'status'),
     ...stamp('createdAt', 'updatedAt'), ...text('createdBy', 'updatedBy'),
@@ -139,6 +144,7 @@ export const SHEET = {
   procurement: 'EPCIC - Procurement packages',
   expediting: 'EPCIC - Expediting packages',
   budget: 'EPCIC - Construction budget',
+  facilityEquipment: 'EPCIC - Facility equipment',
   logistics: 'EPCIC - Logistics shipments',
   materialBalance: 'EPCIC - Material balance',
   materialSummary: 'EPCIC - Material summary',
@@ -184,7 +190,7 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'facilityEquipment', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
 export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'riskActions', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];
@@ -200,6 +206,7 @@ export const DATASET_OF_MODULE: Record<string, { sheet: string; columns: Column[
   'procurement.expediting.vendor-overview': { sheet: SHEET.expediting, columns: COLUMNS.expediting },
   'task-management.board': { sheet: SHEET.tasks, columns: COLUMNS.tasks },
   'construction.budget': { sheet: SHEET.budget, columns: COLUMNS.budget },
+  'construction.facility-layout': { sheet: SHEET.facilityEquipment, columns: COLUMNS.facilityEquipment },
   'procurement.logistics': { sheet: SHEET.logistics, columns: COLUMNS.logistics },
   'procurement.materials': { sheet: SHEET.materialBalance, columns: COLUMNS.materialBalance },
   'procurement.concerns': { sheet: SHEET.procConcerns, columns: COLUMNS.procConcerns },

@@ -120,6 +120,16 @@
         "dev:secure"
       ],
       "port": 3200
+    },
+    {
+      "name": "app-api-v2-local",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "app/apps/api-v2",
+        "dev:local"
+      ],
+      "port": 3300
     }
   ]
 }

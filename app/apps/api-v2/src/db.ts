@@ -3,9 +3,51 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Pool, type PoolClient } from 'pg';
+import { PGlite } from '@electric-sql/pglite';
 import type { StoreSnapshot } from '../../sheets/src/memory-store';
 
+/** One embedded PostgreSQL per directory, shared by everything in the process (PGlite allows a single opener). */
+const localDatabases = new Map<string, Pool>();
+
+/**
+ * A pg Pool look-alike over PGlite (PostgreSQL compiled to WebAssembly) with its files in `dir`, for running API v2 on a machine that
+ * cannot reach Supabase. Same schema, same SQL, same server code. PGlite has one connection, so a transaction holds a lock from
+ * `begin` to `commit`/`rollback` and other statements wait for it.
+ */
+export function createLocalPool(dir: string): Pool {
+  const known = localDatabases.get(dir);
+  if (known) return known;
+  const db = new PGlite(dir);
+  let tail: Promise<void> = Promise.resolve();
+  const acquire = () => { let release!: () => void; const next = new Promise<void>(r => { release = r; }); const ready = tail.then(() => release); tail = tail.then(() => next); return ready; };
+  const run = async (text: string, params?: unknown[]) => {
+    await db.waitReady;
+    if (!params?.length && /;\s*\S/.test(text.trim())) { await db.exec(text); return { rows: [], rowCount: 0 }; }
+    const r = await db.query(text, params as never);
+    return { rows: r.rows, rowCount: r.rows.length };
+  };
+  const client = () => {
+    let release: (() => void) | null = null;
+    return {
+      async query(text: string, params?: unknown[]) {
+        if (/^\s*begin/i.test(text)) { release = await acquire(); return run(text, params); }
+        if (release) {
+          try { return await run(text, params); }
+          finally { if (/^\s*(commit|rollback)/i.test(text)) { release(); release = null; } }
+        }
+        const r = await acquire();
+        try { return await run(text, params); } finally { r(); }
+      },
+      release() { release?.(); release = null; },
+    };
+  };
+  const pool = { connect: async () => client(), query: (text: string, params?: unknown[]) => client().query(text, params), end: () => db.close() } as unknown as Pool;
+  localDatabases.set(dir, pool);
+  return pool;
+}
+
 export function createPool() {
+  if (process.env.LOCAL_PGLITE_DIR) return createLocalPool(process.env.LOCAL_PGLITE_DIR);
   const connectionString = process.env.SUPABASE_DB_URL;
   if (!connectionString) throw new Error('SUPABASE_DB_URL is required; API v2 cannot fall back to another database.');
   const caPath = process.env.SUPABASE_CA_CERT ?? fileURLToPath(new URL('../certs/prod-ca-2021.crt', import.meta.url));

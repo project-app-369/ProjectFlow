@@ -33,6 +33,7 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `EPCIC - Procurement S-curves` | EPCIC | Weekly cumulative plan, forecast and actual per facility and LS / PS / overall, as comma-separated percentages from a start date (17 rows) | Procurement dashboard |
 | `EPCIC - Procurement concerns` | EPCIC | Risks, concerns and issues per package with severity, owner, action (22 seeded from expediting and logistics) | Risks & Concerns, Procurement dashboard |
 | `EPCIC - Construction budget` | EPCIC | WBS rows with parent, discipline, manhours, plan start and finish | Construction → Budget |
+| `EPCIC - Facility equipment` | EPCIC | Large equipment of the 3D model, one row per tag: name, deck, package, vendor, ROS, ETA, status, installation method (Lift by Crane / Skidding), remarks, comments, source (111 seeded from the expediting report). Added, edited and deleted in the app (and in the sheet, if you keep the Sheets backend) | Construction → Facility Layout |
 | `Governance - Issues` | Governance | Issues with persons in charge (emails), priority, status, dates (38 from the task monitor) | Issues |
 | `Governance - Issue sub-tasks` | Governance | Steps of each issue with a PIC and due date | Issues |
 | `Governance - Issue log` | Governance | History of every change and reminder | Issues |

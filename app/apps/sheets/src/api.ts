@@ -3,6 +3,7 @@ import { AccessService } from './access-service';
 import { AdminService } from './admin-service';
 import type { Actor, AuthOptions } from './auth';
 import { FacilitiesService } from './facilities-service';
+import { FacilityLayoutService } from './facility-layout-service';
 import { InterfacesService } from './interfaces-service';
 import { RegistersService } from './registers-service';
 import { RisksService } from './risks-service';
@@ -33,6 +34,7 @@ export class Api {
   readonly risks: RisksService;
   readonly interfaces: InterfacesService;
   readonly facilities: FacilitiesService;
+  readonly facilityLayout: FacilityLayoutService;
 
   constructor(store: Store, clock: () => Date = () => new Date(), mailer: Mailer = noMailer, auth?: AuthOptions) {
     this.svc = new Service(store, clock);
@@ -50,6 +52,7 @@ export class Api {
     this.risks = new RisksService(this.svc);
     this.interfaces = new InterfacesService(this.svc);
     this.facilities = new FacilitiesService(this.svc, this.reg);
+    this.facilityLayout = new FacilityLayoutService(this.svc);
   }
 
   /**

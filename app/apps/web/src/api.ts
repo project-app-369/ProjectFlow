@@ -490,6 +490,14 @@ export interface BudgetSummary {
   byDiscipline: Record<string, number>; start: string | null; finish: string | null; topLevel: { wbs: string; name: string; hours: number }[];
 }
 export interface BudgetResponse { items: WbsNode[]; summary: BudgetSummary }
+
+/** Construction → Facility Layout: one large equipment of the 3D model, as kept in the Facility equipment sheet. */
+export interface FacilityEquipment {
+  tag: string; name: string | null; deck: string; packageCode: string | null; vendor: string | null;
+  rosDate: string | null; etaDate: string | null; status: string | null; packageStatus: string | null;
+  method: string | null; remarks: string | null; comments: string | null; source: string | null;
+}
+export interface FacilityEquipmentResponse { items: FacilityEquipment[]; decks: string[] }
 export interface BudgetInput {
   wbs?: string; name?: string; parentWbs?: string | null; discipline?: string | null; manhours?: number | null; actualHours?: number | null; earnedHours?: number | null; planStart?: string | null; planFinish?: string | null; notes?: string | null;
 }

@@ -11,7 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
-import { ensureAllSheets, seedRows } from '../../sheets/src/seed';
+import { appendSeedFacilityEquipment, enableModuleChain, ensureAllSheets, seedRows } from '../../sheets/src/seed';
 import { seedData } from '../../sheets/src/seed-data';
 import { createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
@@ -45,6 +45,13 @@ export function refreshStore(store: MemoryStore, raw = seedData, now = new Date(
     store.deleteRows(name, columns, { projectId: pid });
     store.appendRows(name, columns, next as never);
     changes.push({ dataset: name, before: current.length, after: next.length });
+  }
+  // Facility equipment is kept by people in the app (add, edit, delete), so it is only loaded once, while the project has none.
+  const seeded = appendSeedFacilityEquipment(store, raw, now);
+  if (seeded) {
+    changes.push({ dataset: `${SHEET.facilityEquipment} (loaded once, then kept in the app)`, before: 0, after: seeded });
+    // the feature arrives with its data: switch it on, and the Construction group above it, where an older database has them Disabled
+    for (const key of enableModuleChain(store, 'construction.facility-layout', now)) changes.push({ dataset: `${SHEET.modules} (${key}: Disabled → Enabled)`, before: 1, after: 1 });
   }
   const project = rows.project[0] as { cutoff?: string };
   const was = store.readRows(SHEET.projects, COLUMNS.projects).find(p => p.id === pid);

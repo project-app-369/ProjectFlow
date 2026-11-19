@@ -43,6 +43,7 @@ const paths: Record<string, string> = {
   sheet: 'M3 4h18v16H3z M3 10h18 M3 15h18 M9 4v16',
   copy: 'M9 9h11v11H9z M5 15V4h11',
   expand: 'M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5',
+  shrink: 'M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5',
   popout: 'M14 4h6v6 M20 4l-9 9 M18 14v6H4V6h6',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M4 21a8 8 0 0 1 16 0',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',

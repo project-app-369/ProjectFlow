@@ -34,7 +34,7 @@ describe('setup', () => {
       'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - Working schedule', 'EPCIC - CPN progress', 'EPCIC - S-curve', 'EPCIC - S-curve weekly', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
       'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
-      'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data',
+      'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data', 'EPCIC - Facility equipment',
     ]);
   });
 
@@ -1418,5 +1418,47 @@ describe('facility schedule and progress', () => {
     ok(call('PUT', '/party-access', { cells: [{ moduleKey: 'planning.schedule', party: 'Client', visible: false }] }));
     expect(err(call('GET', `${P}/facilities/lqm2/schedule`, undefined, CLIENT)).error.code).toBe('NOT_FOR_YOUR_PARTY');
     ok(call('GET', `${P}/facilities/lqm2/progress`, undefined, CLIENT));
+  });
+});
+
+describe('facility layout equipment', () => {
+  const E = `${P}/construction/facility-layout/equipment`;
+
+  it('lists the equipment of the 3D model by deck with ROS and ETA from the expediting report', () => {
+    const r = ok(call('GET', E));
+    expect(r.decks).toEqual(['Sub-Cellar Deck', 'Cellar Deck', 'Intermediate Deck', 'Main Deck', 'Caissons']);
+    expect(r.items.length).toBeGreaterThan(100);
+    const sep = r.items.find((i: any) => i.tag === 'MBD-2501');
+    expect(sep).toMatchObject({ name: 'Production Separator', deck: 'Cellar Deck', rosDate: '2026-12-15', method: null });
+    expect(sep.etaDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(r.items.map((i: any) => i.deck)).toEqual([...r.items.map((i: any) => i.deck)].sort((a, b) => r.decks.indexOf(a) - r.decks.indexOf(b)));
+  });
+
+  it('creates, edits and removes equipment, and a new deck name follows the known decks', () => {
+    const made = ok(call('POST', E, { tag: 'ZZZ-NEW', name: 'Added in the app', deck: 'Helideck', method: 'Skidding', rosDate: '2027-01-05' }));
+    expect(made).toMatchObject({ tag: 'ZZZ-NEW', deck: 'Helideck', method: 'Skidding', rosDate: '2027-01-05', etaDate: null, source: 'Added in Project Flow' });
+    expect(ok(call('GET', E)).decks.at(-1)).toBe('Helideck');
+    const edited = ok(call('PATCH', `${E}/ZZZ-NEW`, { etaDate: '2027-01-20', method: 'Lift by Crane', comments: 'Needs the hatch open' }));
+    expect(edited).toMatchObject({ etaDate: '2027-01-20', method: 'Lift by Crane', comments: 'Needs the hatch open', rosDate: '2027-01-05', name: 'Added in the app' });
+    expect(ok(call('PATCH', `${E}/MBD-2501`, { method: 'Lift by Crane' })).method).toBe('Lift by Crane');
+    expect(call('DELETE', `${E}/ZZZ-NEW`).ok).toBe(true);
+    expect(ok(call('GET', E)).items.some((i: any) => i.tag === 'ZZZ-NEW')).toBe(false);
+  });
+
+  it('rejects a duplicate tag, a bad date, a method outside the list, an unknown tag and a read-only role', () => {
+    expect(err(call('POST', E, { tag: 'mbd-2501', deck: 'Cellar Deck' })).error.code).toBe('TAG_EXISTS');
+    expect(err(call('POST', E, { tag: 'X-1', deck: 'Main Deck', rosDate: '5 Jan 2027' })).error.code).toBe('VALIDATION_ERROR');
+    expect(err(call('POST', E, { tag: 'X-1', deck: 'Main Deck', method: 'Drag' })).error.code).toBe('VALIDATION_ERROR');
+    expect(err(call('POST', E, { tag: 'bad/tag', deck: 'Main Deck' })).error.code).toBe('VALIDATION_ERROR');
+    expect(err(call('PATCH', `${E}/NOPE-1`, { name: 'x' })).status).toBe(404);
+    expect(err(call('DELETE', `${E}/NOPE-1`)).status).toBe(404);
+    expect(err(call('POST', E, { tag: 'X-2', deck: 'Main Deck' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
+    expect(err(call('DELETE', `${E}/MBD-2501`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
+  });
+
+  it('is its own module with a sheet, and follows the module switch', () => {
+    expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'construction.facility-layout').sheet.name).toBe('EPCIC - Facility equipment');
+    ok(call('PUT', `${P}/modules/construction.facility-layout`, { state: 'Disabled' }));
+    expect(err(call('GET', E)).status).toBeGreaterThanOrEqual(400);
   });
 });

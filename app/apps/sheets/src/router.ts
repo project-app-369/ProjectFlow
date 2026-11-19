@@ -52,6 +52,7 @@ const IF_REGISTER = 'interface.register';
 const IF_MATRIX = 'interface.matrix';
 const IF_POINTS = 'interface.points';
 const BUDGET = 'construction.budget';
+const FACILITY_LAYOUT = 'construction.facility-layout';
 const KNOWLEDGE = 'knowledge';
 const PROC_DASH = 'procurement.dashboard';
 const LOGISTICS = 'procurement.logistics';
@@ -196,6 +197,11 @@ const ROUTES: Route[] = [
   route('POST', `${PID}/interface-points/(?<id>[^/]+)/transition`, c => c.api.interfaces.pointTransition(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
   route('DELETE', `${PID}/interface-points/(?<id>[^/]+)`, c => { c.api.interfaces.pointDelete(c.p.pid, c.p.id, c.actor); return null; }, { module: IF_POINTS, status: 204 }),
 
+  // facility layout: the equipment of the 3D model with their dates and method, created, edited and removed in the app
+  route('GET', `${PID}/construction/facility-layout/equipment`, c => c.api.facilityLayout.list(c.p.pid), { module: FACILITY_LAYOUT }),
+  route('POST', `${PID}/construction/facility-layout/equipment`, c => c.api.facilityLayout.create(c.p.pid, c.body, c.actor), { module: FACILITY_LAYOUT, status: 201 }),
+  route('PATCH', `${PID}/construction/facility-layout/equipment/(?<tag>[^/]+)`, c => c.api.facilityLayout.update(c.p.pid, c.p.tag, c.body, c.actor), { module: FACILITY_LAYOUT }),
+  route('DELETE', `${PID}/construction/facility-layout/equipment/(?<tag>[^/]+)`, c => { c.api.facilityLayout.remove(c.p.pid, c.p.tag, c.actor); return null; }, { module: FACILITY_LAYOUT, status: 204 }),
   // construction budget (manhours by WBS activity)
   route('GET', `${PID}/construction/budget`, c => c.api.budget.list(c.p.pid), { module: BUDGET }),
   route('GET', `${PID}/construction/budget/histogram`, c => c.api.budget.histogram(c.p.pid, c.q), { module: BUDGET }),

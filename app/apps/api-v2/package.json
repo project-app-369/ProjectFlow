@@ -17,7 +17,8 @@
     "db:set-password": "node --env-file=.env.local --import tsx src/set-password.ts",
     "db:verify": "node --env-file=.env.local --import tsx src/verify-live.ts",
     "db:smoke-import": "tsx src/smoke-import.ts",
-    "sheets:pull": "node --env-file=.env.local --import tsx src/pull-sheets.ts"
+    "sheets:pull": "node --env-file=.env.local --import tsx src/pull-sheets.ts",
+    "dev:local": "node --env-file=.env.local --import tsx src/server-local.ts"
   },
   "dependencies": {
     "pg": "^8.23.1",
