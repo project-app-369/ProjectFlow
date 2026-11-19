@@ -13,7 +13,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
@@ -103,7 +103,9 @@ console.log(`Built ${out} (${(size(out) / 1048576).toFixed(1)} MB), API ${env.VI
 if (zip) {
   const file = `${out}.zip`;
   rmSync(file, { force: true });
-  const r = spawnSync('tar', ['-a', '-c', '-f', file, '-C', out, '.'], { stdio: 'inherit' });
+  // Windows ships bsdtar, which writes zip; a GNU tar earlier on PATH (Git Bash) cannot. Relative names also avoid "E:" read as a host.
+  const tar = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\Windows', 'System32', 'tar.exe') : 'tar';
+  const r = spawnSync(tar, ['-a', '-c', '-f', basename(file), '-C', basename(out), '.'], { cwd: dirname(file), stdio: 'inherit' });
   if (r.status !== 0 || !existsSync(file)) throw new Error('Could not create the zip with tar; zip the folder yourself.');
   console.log(`Zip ${file} (${(statSync(file).size / 1048576).toFixed(1)} MB)`);
 }
