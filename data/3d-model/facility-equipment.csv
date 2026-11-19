@@ -1,0 +1,314 @@
+﻿Deck,Tag,Equipment name,In 3D model,3D file,Package code,Vendor,ROS,ETA,"Margin (days, ROS - ETA)",Installation method,Shipment status,Package status,Remarks,Comments,Source,Size X (m),Height Y (m),Size Z (m),Centre X,Centre Y,Centre Z,Triangles,Model parts
+Sub-Cellar Deck,ABJ-6202,Hazardous Open Drain Tank With Heater,Yes,sub-cellar.glb,STTP2B-GF-MEC-006,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-05-30,2027-01-21,129,,Under Production,Normal,"Procurement: Internal parts for this package are being procured through MWT; responses from the mills remain limited and slow.
+Fabrication: To close-ly follow up with Fit up & Welding Process.","Procurement: 
+- Follow up with MWT to closely monitor procurement progress.
+- Plan finish welding: 20-Nov to start opening Nozzle by 23-Nov",Expediting report 13-Nov-2026,2.62,2.52,6.31,10.35,14.96,-28.13,27761,VENDOR
+Sub-Cellar Deck,MBF-6101,ASME U Stamp Pressure Vessels,Yes,sub-cellar.glb,STTP2B-GF-MEC-002,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-03,2026-11-26,7,,Under Production,At Risk,"1. Heater to issue design on 19-Oct-26. Expected time to finish intallation at site is week 2 of Apr-2027.
+2. The painting scope to be done by AECC has 2 concerns: 1. Belzona to witness full-time, and 2. Painting applicators to be authorized by Belzona. This is resolved and will be addressed in the TQ
+3. Due to high number of vessels being painted by AECC, this package's schedule is delayed as follows:
+- Internal parts installation on 13-Nov-26
+- Final inspection is 19-Nov-26
+- ETA at site is 26-Nov-26
+->>> This is still within ROS of 03-Dec-26
+4. To paint a PU layer for Closed Drain, which would take 2 weeks.","1. Exheat issued design by 21-Oct-2026. Breakdown and expedite the steps from design to finish installation to week 1 of Mar-2027
+2. TQ to allow AECC to paint is currently code 2, and confirmation to proceed painting from CL has been issued
+3. Follow closely to make sure no more delay
+4. To expedite and make sure the closed drain do not miss the ROS of 18-Dec-26",Expediting report 13-Nov-2026,2.59,3.09,6.63,-9.48,15.68,-28.54,17348,MCGSDD-MBF-6101
+Sub-Cellar Deck,PBA-6203,Hazardous Open Drain Pump,Yes,sub-cellar.glb,STTP2B-GF-MEC-009,Thai Khuong Technology Trading Comany Limited,2027-04-30,2027-01-08,112,,Under Production,Normal,"1 set of PVDF Pump is now waiting for the export licesnse in the USA.
+3 sets remaining have arrive in Singapore","- To request vendor to improve the document quality 
+- To expedite vendor to update the procurement status (hose, suction strainer)
+- To request vendor update the status of PVDF Pump in USA",Expediting report 13-Nov-2026,1.06,0.77,0.7,8.74,13.98,-32.15,37223,MCGSDD-PBA-6203
+Sub-Cellar Deck,PBA-6206,Portable Pump,Yes,sub-cellar.glb,STTP2B-GF-MEC-009,Thai Khuong Technology Trading Comany Limited,2027-04-30,2027-01-08,112,,Under Production,Normal,"1 set of PVDF Pump is now waiting for the export licesnse in the USA.
+3 sets remaining have arrive in Singapore","- To request vendor to improve the document quality 
+- To expedite vendor to update the procurement status (hose, suction strainer)
+- To request vendor update the status of PVDF Pump in USA",Expediting report 13-Nov-2026,1.69,1.23,1.02,-8.88,14.12,-33.1,65262,MCGSDD-PBA-6206
+Sub-Cellar Deck,PBE-6103A,Closed Drain Pumps,Yes,sub-cellar.glb,STTP2B-GF-MEC-008,Exion Vietnam Company Limited,2027-06-08,2027-02-23,105,,Under Production,Normal,"Hydrotest for casing on 02-Sep-26 was done. Result is satisfactory
+Components already received","VDML submitted on 22-Apr-26. GAD code 2, P&ID code 2, Pump curves code 1, motor datasheet code 3 (resubmitted)
+ITP code 2, hydrotest code 2, FAT procedure code 2, WPS code 1",Expediting report 13-Nov-2026,0.65,2.35,3.08,-14.09,14.54,-31.9,144910,VENDOR
+Sub-Cellar Deck,PBE-6103B,Closed Drain Pumps,Yes,sub-cellar.glb,STTP2B-GF-MEC-008,Exion Vietnam Company Limited,2027-06-08,2027-02-23,105,,Under Production,Normal,"Hydrotest for casing on 02-Sep-26 was done. Result is satisfactory
+Components already received","VDML submitted on 22-Apr-26. GAD code 2, P&ID code 2, Pump curves code 1, motor datasheet code 3 (resubmitted)
+ITP code 2, hydrotest code 2, FAT procedure code 2, WPS code 1",Expediting report 13-Nov-2026,0.65,2.35,3.08,-11.79,14.54,-31.9,144973,VENDOR
+Cellar Deck,DV-8007,Deluge Valve Skid,Yes,cellar.glb,STTP2B-GF-INS-017,Federal Fire Engineering PTE LTD,2026-11-15,2026-11-25,-10,,Ready EXW,Delay,"1. ETD from Malay is 17-Nov and ETA at HCM is 22-Nov.
+-> ETA at site is 25-Nov-26, 10 days after the ROS of 15-Nov-26
+2. NCR of the baseplate has been issued.","1. Checked with CONS team, ETA at site 25-Nov is accepatable.
+-> To follow any possible vessel delay and inform CONS team
+2. To follow NCR and resolve within 25-Nov",Expediting report 13-Nov-2026,3.0,1.65,1.02,10.57,19.02,24.75,136790,MCGCDD-DV-8007-VENDOR
+Cellar Deck,DV-8008,Deluge Valve Skid,Yes,cellar.glb,STTP2B-GF-INS-017,Federal Fire Engineering PTE LTD,2026-11-15,2026-11-25,-10,,Ready EXW,Delay,"1. ETD from Malay is 17-Nov and ETA at HCM is 22-Nov.
+-> ETA at site is 25-Nov-26, 10 days after the ROS of 15-Nov-26
+2. NCR of the baseplate has been issued.","1. Checked with CONS team, ETA at site 25-Nov is accepatable.
+-> To follow any possible vessel delay and inform CONS team
+2. To follow NCR and resolve within 25-Nov",Expediting report 13-Nov-2026,3.0,1.65,1.02,10.57,19.02,22.75,136790,MCGCDD-DV-8008-VENDOR
+Cellar Deck,DV-8009,Deluge Valve Skid,Yes,cellar.glb,STTP2B-GF-INS-017,Federal Fire Engineering PTE LTD,2026-11-15,2026-11-25,-10,,Ready EXW,Delay,"1. ETD from Malay is 17-Nov and ETA at HCM is 22-Nov.
+-> ETA at site is 25-Nov-26, 10 days after the ROS of 15-Nov-26
+2. NCR of the baseplate has been issued.","1. Checked with CONS team, ETA at site 25-Nov is accepatable.
+-> To follow any possible vessel delay and inform CONS team
+2. To follow NCR and resolve within 25-Nov",Expediting report 13-Nov-2026,3.4,1.85,1.27,10.55,19.12,27.16,150843,MCGCDD-DV-8009-VENDOR
+Cellar Deck,DV-8010,Deluge Valve Skid,Yes,cellar.glb,STTP2B-GF-INS-017,Federal Fire Engineering PTE LTD,2026-11-15,2026-11-25,-10,,Ready EXW,Delay,"1. ETD from Malay is 17-Nov and ETA at HCM is 22-Nov.
+-> ETA at site is 25-Nov-26, 10 days after the ROS of 15-Nov-26
+2. NCR of the baseplate has been issued.","1. Checked with CONS team, ETA at site 25-Nov is accepatable.
+-> To follow any possible vessel delay and inform CONS team
+2. To follow NCR and resolve within 25-Nov",Expediting report 13-Nov-2026,0.92,1.55,2.21,6.45,18.98,26.66,130950,MCGCDD-DV-8010-VENDOR
+Cellar Deck,HAP-4302A,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.35,0.45,0.7,4.97,19.84,0.15,2824,MCGCDD-HAP-4302A
+Cellar Deck,HAP-4302B,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.35,0.45,0.7,12.27,19.84,0.15,2824,MCGCDD-HAP-4302B
+Cellar Deck,HBA-4904A,Plate and Frame Heat Exchanger,Yes,cellar.glb,STTP2B-GF-MEC-007,"LEADER HEAT EXCHANGER CO., LTD",2027-01-13,2027-01-05,8,,Under Production,Normal,"- NOI for PIM on 20-Oct sent. Done.
+- FAT plan: 15-Dec-26","-Expedite the procurement of the items in Aug -> Received PO for gasket and Frame. Chasing the PO for the remaining Items 
+- Follow the fabrication and request vendor to provide the fabricating pictures",Expediting report 13-Nov-2026,1.17,3.66,4.54,-10.84,20.13,0.92,673725,MCGCDD-HBA-4904A-VENDOR
+Cellar Deck,HBA-4904B,Plate and Frame Heat Exchanger,Yes,cellar.glb,STTP2B-GF-MEC-007,"LEADER HEAT EXCHANGER CO., LTD",2027-01-13,2027-01-05,8,,Under Production,Normal,"- NOI for PIM on 20-Oct sent. Done.
+- FAT plan: 15-Dec-26","-Expedite the procurement of the items in Aug -> Received PO for gasket and Frame. Chasing the PO for the remaining Items 
+- Follow the fabrication and request vendor to provide the fabricating pictures",Expediting report 13-Nov-2026,1.17,3.66,4.54,-13.73,20.13,0.92,673731,MCGCDD-HBA-4904B-VENDOR
+Cellar Deck,KAH-3004,Sale Gas Launcher,Yes,cellar.glb,STTP2B-GF-MEC-001,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2026-09-12,2026-09-07,5,,Arrived,Normal,,"Delivered.
+Finish OSD, monitoring final doc.",Expediting report 13-Nov-2026,4.95,1.45,0.82,9.25,18.92,-10.8,9122,MCGCDD-KAH-3004
+Cellar Deck,MAJ-4903A,Sea Water Filters,Yes,cellar.glb,STTP2B-GF-MEC-005,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-01-15,2026-12-20,26,,Under Production,Normal,"Follow-up for Painting process for Water Cooling & Fuel Gas Filters, Paint will arrive in 18-Nov","Engineering:
+
+DKE is checking the seawater filter bucket clarification with the manufacturer
+
+Fabrication:
+DKE to follow up and expedite documentation for painting the two Fuel Gas Filters, and prepare the required documents and NOI for painting the remaining items.",Expediting report 13-Nov-2026,1.06,3.54,1.28,-9.66,19.87,20.62,4078,MCGCDD-MAJ-4903A
+Cellar Deck,MAJ-4903B,Sea Water Filters,Yes,cellar.glb,STTP2B-GF-MEC-005,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-01-15,2026-12-20,26,,Under Production,Normal,"Follow-up for Painting process for Water Cooling & Fuel Gas Filters, Paint will arrive in 18-Nov","Engineering:
+
+DKE is checking the seawater filter bucket clarification with the manufacturer
+
+Fabrication:
+DKE to follow up and expedite documentation for painting the two Fuel Gas Filters, and prepare the required documents and NOI for painting the remaining items.",Expediting report 13-Nov-2026,1.06,3.54,1.28,-12.34,19.87,20.62,4080,MCGCDD-MAJ-4903B
+Cellar Deck,MAJ-4906,Cooling Water Trim Filter,Yes,cellar.glb,STTP2B-GF-MEC-005,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-01-15,2026-12-20,26,,Under Production,Normal,"Follow-up for Painting process for Water Cooling & Fuel Gas Filters, Paint will arrive in 18-Nov","Engineering:
+
+DKE is checking the seawater filter bucket clarification with the manufacturer
+
+Fabrication:
+DKE to follow up and expedite documentation for painting the two Fuel Gas Filters, and prepare the required documents and NOI for painting the remaining items.",Expediting report 13-Nov-2026,0.89,2.98,1.1,-4.28,19.69,-1.0,4928,MCGCDD-MAJ-4906
+Cellar Deck,MBD-2501,Production Separator,Yes,cellar.glb,STTP2B-GF-MEC-020,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-15,2026-12-14,1,,Under Production,At Risk,"- Following the latest progress, the arrival date of the Production Separator & Test Separator are close to the ROS date 15-Dec-2026","- Closely monitor the fabrication progress the ensure the goods can complete and deliver to site on time (target 14-Dec-2026)
+- Nozzle N3 (6"") Spool of Suction Scrubbers: AECC confirmed to change to SS fittings
+--> Package team to check with Client to get approval to proceed with the work",Expediting report 13-Nov-2026,8.9,5.84,3.87,4.29,21.12,-5.62,23162,MCGCDD-MBD-2501
+Cellar Deck,MBD-2701,Test Separator,Yes,cellar.glb,STTP2B-GF-MEC-020,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-15,2026-12-14,1,,Under Production,At Risk,"- Following the latest progress, the arrival date of the Production Separator & Test Separator are close to the ROS date 15-Dec-2026","- Closely monitor the fabrication progress the ensure the goods can complete and deliver to site on time (target 14-Dec-2026)
+- Nozzle N3 (6"") Spool of Suction Scrubbers: AECC confirmed to change to SS fittings
+--> Package team to check with Client to get approval to proceed with the work",Expediting report 13-Nov-2026,5.77,3.37,3.06,-8.65,19.88,-5.67,21928,MCGCDD-MBD-2701
+Cellar Deck,MBF-4302,ASME U Stamp Pressure Vessels,Yes,cellar.glb,STTP2B-GF-MEC-002,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-03,2026-11-26,7,,Under Production,At Risk,"1. Heater to issue design on 19-Oct-26. Expected time to finish intallation at site is week 2 of Apr-2027.
+2. The painting scope to be done by AECC has 2 concerns: 1. Belzona to witness full-time, and 2. Painting applicators to be authorized by Belzona. This is resolved and will be addressed in the TQ
+3. Due to high number of vessels being painted by AECC, this package's schedule is delayed as follows:
+- Internal parts installation on 13-Nov-26
+- Final inspection is 19-Nov-26
+- ETA at site is 26-Nov-26
+->>> This is still within ROS of 03-Dec-26
+4. To paint a PU layer for Closed Drain, which would take 2 weeks.","1. Exheat issued design by 21-Oct-2026. Breakdown and expedite the steps from design to finish installation to week 1 of Mar-2027
+2. TQ to allow AECC to paint is currently code 2, and confirmation to proceed painting from CL has been issued
+3. Follow closely to make sure no more delay
+4. To expedite and make sure the closed drain do not miss the ROS of 18-Dec-26",Expediting report 13-Nov-2026,8.79,6.86,3.78,8.62,21.63,0.01,21278,MCGCDD-MBF-4302
+Cellar Deck,MBL-5010,Utility Vessels,Yes,cellar.glb,STTP2B-GF-MEC-004,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-10,2026-11-30,10,,Under Production,At Risk,,"Tag 6410: Final Inspection 13-Nov-26, plan delivery 16-Nov-26.
+Tag 6411: Final Inspection 18-Nov-26, plan delivery 20-Nov-26.
+Tag 5010: Final Inspection 16-Nov-26, plan delivery 18-Nov-26.
+Tag 4905: Done external coating 3rd layer, follow external final inspection plan 23-Nov-26.",Expediting report 13-Nov-2026,2.01,5.71,2.29,13.75,21.05,19.32,10112,MCGCDD-MBL-5010
+Cellar Deck,MBL-6410,Utility Vessels,Yes,cellar.glb,STTP2B-GF-MEC-004,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-10,2026-11-30,10,,Under Production,At Risk,,"Tag 6410: Final Inspection 13-Nov-26, plan delivery 16-Nov-26.
+Tag 6411: Final Inspection 18-Nov-26, plan delivery 20-Nov-26.
+Tag 5010: Final Inspection 16-Nov-26, plan delivery 18-Nov-26.
+Tag 4905: Done external coating 3rd layer, follow external final inspection plan 23-Nov-26.",Expediting report 13-Nov-2026,3.25,6.96,3.41,2.58,21.68,19.85,12602,MCGCDD-MBL-6410
+Cellar Deck,MBL-6411,Utility Vessels,Yes,cellar.glb,STTP2B-GF-MEC-004,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-10,2026-11-30,10,,Under Production,At Risk,,"Tag 6410: Final Inspection 13-Nov-26, plan delivery 16-Nov-26.
+Tag 6411: Final Inspection 18-Nov-26, plan delivery 20-Nov-26.
+Tag 5010: Final Inspection 16-Nov-26, plan delivery 18-Nov-26.
+Tag 4905: Done external coating 3rd layer, follow external final inspection plan 23-Nov-26.",Expediting report 13-Nov-2026,2.16,5.68,2.35,-2.6,21.02,19.36,11834,MCGCDD-MBL-6411
+Cellar Deck,N2-RACK-1,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,2.46,1.49,-13.11,19.18,-32.11,32160,MCGCDD-N2-CYLINDER-RACK-1
+Cellar Deck,N2-RACK-2,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,2.46,1.48,-13.11,19.18,-30.17,32160,MCGCDD-N2.-CYLINDER-RACK-2
+Cellar Deck,PBE-4304A,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.38,5.14,2.35,-3.81,18.29,4.82,306440,MCGCDD-PBE-4304A-VENDOR
+Cellar Deck,PBE-4304B,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.38,5.14,2.35,-3.81,18.29,2.02,306369,MCGCDD-PBE-4304B-VENDOR
+Cellar Deck,PBE-4907A,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,4.33,1.91,1.82,5.29,19.1,12.45,5870,MCGCDD-PBE-4907A
+Cellar Deck,PBE-4907B,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,4.33,1.91,1.82,5.29,19.1,8.73,5870,MCGCDD-PBE-4907B
+Cellar Deck,QAY-2874,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,-3.63,17.82,-32.39,110680,MCGCDD-QAY-2874_SLOT#01
+Cellar Deck,QAY-2875,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,4.17,17.82,-29.39,110688,MCGCDD-QAY-2875_SLOT#08
+Cellar Deck,QAY-2878,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,-3.63,17.82,-29.39,110680,MCGCDD-QAY-2878_SLOT#05
+Cellar Deck,QAY-2879,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,4.17,17.82,-26.39,110688,MCGCDD-QAY-2879_SLOT#12
+Cellar Deck,QAY-2882,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,-3.63,17.82,-26.39,110680,MCGCDD-QAY-2882_SLOT#09
+Cellar Deck,QAY-2883,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,4.17,17.82,-23.39,110688,MCGCDD-QAY-2883_SLOT#16
+Cellar Deck,QAY-2884,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,1.57,17.82,-23.39,110680,MCGCDD-QAY-2884_SLOT#15
+Cellar Deck,QAY-2885,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,-1.03,17.82,-23.39,110678,MCGCDD-QAY-2885_SLOT#14
+Cellar Deck,QAY-2886,,Yes,cellar.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.58,4.71,2.12,-3.63,17.82,-23.39,110680,MCGCDD-QAY-2886_SLOT#13
+Cellar Deck,WHCP-2870,Wellhead Control Panel,Yes,cellar.glb,STTP2B-GF-INS-002,Wilmax Control Systems Pte Ltd,2026-12-05,2026-12-23,-18,,Under Production,Delay,ETA behind ROS,"Already check with Cons Team, new ETA is acceptable. 
+Back up solution skidding is already prepared.
+Final Inspection: 16-Nov-2026",Expediting report 13-Nov-2026,3.31,2.82,6.01,-9.53,19.61,-28.95,72003,MCGCDD-WHCP-2870-VENDOR
+Cellar Deck,ZZZ-4101,Hypochlorite Generation Package,Yes,cellar.glb,,,2027-04-15,2027-02-24,50,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),4.65,4.35,6.92,12.16,20.38,10.67,545323,MCGCDD-ZZZ-4101-VENDOR
+Cellar Deck,ZZZ-5000,Nitrogen Generation Package,Yes,cellar.glb,STTP2B-GF-MEC-011,TOANTHANG Engineering Corporation,2027-01-22,2026-12-11,42,,Under Production,Normal,"Vendor currently searching for E&I cables, tubing TPU coated and steel
+
+(Suggesting DKE, AECC and PVD Tech)","Vendor currently performing additional testing to use the material
+Welding approved to proceed
+Painting procedure resubmit for approval
+TQ for non-AML suppliers is prepared by TTE",Expediting report 13-Nov-2026,4.06,2.61,2.34,8.82,19.48,19.14,1688,MCGCDD-ZZZ-5000
+Cellar Deck,ZZZ-6400,Instrument Air Compressor Package,Yes,cellar.glb,STTP2B-GF-MEC-010,Nam Tien Thinh Trading and Manufacture Company Limited,2027-03-22,2027-03-18,4,,Under Production,At Risk,"Raw material for Base frame are supplied by non-AVL supplier
+Mill confirmed Air Freight for the Air Compressor
+- Vendor informed that the Air Compressor will be sent to Malaysia for the Cooler replacement and herisite coating.
+=> Vendor has confirm to conduct the work in Korea","- Request vendor accelerate the fabrication progress as it is showing the delay compared with the PO Delivery Date
+- Expedite vendor to promptly close the issue regarding the raw material for base frame & vessel MTC",Expediting report 13-Nov-2026,2.54,2.58,4.8,2.8,19.49,27.4,478077,MCGCDD-ZZZ-6400-VENDOR
+Cellar Deck,ZZZ-6405,Instrument Air Dryer Package,Yes,cellar.glb,STTP2B-GF-MEC-010,Nam Tien Thinh Trading and Manufacture Company Limited,2027-03-22,2027-03-18,4,,Under Production,At Risk,"Raw material for Base frame are supplied by non-AVL supplier
+Mill confirmed Air Freight for the Air Compressor
+- Vendor informed that the Air Compressor will be sent to Malaysia for the Cooler replacement and herisite coating.
+=> Vendor has confirm to conduct the work in Korea","- Request vendor accelerate the fabrication progress as it is showing the delay compared with the PO Delivery Date
+- Expedite vendor to promptly close the issue regarding the raw material for base frame & vessel MTC",Expediting report 13-Nov-2026,2.76,3.29,4.1,-3.5,19.84,27.75,307170,MCGCDD-ZZZ-6405-VENDOR
+Intermediate Deck,FM-200-XA,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,6.2,2.56,1.05,5.35,27.43,23.35,143509,MCGIDD-FM-200-XA-VENDOR
+Intermediate Deck,FM-200-XB,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,3.96,2.56,1.05,7.49,33.33,33.52,104215,MCGIDD-FM-200-XB-VENDOR
+Intermediate Deck,HAP-5703A,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.6,1.61,4.61,8.08,27.0,8.6,3134,MCGIDD-HAP-5703A
+Intermediate Deck,HAP-5703B,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.88,1.61,4.61,8.84,27.0,8.6,3486,MCGIDD-HAP-5703B
+Intermediate Deck,HBG-2502A,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.25,1.77,3.0,-2.23,28.09,4.9,8516,MCGIDD-HBG-2502A
+Intermediate Deck,HBG-2502B,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.25,1.77,3.0,-6.54,28.09,4.9,8516,MCGIDD-HBG-2502B
+Intermediate Deck,LAN-7100,Diesel Generator,Yes,intermediate.glb,,,2027-02-01,2027-02-01,0,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),12.16,4.85,5.57,-7.49,28.59,18.89,22953,MCGIDD-LAN-7100
+Intermediate Deck,MAD-2415,Gas Dehydration,Yes,intermediate.glb,STTP2B-GF-MEC-021,Federal Hardware Engineering Co Pte Ltd,2027-05-31,2027-07-10,-40,,Under Production,Delay,"ENGINEERING
+The latest GAD will be submitted by early of Aug
+PROCUREMENT
+All raw materials and main components are ordered by the end of October, to follow up with E&I components
+FABRICATION
+PIM are expected to performed by mid Nov and 90% 3D reviwe by the end of Nov","ENGINEERING: FHE to prioritize procurement-critical documents, especially GAD for Modal review, 3D will be update weekly
+PROCUREMENT: Vendor confirmed that the fabrication duration will be shortened by add Manpower and all remaining items will be ordered within October to ensure the materials are available at site as early as possible.
+SCHEDULE: Strictly follow with procurement plan from Vendor",Expediting report 13-Nov-2026,2.22,6.67,1.72,13.68,29.53,-2.2,22455,MCGIDD-MAD-2415
+Intermediate Deck,MAF-2401,Gas Dehydration,Yes,intermediate.glb,STTP2B-GF-MEC-021,Federal Hardware Engineering Co Pte Ltd,2027-05-31,2027-07-10,-40,,Under Production,Delay,"ENGINEERING
+The latest GAD will be submitted by early of Aug
+PROCUREMENT
+All raw materials and main components are ordered by the end of October, to follow up with E&I components
+FABRICATION
+PIM are expected to performed by mid Nov and 90% 3D reviwe by the end of Nov","ENGINEERING: FHE to prioritize procurement-critical documents, especially GAD for Modal review, 3D will be update weekly
+PROCUREMENT: Vendor confirmed that the fabrication duration will be shortened by add Manpower and all remaining items will be ordered within October to ensure the materials are available at site as early as possible.
+SCHEDULE: Strictly follow with procurement plan from Vendor",Expediting report 13-Nov-2026,4.03,14.42,4.04,14.32,33.21,-5.58,48573,MCGMDD-MAF-2401
+Intermediate Deck,MBD-2613A,Gas Compressor Suction Srubbers,Yes,intermediate.glb,STTP2B-GF-MEC-020,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-30,2026-12-14,16,,Under Production,At Risk,"- Following the latest progress, the arrival date of the Production Separator & Test Separator are close to the ROS date 15-Dec-2026","- Closely monitor the fabrication progress the ensure the goods can complete and deliver to site on time (target 14-Dec-2026)
+- Nozzle N3 (6"") Spool of Suction Scrubbers: AECC confirmed to change to SS fittings
+--> Package team to check with Client to get approval to proceed with the work",Expediting report 13-Nov-2026,2.57,6.61,3.17,-2.83,29.51,-5.18,22652,MCGIDD-MBD-2613A
+Intermediate Deck,MBD-2613B,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.57,6.61,3.17,-6.62,29.51,-5.18,22652,MCGIDD-MBD-2613B
+Intermediate Deck,MBF-5701,ASME U Stamp Pressure Vessels,Yes,intermediate.glb,STTP2B-GF-MEC-002,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-03,2026-11-26,7,,Under Production,At Risk,"1. Heater to issue design on 19-Oct-26. Expected time to finish intallation at site is week 2 of Apr-2027.
+2. The painting scope to be done by AECC has 2 concerns: 1. Belzona to witness full-time, and 2. Painting applicators to be authorized by Belzona. This is resolved and will be addressed in the TQ
+3. Due to high number of vessels being painted by AECC, this package's schedule is delayed as follows:
+- Internal parts installation on 13-Nov-26
+- Final inspection is 19-Nov-26
+- ETA at site is 26-Nov-26
+->>> This is still within ROS of 03-Dec-26
+4. To paint a PU layer for Closed Drain, which would take 2 weeks.","1. Exheat issued design by 21-Oct-2026. Breakdown and expedite the steps from design to finish installation to week 1 of Mar-2027
+2. TQ to allow AECC to paint is currently code 2, and confirmation to proceed painting from CL has been issued
+3. Follow closely to make sure no more delay
+4. To expedite and make sure the closed drain do not miss the ROS of 18-Dec-26",Expediting report 13-Nov-2026,1.57,3.99,1.5,12.45,28.2,7.8,10765,MCGIDD-MBF-5701
+Intermediate Deck,MBF-5702A,Fuel Gas Filter,Yes,intermediate.glb,STTP2B-GF-MEC-005,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-01-15,2026-12-20,26,,Under Production,Normal,"Follow-up for Painting process for Water Cooling & Fuel Gas Filters, Paint will arrive in 18-Nov","Engineering:
+
+DKE is checking the seawater filter bucket clarification with the manufacturer
+
+Fabrication:
+DKE to follow up and expedite documentation for painting the two Fuel Gas Filters, and prepare the required documents and NOI for painting the remaining items.",Expediting report 13-Nov-2026,0.87,3.79,0.86,12.32,28.09,11.77,9269,MCGIDD-MBF-5702A
+Intermediate Deck,MBF-5702B,Fuel Gas Filter,Yes,intermediate.glb,STTP2B-GF-MEC-005,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-01-15,2026-12-20,26,,Under Production,Normal,"Follow-up for Painting process for Water Cooling & Fuel Gas Filters, Paint will arrive in 18-Nov","Engineering:
+
+DKE is checking the seawater filter bucket clarification with the manufacturer
+
+Fabrication:
+DKE to follow up and expedite documentation for painting the two Fuel Gas Filters, and prepare the required documents and NOI for painting the remaining items.",Expediting report 13-Nov-2026,0.87,3.78,0.86,12.34,28.09,13.17,9519,MCGIDD-MBF-5702B
+Intermediate Deck,PACU-2,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,6.04,2.4,3.45,1.72,37.88,29.23,431574,20261029_STT-PACU-2
+Intermediate Deck,ZAU-3003,Sale Gas Metering Skid,Yes,intermediate.glb,,,2027-02-28,2027-01-25,34,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),3.94,3.89,20.5,-11.37,28.12,3.23,874944,MCGIDD-ZAU-3003-VENDOR
+Intermediate Deck,ZET-7210A,"2500 kVA, 4.16 kV/ 480V, 60Hz Liquid Filled Power Transformer",Yes,intermediate.glb,STTP2B-GF-ELE-004,MT CORP (MT),2027-02-14,2027-03-01,-15,,Under Production,Normal,"-Oil type delivery date delay to early Mar due to the extend leadtime of the material and delay in document submission.
+- FAT plan for the Dry type in 8,9 of Dec","- Dry Type: FAT plan 8,9-Dec
+- Oil Type: update drawing submitted -> MT to chase the factory for the confirmation of starting the production by 6-Nov-26
+- Chase vendor to submit the procedure documents",Expediting report 13-Nov-2026,2.69,1.81,3.31,-14.93,27.27,33.45,48922,ZET-7210A_2500KVA
+Intermediate Deck,ZET-7210B,"2500 kVA, 4.16 kV/ 480V, 60Hz Liquid Filled Power Transformer",Yes,intermediate.glb,STTP2B-GF-ELE-004,MT CORP (MT),2027-02-14,2027-03-01,-15,,Under Production,Normal,"-Oil type delivery date delay to early Mar due to the extend leadtime of the material and delay in document submission.
+- FAT plan for the Dry type in 8,9 of Dec","- Dry Type: FAT plan 8,9-Dec
+- Oil Type: update drawing submitted -> MT to chase the factory for the confirmation of starting the production by 6-Nov-26
+- Chase vendor to submit the procedure documents",Expediting report 13-Nov-2026,2.69,1.81,3.31,-11.36,27.27,33.45,49015,ZET-7210B_2500KVA
+Intermediate Deck,ZZZ-4201,Corrrosion Inhibitor Injection Package,Yes,intermediate.glb,STTP2B-GF-MEC-003,PVD TRADING AND TECHNICAL SERVICES JOINT STOCK COMPANY,2027-03-08,2027-01-30,37,,Under Production,Normal,- PVD Tech advise the CIS skid can be delivered by end of January.,"- Closely monitor the fabrication schedule at PVD tech workshop
+- Chase vendor for the handrail issue -> Close
+- PVD Tech to inform PTSC team for the pump inspection via email -> Email sent
+- PVD Tech to raise an email regarding the Chloride content for the Hydro test water ->Close
+- Delay in tube fitting arrival. PVD tech to monitor this material and make sure it will arrrive no later than 15-Nov-26.",Expediting report 13-Nov-2026,4.7,3.15,3.38,-2.95,27.62,-15.75,560535,MCGIDD-ZZZ-4201-VENDOR
+Intermediate Deck,ZZZ-4202,H2S Scavenger Injection Package,Yes,intermediate.glb,STTP2B-GF-MEC-003,PVD TRADING AND TECHNICAL SERVICES JOINT STOCK COMPANY,2027-01-05,2027-01-30,-25,,Under Production,Normal,- PVD Tech advise the CIS skid can be delivered by end of January.,"- Closely monitor the fabrication schedule at PVD tech workshop
+- Chase vendor for the handrail issue -> Close
+- PVD Tech to inform PTSC team for the pump inspection via email -> Email sent
+- PVD Tech to raise an email regarding the Chloride content for the Hydro test water ->Close
+- Delay in tube fitting arrival. PVD tech to monitor this material and make sure it will arrrive no later than 15-Nov-26.",Expediting report 13-Nov-2026,6.46,5.04,6.61,-11.4,28.68,-14.09,272861,
+Intermediate Deck,ZZZ-4503,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.45,1.8,0.8,8.41,26.94,17.35,12,MCGIDD2B-ZZZ-4503
+Intermediate Deck,ZZZ-4504,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.32,1.8,1.39,10.78,26.94,17.64,36,MCGIDD2B-ZZZ-4504
+Intermediate Deck,ZZZ-4710,Gas Dehydration,Yes,intermediate.glb,STTP2B-GF-MEC-021,Federal Hardware Engineering Co Pte Ltd,2027-05-31,2027-07-10,-40,Lift by Crane,Under Production,Delay,"ENGINEERING
+The latest GAD will be submitted by early of Aug
+PROCUREMENT
+All raw materials and main components are ordered by the end of October, to follow up with E&I components
+FABRICATION
+PIM are expected to performed by mid Nov and 90% 3D reviwe by the end of Nov","ENGINEERING: FHE to prioritize procurement-critical documents, especially GAD for Modal review, 3D will be update weekly
+PROCUREMENT: Vendor confirmed that the fabrication duration will be shortened by add Manpower and all remaining items will be ordered within October to ensure the materials are available at site as early as possible.
+SCHEDULE: Strictly follow with procurement plan from Vendor",Expediting report 13-Nov-2026,16.16,17.38,6.0,9.61,33.7,-13.04,1144044,MCGIDD-ZZZ-4710-VENDOR-261102
+Intermediate Deck,ZZZ-6810A,HVAC Inline Equipment,Yes,intermediate.glb,STTP2B-GF-MEC-018,Dynac SDN. BHD.,2026-12-17,2027-01-22,-36,,On Sailing,Normal,,"- NOI for MCC Section. Due: 23-Nov-26. Plan 10-Dec-26.
+
+- Deviation to finalize material list for HVAC Equipment after design development. Plan submit: 16-Nov-26.
+
+- Expedite pending vendor data from Dynac by 18-Nov-26.
+
+- Push Dynac confirm solutions for jacketed piping. Due: 17-Nov-26.",Expediting report 13-Nov-2026,6.12,2.76,3.64,1.73,37.9,29.06,336197,ZZZ-6810A
+Intermediate Deck,ZZZ-6810B,HVAC Main Equipment,Yes,intermediate.glb,STTP2B-GF-MEC-018,Dynac SDN. BHD.,2026-12-17,2027-01-22,-36,,Under Production,Normal,,"- NOI for MCC Section. Due: 23-Nov-26. Plan 10-Dec-26.
+
+- Deviation to finalize material list for HVAC Equipment after design development. Plan submit: 16-Nov-26.
+
+- Expedite pending vendor data from Dynac by 18-Nov-26.
+
+- Push Dynac confirm solutions for jacketed piping. Due: 17-Nov-26.",Expediting report 13-Nov-2026,6.91,2.76,3.64,9.04,37.9,29.06,337751,ZZZ-6810B
+Intermediate Deck,ZZZ-7102,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.54,2.8,1.33,0.17,27.6,20.62,492,MCGMDD-ZZZ-7102
+Intermediate Deck,ZZZ-8003A,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.4,1.25,1.8,11.68,26.66,20.15,24,MCGIDD2B-ZZZ-8003A
+Intermediate Deck,ZZZ-8011,,Yes,intermediate.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.86,1.19,1.61,7.61,26.63,19.13,12,MCGIDD2B-ZZZ-8011
+Main Deck,AAK-2601,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.37,2.59,1.38,5.28,40.11,19.6,8224,MCGMDD-AAK-2601
+Main Deck,AAK-2611,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.37,2.59,1.38,5.28,40.11,22.0,8224,MCGMDD-AAK-2611
+Main Deck,AAK-7001,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.53,2.61,0.54,-9.38,39.92,17.93,1004,MCGMDD-AAK-7001
+Main Deck,AAK-7011,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.53,2.61,0.54,-16.02,39.92,17.93,1004,MCGMDD-AAK-7011
+Main Deck,CAE-2614A,Gas Turbine Compressor,Yes,main.glb,,,2027-01-31,2027-01-31,0,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),8.21,21.21,19.58,8.62,44.67,13.27,497724,"MCGMDD-CAE-2614A-VENDOR-REVB, MCGMDD-CAE-2614A-EXHAUST-VENDOR-REF"
+Main Deck,CAE-2614B,Gas Turbine Compressor,Yes,main.glb,,,2027-01-31,2027-01-31,0,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),7.98,21.21,19.58,3.04,44.67,13.27,497927,"MCGMDD-CAE-2614B-VENDOR-REVB, MCGMDD-CAE-2614B-EXHAUST-VENDOR-REF"
+Main Deck,HAL-5704,Fuel Gas Pre-Cooler,Yes,main.glb,STTP2B-GF-MEC-013,DK ENGINEERING CONSULTANCY JOINT STOCK COMPANY (DKE),2027-03-10,2026-11-28,102,,Under Production,Normal,"Fabrication:
+Is delaying 1 week by request of Demo Tube & Plug Sheet by Client","Fabrication:
+Closely follow-up for the Painting of Header Box until 19-Nov.
+Preparing for Bundle Combination 12-Nov.",Expediting report 13-Nov-2026,3.09,3.66,7.06,17.06,35.83,2.88,232658,MCGMDD-HAL-5704-VENDOR
+Main Deck,HAL-7001,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,1.91,2.67,-9.09,39.55,15.88,2808,MCGMDD-HAL-7001
+Main Deck,HAL-7011,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,1.91,2.67,-16.24,39.55,15.88,2808,MCGMDD-HAL-7011
+Main Deck,HBG-2603,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.55,1.12,0.96,6.92,34.76,21.35,3424,MCGMDD-HBG-2603
+Main Deck,HBG-2612A,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,2.62,2.14,1.58,5.38,36.78,-14.0,8600,MCGMDD-HBG-2612A
+Main Deck,HBG-2613,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.55,1.12,0.96,4.62,34.76,21.35,3424,MCGMDD-HBG-2613
+Main Deck,LAN-7000A,Gas Turbine Generator,Yes,main.glb,STTP2B-GFBF-ELE-001,SOLAR TURBINES INTERNATIONAL COMPANY,2027-06-02,2027-05-30,3,,Under Production,At Risk,"- 2nd round documents slipped from 21-Aug to 25-Sep. Rev.2 Critical doc submission submitted on 11-Sep
+- Rev. B douments raises a number of comments that need to be clarified. 
+- Rev. B documents for PMS and BF Modification have not been submitted by Solar => 16-Oct: Submitted partially. Missing: 
+1. PMS Cabinet GA (Plan 9-Nov)
+2. ELS - Modification (Plan 9-Nov)
+3. PRU Controls Upgrade Scope of Work (Plan 9-Nov)","- Push Vendor resubmit the documents for PMS and BF modification
+- Verify the Base manufacturing progress from Vendor.
+- Set up technical weekly meeting to clarify the outstanding technical issues after receiving rev. B documents. => 16-Oct: - Bi-Weekly Meeting will be held at 9:00 AM every two Thurdays, starting from 22-Oct.
+- Prepare the PIM at Solar's premises on 28-Oct-26 => Done",Expediting report 13-Nov-2026,6.98,22.15,17.35,-6.23,45.17,19.04,499684,"MCGMDD-LAN-7000A-29-JUL, MCGMDD-LAN-7000A-VALVE, MCGMDD-LAN-7000A-STP-SL, MCGMDD-LAN-7000A-STP-OK"
+Main Deck,LAN-7000B,Gas Turbine Generator,Yes,main.glb,STTP2B-GFBF-ELE-001,SOLAR TURBINES INTERNATIONAL COMPANY,2027-06-02,2027-05-30,3,,Under Production,At Risk,"- 2nd round documents slipped from 21-Aug to 25-Sep. Rev.2 Critical doc submission submitted on 11-Sep
+- Rev. B douments raises a number of comments that need to be clarified. 
+- Rev. B documents for PMS and BF Modification have not been submitted by Solar => 16-Oct: Submitted partially. Missing: 
+1. PMS Cabinet GA (Plan 9-Nov)
+2. ELS - Modification (Plan 9-Nov)
+3. PRU Controls Upgrade Scope of Work (Plan 9-Nov)","- Push Vendor resubmit the documents for PMS and BF modification
+- Verify the Base manufacturing progress from Vendor.
+- Set up technical weekly meeting to clarify the outstanding technical issues after receiving rev. B documents. => 16-Oct: - Bi-Weekly Meeting will be held at 9:00 AM every two Thurdays, starting from 22-Oct.
+- Prepare the PIM at Solar's premises on 28-Oct-26 => Done",Expediting report 13-Nov-2026,9.71,22.15,17.35,-10.81,45.17,19.04,511744,"MCGMDD-LAN-7000B-29-JUL, MCGMDD-LAN-7000B-VALVE, MCGMDD-LAN-7000B-STP-OK, MCGMDD-LAN-7000B-STP-SL"
+Main Deck,MAD-2603,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.35,0.86,0.45,12.02,34.99,20.38,1548,MCGMDD-MAD-2603
+Main Deck,MAD-2613,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.35,0.86,0.46,-0.88,34.94,19.9,1548,MCGMDD-MAD-2613
+Main Deck,MAD-7002,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.35,0.86,0.46,-2.25,34.87,20.75,1548,MCGMDD-MAD-7002
+Main Deck,MAD-7012,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.35,0.86,0.46,-8.23,34.87,20.75,1548,MCGMDD-MAD-7012
+Main Deck,MBJ-4905,Cooling Water Expansion Vessel,Yes,main.glb,STTP2B-GF-MEC-004,Southern Petroleum Construction Joint Stock Company (Alpha ECC),2026-12-10,2026-11-30,10,,Under Production,At Risk,,"Tag 6410: Final Inspection 13-Nov-26, plan delivery 16-Nov-26.
+Tag 6411: Final Inspection 18-Nov-26, plan delivery 20-Nov-26.
+Tag 5010: Final Inspection 16-Nov-26, plan delivery 18-Nov-26.
+Tag 4905: Done external coating 3rd layer, follow external final inspection plan 23-Nov-26.",Expediting report 13-Nov-2026,1.95,2.85,4.48,-15.29,38.22,-1.9,18135,MCGMDD-MBJ-4905
+Main Deck,PBA-4730,Top-up Glycol Transfer Pump,Yes,main.glb,STTP2B-GF-MEC-009,Thai Khuong Technology Trading Comany Limited,2027-04-30,2027-01-08,112,,Under Production,Normal,"1 set of PVDF Pump is now waiting for the export licesnse in the USA.
+3 sets remaining have arrive in Singapore","- To request vendor to improve the document quality 
+- To expedite vendor to update the procurement status (hose, suction strainer)
+- To request vendor update the status of PVDF Pump in USA",Expediting report 13-Nov-2026,1.02,1.23,1.69,-13.81,34.62,-5.67,67686,MCGMDD-PBA-4730
+Main Deck,TOTE-TANKS,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,6.22,1.88,6.2,-13.89,35.6,-8.47,20388,MCGMDD-TOTE-TANKS
+Main Deck,ZZZ-2510,Mercury Removal Unit,Yes,main.glb,,,2027-08-01,2027-08-01,0,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),9.03,9.76,17.55,-6.02,38.98,-8.06,716592,MCGMDD-ZZZ-2510-VENDOR_261026
+Main Deck,ZZZ-2604,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.74,2.26,0.99,9.67,35.33,21.37,868,MCGMDD-ZZZ-2604
+Main Deck,ZZZ-2605A,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.22,1.03,0.57,1.99,34.59,22.38,12877,MCGMDD-ZZZ-2605_A
+Main Deck,ZZZ-2605B,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.22,1.03,0.57,7.04,34.59,23.11,12877,MCGMDD-ZZZ-2605_B
+Main Deck,ZZZ-2606,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.87,13.32,2.36,13.62,40.84,9.36,3020,MCGMDD-ZZZ-2606
+Main Deck,ZZZ-2614,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.74,2.26,0.99,2.02,35.33,21.37,868,MCGMDD-ZZZ-2614
+Main Deck,ZZZ-2616,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.87,13.32,2.36,13.62,40.84,13.19,3020,MCGMDD-ZZZ-2616
+Main Deck,ZZZ-7001,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.85,2.29,1.44,-6.72,35.25,21.25,176,MCGMDD-ZZZ-7001
+Main Deck,ZZZ-7003A,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.22,1.03,0.56,-16.22,34.52,21.7,12877,MCGMDD-ZZZ-7003A
+Main Deck,ZZZ-7003B,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.57,1.03,1.22,-5.89,34.52,23.03,12896,MCGMDD-ZZZ-7003B
+Main Deck,ZZZ-7011,,Yes,main.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,0.85,2.29,1.44,-13.73,35.25,21.75,176,MCGMDD-ZZZ-7011
+Main Deck,ZZZ-9908,Pedestal Crane,Yes,main.glb,,,2027-06-05,2027-06-05,0,,,,,,Project introduction deck 30-Oct-2026 (not in the expediting report),8.67,18.36,50.22,-15.95,50.2,-16.38,768218,MCGMDD-ZZZ-9908-VENDOR-90%
+Caissons,ABH-4901A,,Yes,caissons.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,33.09,1.63,-10.04,2.78,25.88,896,MCGCDD-ABH-4901A
+Caissons,ABH-4901B,,Yes,caissons.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.56,33.05,1.63,-13.04,2.8,25.88,1384,MCGCDD-ABH-4901B
+Caissons,ABH-6204,,Yes,caissons.glb,,,,,,,,,,,Not in the expediting report: add dates with Edit,1.35,0.74,1.47,10.88,6.7,-24.25,3328,MCGTJD-ABH-6204
+Caissons,PBA-6205,Open Drain Caisson Pump,Yes,caissons.glb,STTP2B-GF-MEC-009,Thai Khuong Technology Trading Comany Limited,2027-04-30,2027-01-08,112,,Under Production,Normal,"1 set of PVDF Pump is now waiting for the export licesnse in the USA.
+3 sets remaining have arrive in Singapore","- To request vendor to improve the document quality 
+- To expedite vendor to update the procurement status (hose, suction strainer)
+- To request vendor update the status of PVDF Pump in USA",Expediting report 13-Nov-2026,0.24,0.45,0.77,13.8,13.98,-26.27,15007,MCGSDD-PBA-6205_AIR-MODULE
+Caissons,PBE-4902A,Seawater Lift Pumps,Yes,caissons.glb,STTP2B-GF-MEC-015,KHANH LINH EQUIPMENT & ENGINEERING JOINT STOCK COMPANY,2027-04-30,2027-03-24,37,,Under Production,Normal,"- Casting for Pump Bowl, Impeller: Casting will start on 09-Nov and tentatively complete by 13-Nov-26
+- Some internal part insde the Motor are made of SS304","- Expedite Peerless to re-submit other critical documents returned by PTSC team
+- Expedite Peerless to respond the NCR regarding the Motor Components - Deadline: 16-Nov-26
+- To expedite photos of casting items from Austral Alloy - Deadline: 16-Nov-26
+- Request Peerless to closely monitor the progress at Austral Alloy",Expediting report 13-Nov-2026,1.39,36.27,1.84,-10.12,1.42,25.78,60107,MCGCDD-PBE-4902A-VENDOR
+Caissons,PBE-4902B,Seawater Lift Pumps,Yes,caissons.glb,STTP2B-GF-MEC-015,KHANH LINH EQUIPMENT & ENGINEERING JOINT STOCK COMPANY,2027-04-30,2027-03-24,37,,Under Production,Normal,"- Casting for Pump Bowl, Impeller: Casting will start on 09-Nov and tentatively complete by 13-Nov-26
+- Some internal part insde the Motor are made of SS304","- Expedite Peerless to re-submit other critical documents returned by PTSC team
+- Expedite Peerless to respond the NCR regarding the Motor Components - Deadline: 16-Nov-26
+- To expedite photos of casting items from Austral Alloy - Deadline: 16-Nov-26
+- Request Peerless to closely monitor the progress at Austral Alloy",Expediting report 13-Nov-2026,1.19,28.56,2.28,-13.27,4.76,25.46,1336,MCGCDD-PBE-4902B
