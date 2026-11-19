@@ -13,7 +13,8 @@
     "dev:sim": "vite --mode sim",
     "dev:v2": "node scripts/dev-v2.mjs",
     "dev:v3": "vite --mode v3",
-    "build:sheets": "tsc --noEmit && vite build --mode sheets"
+    "build:sheets": "tsc --noEmit && vite build --mode sheets",
+    "build:static": "tsc --noEmit && node scripts/build-static.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",

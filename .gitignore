@@ -16,3 +16,5 @@ data/3d-model/pipeline/bin/
 data/3d-model/pipeline/out/
 data/3d-model/pipeline/.venv/
 app/apps/api-v2/.local-db/
+dist-static/
+app/apps/api-v2/.tmp-deploy/

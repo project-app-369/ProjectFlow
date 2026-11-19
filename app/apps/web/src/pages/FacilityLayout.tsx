@@ -166,7 +166,7 @@ export default function FacilityLayout() {
   const hud = full ? open ?? pickedItem : open ? null : pickedItem;
   const today = localToday();
   // the viewer resolves a path against the page's own address (/m/...), so it gets full URLs
-  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${MODEL_BASE}${d.file}`, window.location.origin).href }));
+  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${MODEL_BASE}${d.file}`, document.baseURI).href }));
 
   return (
     <>

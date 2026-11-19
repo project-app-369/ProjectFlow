@@ -7,6 +7,7 @@
     "dev": "node --env-file=.env.local --import tsx src/server.ts",
     "build": "esbuild src/server.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/server.mjs",
     "build:edge-v3": "esbuild src/edge-v3.ts --bundle --platform=neutral --target=es2022 --format=esm --alias:zod=npm:zod@4.6.7 --external:npm:* --external:node:* --outfile=dist/edge-v3.js",
+    "deploy:edge-v3": "node scripts/deploy-edge-v3.mjs",
     "start": "node dist/server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

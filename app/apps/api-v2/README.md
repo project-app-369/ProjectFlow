@@ -50,3 +50,12 @@ API v3 is the Supabase Edge Function in src/edge-v3.ts. Build with pnpm --filter
 
 The separate [Project Flow v3 Site](https://project-flow-v3.ptsc-7423.chatgpt.site/) and deliverables/project-flow-v3-static.zip both call that endpoint. Upload the ZIP contents to any HTTPS shared host or CDN. The portable build uses hash routes, so no rewrite rule is needed for subdirectory hosting. The Sheet remains a point-in-time backup; Supabase edits do not sync back to it.
 
+### Connection timeouts and deploying the function over HTTPS
+
+If `db:refresh` and the other database scripts fail with "Connection terminated due to connection timeout", the network (not Supabase or the credentials) is the cause: the TCP connection to the pooler opens, then the Postgres/TLS exchange stalls on some networks, intermittently. The scripts now retry the connection (4 attempts, 20 s each; `PG_CONNECT_TIMEOUT_MS` changes the timeout). Run the script again, or from another network. Where Postgres stays unreachable, everything can go through the Edge Function over HTTPS (port 443) instead, which holds the database connection itself.
+
+To put new server code (for example the Facility Layout routes) on the live site, deploy the function with `pnpm --filter @projectflow/api-v2 deploy:edge-v3`. It builds `dist/edge-v3.js` and runs `supabase functions deploy` with `--use-api` (no Docker). Set `SUPABASE_ACCESS_TOKEN` (a personal token from the Supabase dashboard) or run `npx supabase login` first. Check `GET .../functions/v1/project-flow-api-v3?path=/health` afterwards.
+
+### Static distribution for shared hosting or a CDN
+
+`pnpm --filter @projectflow/web build:static` writes `dist-static/project-flow-static/` and `dist-static/project-flow-static.zip` (git-ignored): the app with relative paths and hash routes, the 3D model, the Draco decoder, `.htaccess` and `_headers`. Upload the folder's contents to any HTTPS host or sub-folder; no rewrite rule is needed. The API is the one in `apps/web/.env.v3`.
