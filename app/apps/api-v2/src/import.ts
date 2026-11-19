@@ -5,7 +5,7 @@ import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
 import { seedData } from '../../sheets/src/seed-data';
 import { seedStore } from '../../sheets/src/seed';
-import { createPool, migrate, readSnapshot, withWriteLock, writeSnapshot } from './db';
+import { connectWithRetry, createPool, migrate, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
 export async function loadArchive(input: string): Promise<StoreSnapshot> {
   if (input === '--seed') {
@@ -73,7 +73,7 @@ if (process.argv[1] && /(?:^|[/\\])import\.(?:ts|js)$/.test(process.argv[1])) {
   const archive = await loadArchive(source);
   const pool = createPool();
   try {
-    const client = await pool.connect();
+    const client = await connectWithRetry(pool);
     try {
       await client.query('begin');
       await migrate(client);

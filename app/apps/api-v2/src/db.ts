@@ -51,7 +51,25 @@ export function createPool() {
   const connectionString = process.env.SUPABASE_DB_URL;
   if (!connectionString) throw new Error('SUPABASE_DB_URL is required; API v2 cannot fall back to another database.');
   const caPath = process.env.SUPABASE_CA_CERT ?? fileURLToPath(new URL('../certs/prod-ca-2021.crt', import.meta.url));
-  return new Pool({ connectionString, ssl: { ca: readFileSync(caPath, 'utf8'), rejectUnauthorized: true }, max: Number(process.env.PG_POOL_SIZE ?? 5), connectionTimeoutMillis: 10_000, idleTimeoutMillis: 10 * 60_000, keepAlive: true });
+  return new Pool({ connectionString, ssl: { ca: readFileSync(caPath, 'utf8'), rejectUnauthorized: true }, max: Number(process.env.PG_POOL_SIZE ?? 5), connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS ?? 20_000), idleTimeoutMillis: 10 * 60_000, keepAlive: true });
+}
+
+/**
+ * Takes a connection from the pool, trying again after a connect timeout or a connection reset. From some networks the first connection
+ * attempts to the Supabase pooler time out intermittently while a later one succeeds, so a one-off job should not fail on the first.
+ */
+export async function connectWithRetry(pool: Pool, attempts = 4): Promise<PoolClient> {
+  let last: unknown;
+  for (let i = 1; i <= attempts; i++) {
+    try { return await pool.connect(); }
+    catch (error) {
+      last = error;
+      if (!/timeout|terminated|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(String((error as Error)?.message ?? error)) || i === attempts) break;
+      console.warn(`Database connection attempt ${i}/${attempts} failed (${(error as Error).message}); retrying`);
+      await new Promise(r => setTimeout(r, 1000 * i));
+    }
+  }
+  throw last;
 }
 
 export async function migrate(client: PoolClient) {

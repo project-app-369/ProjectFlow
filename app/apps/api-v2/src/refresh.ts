@@ -13,7 +13,7 @@ import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
 import { appendSeedFacilityEquipment, enableModuleChain, ensureAllSheets, seedRows } from '../../sheets/src/seed';
 import { seedData } from '../../sheets/src/seed-data';
-import { createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
+import { connectWithRetry, createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
 /** Datasets that only the extractors produce: replaced row for row for the project. */
 export const REFERENCE = [
@@ -67,7 +67,7 @@ const count = (s: StoreSnapshot) => s.sheets.reduce((n, sheet) => n + sheet.rows
 async function main() {
   const apply = process.argv.includes('--apply');
   const pool = createPool();
-  const client = await pool.connect();
+  const client = await connectWithRetry(pool);
   try {
     await client.query(apply ? 'begin' : 'begin isolation level repeatable read read only');
     if (apply) await withWriteLock(client);

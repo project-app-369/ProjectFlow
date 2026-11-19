@@ -9,7 +9,7 @@
 import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { hashPassword } from '../../sheets/src/hash';
 import { MemoryStore } from '../../sheets/src/memory-store';
-import { createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
+import { connectWithRetry, createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
 const email = process.argv.slice(2).find(a => a.includes('@'))?.trim().toLowerCase();
 const password = process.env.NEW_PASSWORD ?? '';
@@ -17,7 +17,7 @@ if (!email) throw new Error('Give the e-mail of the account: pnpm db:set-passwor
 if (password.length < 8) throw new Error('Set NEW_PASSWORD to a password of at least 8 characters.');
 
 const pool = createPool();
-const client = await pool.connect();
+const client = await connectWithRetry(pool);
 try {
   await client.query('begin');
   await withWriteLock(client);

@@ -1,11 +1,11 @@
 import { Api } from '../../sheets/src/api';
 import { MemoryStore } from '../../sheets/src/memory-store';
 import { handle } from '../../sheets/src/router';
-import { createPool, readSnapshot } from './db';
+import { connectWithRetry, createPool, readSnapshot } from './db';
 
 const pool = createPool();
 try {
-  const client = await pool.connect();
+  const client = await connectWithRetry(pool);
   try {
     const snapshot = await readSnapshot(client);
     const rows = snapshot.sheets.reduce((count, sheet) => count + sheet.rows.length, 0);

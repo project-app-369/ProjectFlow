@@ -1,8 +1,8 @@
-import { createPool, migrate } from './db';
+import { connectWithRetry, createPool, migrate } from './db';
 
 const pool = createPool();
 try {
-  const client = await pool.connect();
+  const client = await connectWithRetry(pool);
   try { await migrate(client); }
   finally { client.release(); }
   console.log('Project Flow API v2 schema is ready.');
