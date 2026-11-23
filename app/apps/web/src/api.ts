@@ -382,6 +382,12 @@ export interface InterfacePoint {
   originator: string; target: string; action: string | null; queryDate: string | null; targetDate: string | null; reference: string | null; status: PointStatus;
   resolution: string | null; resolvedDate: string | null; resolvedDocument: string | null; remarks: string | null;
   settled: boolean; overdue: boolean; daysLate: number | null; ageDays: number | null; allowedNext: PointStatus[]; updatedAt?: string;
+  /** Revision number, from 0. Earlier revisions are kept, newest first, as superseded. */
+  rev: number; revisions?: PointRevision[];
+}
+export interface PointRevision {
+  rev: number; status: 'Superseded'; description: string | null; action: string | null; queryDate: string | null; targetDate: string | null;
+  response: string | null; respondedDate: string | null; supersededAt: string; supersededBy: string | null; reason: string | null;
 }
 export interface InterfaceParty { code: string; name: string }
 export interface InterfaceSummary { total: number; open: number; overdue: number; byStatus: Record<string, number>; points: number; pointsOpen: number; pointsOverdue: number }
@@ -493,7 +499,7 @@ export interface BudgetResponse { items: WbsNode[]; summary: BudgetSummary }
 
 /** Construction → Facility Layout: one large equipment of the 3D model, as kept in the Facility equipment sheet. */
 export interface FacilityEquipment {
-  tag: string; name: string | null; deck: string; packageCode: string | null; vendor: string | null;
+  tag: string; model: 'topside' | 'jacket' | 'lqm' | 'linkbridge'; name: string | null; deck: string; packageCode: string | null; vendor: string | null;
   rosDate: string | null; etaDate: string | null; status: string | null; packageStatus: string | null;
   method: string | null; remarks: string | null; comments: string | null; source: string | null;
 }

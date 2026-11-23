@@ -18,3 +18,5 @@ data/3d-model/pipeline/.venv/
 app/apps/api-v2/.local-db/
 dist-static/
 app/apps/api-v2/.tmp-deploy/
+data/3d-model/*.nwd~
+data/3d-model/.supersede/

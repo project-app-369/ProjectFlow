@@ -41,7 +41,7 @@ function parseGlb(buf: ArrayBuffer): Chunk {
 const pad4 = (n: number) => (n + 3) & ~3;
 
 /** Returns the uncompressed GLB as bytes. A file without Draco primitives passes through unchanged. */
-export async function decodeDracoGlb(buf: ArrayBuffer, onStep?: (done: number, total: number) => void): Promise<Uint8Array> {
+export async function decodeDracoGlb(buf: ArrayBuffer, onStep?: (done: number, total: number) => void, signal?: AbortSignal): Promise<Uint8Array> {
   const { json, bin } = parseGlb(buf);
   if (!(json.extensionsRequired ?? []).includes('KHR_draco_mesh_compression')) return new Uint8Array(buf);
   const draco = await loadDecoder();
@@ -106,6 +106,7 @@ export async function decodeDracoGlb(buf: ArrayBuffer, onStep?: (done: number, t
         delete prim.extensions;
         onStep?.(++done, total);
         if (done % 4 === 0) await new Promise(r => setTimeout(r)); // let the page breathe between primitives
+        signal?.throwIfAborted(); // a deck nobody waits for any more (another model was picked) stops decoding
       }
     }
   } finally {
@@ -135,8 +136,8 @@ export async function decodeDracoGlb(buf: ArrayBuffer, onStep?: (done: number, t
 }
 
 /** Fetches a deck, reporting download progress, and returns a blob URL the viewer can load. */
-export async function fetchDeckUrl(url: string, onProgress?: (text: string, fraction: number) => void): Promise<string> {
-  const res = await fetch(url);
+export async function fetchDeckUrl(url: string, onProgress?: (text: string, fraction: number) => void, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`${url.split('/').pop()}: ${res.status}`);
   const total = Number(res.headers.get('content-length')) || 0;
   const reader = res.body?.getReader();
@@ -156,6 +157,7 @@ export async function fetchDeckUrl(url: string, onProgress?: (text: string, frac
     for (const c of chunks) { all.set(c, at); at += c.byteLength; }
     buf = all.buffer;
   } else buf = await res.arrayBuffer();
-  const glb = await decodeDracoGlb(buf, (d, t) => onProgress?.(`Decoding ${d}/${t}`, d / t));
+  const glb = await decodeDracoGlb(buf, (d, t) => onProgress?.(`Decoding ${d}/${t}`, d / t), signal);
+  signal?.throwIfAborted();
   return URL.createObjectURL(new Blob([glb.buffer as ArrayBuffer], { type: 'model/gltf-binary' }));
 }

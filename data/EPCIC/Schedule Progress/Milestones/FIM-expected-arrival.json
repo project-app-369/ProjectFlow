@@ -1,0 +1,19 @@
+{
+  "source": "FIM.pdf - Attachment 1, Expected Arrival Dates of Company Furnished Materials (PVEP Cuu Long JOC, Procurement Team)",
+  "note": "The client gives the estimated time of arrival by month only. `arrival` is that month (YYYY-MM); the app uses its last day. `tags` link a package to the equipment of the 3D model (Facility Layout); an empty list means the package has no equipment in the model. `inferred` marks tags matched by tag number, not by name.",
+  "packages": [
+    { "no": 1, "package": "Primary Steel", "arrival": "2026-11", "remark": "Final shipment", "tags": [] },
+    { "no": 2, "package": "Pedestal Crane", "arrival": "2026-12", "remark": "Shipment 1 - Pedestal adaptor: received in Aug-2026 at PTSC Downstream Port; Shipment 2 - Crane: Dec-2026", "tags": ["ZZZ-9908"] },
+    { "no": 3, "package": "API Pumps - Cooling Water Circulation Pumps", "arrival": "2026-11", "remark": "Cooling Water Circulation Pumps", "tags": ["PBE-4907A", "PBE-4907B"], "inferred": true },
+    { "no": 3, "package": "API Pumps - HP Flare Scrubber Pumps", "arrival": "2026-12", "remark": "HP Flare Scrubber Pumps", "tags": ["PBE-4304A", "PBE-4304B"], "inferred": true },
+    { "no": 4, "package": "Emergency Diesel Generator", "arrival": "2026-12", "remark": null, "tags": ["LAN-7100"] },
+    { "no": 5, "package": "Printed Circuit Heat Exchanger", "arrival": "2026-12", "remark": null, "tags": [] },
+    { "no": 6, "package": "Anti-Surge Valves", "arrival": "2027-01", "remark": null, "tags": [] },
+    { "no": 7, "package": "Gas Turbine Compressor", "arrival": "2027-02", "remark": null, "tags": ["CAE-2614A", "CAE-2614B"] },
+    { "no": 8, "package": "Exhaust Ducting for Gas Turbine Compressor", "arrival": "2027-04", "remark": null, "tags": [] },
+    { "no": 9, "package": "Exhaust Ducting for Gas Turbine Generator", "arrival": "2027-04", "remark": null, "tags": [] },
+    { "no": 10, "package": "Mercury Removal Unit", "arrival": "2027-07", "remark": null, "tags": ["ZZZ-2510"] },
+    { "no": 11, "package": "TEMPS", "arrival": "2027-11", "remark": "Davit", "tags": [] },
+    { "no": 11, "package": "TEMPS", "arrival": "2027-12", "remark": "Lifeboat", "tags": [] }
+  ]
+}

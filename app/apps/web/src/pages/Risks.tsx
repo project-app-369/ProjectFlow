@@ -8,16 +8,19 @@ import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager } from '../ui';
-import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, MultiFilter, People } from './governance';
+import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, ModalSkeleton, DateInput } from '../ui';
+import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, MultiFilter, People, StateSelect } from './governance';
 import { useDeepLink } from '../deepLink';
 import { disciplineTitle } from '../disciplines';
 
 const PAGE_SIZE = 50;
 /** The register opens on everything that is still live; "All statuses" shows the closed ones too. */
 const NOT_CLOSED = 'Not closed';
+import { StateTag, type StateTone } from '../ui';
+const STATUS_TONE: Record<string, StateTone> = { New: 'neutral', Firmed: 'info', 'Under assessment': 'info', 'Under resolving': 'warn', Monitor: 'info', Closed: 'ok' };
 const STATUS_ICON: Record<string, string> = { New: 'status-backlog', Firmed: 'status-planned', 'Under assessment': 'search', 'Under resolving': 'status-ongoing', Monitor: 'shield', Closed: 'status-completed' };
 const FLAGS: [string, string][] = [['active', 'Active only'], ['response-overdue', 'Response overdue'], ['review-overdue', 'Review overdue'], ['awaiting-post', 'Awaiting post-mitigation'], ['unrated', 'Not rated'], ['external', 'External']];
+const STRATEGY_TONE: Record<string, StateTone> = { Avoid: 'crit', Mitigate: 'warn', Transfer: 'info', Accept: 'neutral', Escalate: 'crit' };
 const STRATEGY_ICON: Record<string, string> = { Avoid: 'close', Mitigate: 'shield', Transfer: 'arrow', Accept: 'tick', Escalate: 'flag' };
 const SORTS: [string, string][] = [['no', 'Risk no.'], ['currentRank', 'Level'], ['currentScore', 'Score now'], ['preScore', 'Score before'], ['planDate', 'Response date'], ['recordDate', 'Date recorded'], ['discipline', 'Discipline'], ['category', 'Category'], ['owner', 'Owner'], ['status', 'Status']];
 const DIMENSIONS = ['Schedule', 'Cost', 'Scope', 'Quality'] as const;
@@ -81,7 +84,7 @@ export default function Risks() {
         : <span className="muted">—</span>,
     },
     { id: 'actions', header: '', cell: ({ row: { original: r } }) => (r.actionsTotal ? <span className={`issue-sub ${r.actionsOverdue ? 'negative' : ''}`} title={`${r.actionsDone} of ${r.actionsTotal} actions done${r.actionsOverdue ? `, ${r.actionsOverdue} overdue` : ''}`}><Icon name="status-completed" />{r.actionsDone}/{r.actionsTotal}</span> : null) },
-    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: r } }) => <span className="issue-icon" title={r.status}><Icon name={STATUS_ICON[r.status] ?? 'status-backlog'} /><span className="sr-only">{r.status}</span></span> },
+    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: r } }) => <StateTag icon={STATUS_ICON[r.status] ?? 'status-backlog'} label={r.status} tone={STATUS_TONE[r.status] ?? 'neutral'} /> },
   ], []);
 
   return (
@@ -196,7 +199,7 @@ const blank = (r?: Risk): Form => ({
 function RiskDrawer({ base, id, onClose }: { base: string; id: string | null; onClose: () => void }) {
   const detail = useQuery({ queryKey: ['risk', base, id], enabled: !!id, queryFn: () => request<Risk>(`${base}/${id}`) });
   if (id && !detail.data) {
-    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
+    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}>{detail.error ? <div className="dialog-body"><p className="negative">{errorText(detail.error)}</p></div> : <ModalSkeleton />}</Modal>;
   }
   return <RiskForm key={detail.data?.updatedAt ?? 'new'} risk={id ? detail.data : undefined} base={base} onClose={onClose} />;
 }
@@ -261,8 +264,8 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
           <fieldset disabled={readOnly} className="plain-fieldset gov">
             <Field label="Title" full><input value={String(v.title)} maxLength={200} onChange={e => up('title', e.target.value)} autoFocus={!risk} /></Field>
             <div className="gov-meta">
-              <span className="meta-item" title="Status"><IconChoice label="Status" value={String(v.status)} options={RISK_STATUSES.map(s => ({ value: s, label: s, icon: STATUS_ICON[s] }))} onChange={x => up('status', x ?? 'New')} /></span>
-              <span className="meta-item" title="Response strategy"><IconChoice label="Strategy" clearable value={String(v.strategy ?? '')} options={(opts.data?.strategies ?? []).map(s => ({ value: s, label: `Strategy: ${s}`, icon: STRATEGY_ICON[s] ?? 'shield' }))} onChange={x => up('strategy', x ?? '')} /></span>
+              <span className="meta-item" title="Status"><StateSelect label="Status" value={String(v.status)} options={RISK_STATUSES.map(s => ({ value: s, label: s, icon: STATUS_ICON[s], tone: STATUS_TONE[s] ?? 'neutral' }))} onChange={x => up('status', x ?? 'New')} /></span>
+              <span className="meta-item" title="Response strategy"><StateSelect label="Response strategy" clearable empty="No strategy" value={String(v.strategy ?? '') || null} options={(opts.data?.strategies ?? []).map(s => ({ value: s, label: s, icon: STRATEGY_ICON[s] ?? 'shield', tone: STRATEGY_TONE[s] ?? 'info' }))} onChange={x => up('strategy', x ?? '')} /></span>
               <IconSelect icon="layers" label="RBS discipline" value={String(v.rbs)} onChange={x => up('rbs', x)}>
                 <option value="">RBS discipline…</option>
                 {groups.map(([cat, items]) => <optgroup key={cat} label={cat}>{items.map(b => <option key={b.code} value={b.code}>{b.code} · {b.disciplineName}</option>)}</optgroup>)}
@@ -275,7 +278,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
               </IconSelect>
               <button type="button" className={`icon-toggle ${v.external ? 'on' : ''}`} aria-pressed={!!v.external} title="External risk (raised to the client)" aria-label="External risk" onClick={() => up('external', !v.external)}><Icon name="building" /></button>
               {([['recordDate', 'Record date', 'doc'], ['planDate', 'Plan action date', 'flag'], ['actualDate', 'Actual action date', 'tick'], ['reviewDate', 'Next review', 'clock']] as const).map(([k, label, icon]) => (
-                <label key={k} className="meta-item" title={label}><Icon name={icon} /><input type="date" className="meta-input" aria-label={label} value={String(v[k] ?? '')} onChange={e => up(k, e.target.value)} /></label>
+                <label key={k} className="meta-item" title={label}><Icon name={icon} /><DateInput className="meta-input" aria-label={label} value={String(v[k] ?? '')} onChange={e => up(k, e.target.value)} /></label>
               ))}
             </div>
 
@@ -363,7 +366,7 @@ function RiskActions({ risk, base, canWrite, onChange }: { risk: Risk; base: str
         <form className="subtask-add" onSubmit={e => { e.preventDefault(); run.mutate({ method: 'POST', url: path, body: { action: draft.action, owner: draft.owner || null, dueDate: draft.dueDate || null } }, { onSuccess: () => setDraft({ action: '', owner: '', dueDate: '' }) }); }}>
           <input placeholder="New action" aria-label="New action" value={draft.action} maxLength={1000} onChange={e => setDraft(d => ({ ...d, action: e.target.value }))} />
           <input placeholder="Owner" aria-label="Action owner" value={draft.owner} maxLength={120} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))} style={{ maxWidth: 160 }} />
-          <input type="date" aria-label="Action due date" value={draft.dueDate} onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value }))} style={{ maxWidth: 160 }} />
+          <DateInput aria-label="Action due date" value={draft.dueDate} onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value }))} style={{ maxWidth: 160 }} />
           <Btn kind="small" icon="plus" type="submit" disabled={!draft.action.trim() || run.isPending}>Add</Btn>
         </form>
       )}

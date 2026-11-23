@@ -7,7 +7,7 @@
  *   with no rewrite rule on the server.
  * - The service worker is not registered (it would conflict with a sub-folder path).
  * - The API is the one named by apps/web/.env.<mode> (default "v3": the Supabase Edge Function over HTTPS). Those files hold no secret.
- * - The 3D model (public/models/facility, ~61 MB) and the Draco decoder (public/vendor) are copied into the folder by Vite.
+ * - The 3D models (public/models: topside, jacket, LQM, link bridge), the jacket sequence (public/sequence) and the Draco decoder (public/vendor) are copied into the folder by Vite.
  * - Adds .htaccess (Apache shared hosting: wasm/glb types, compression, caching) and _headers (Netlify / Cloudflare Pages).
  * - Writes README.txt and <out>.zip (needs the `tar` that ships with Windows 10+, macOS and Linux).
  */
@@ -79,7 +79,8 @@ index.html through the host URL, e.g. https://example.com/ or https://example.co
 paths, so it works in a sub-folder and needs no server rewrite rule.
 
   index.html, assets/        the app
-  models/facility/           the 3D topside model (7 Draco-compressed .glb files, ~61 MB) and its list (facility-model.json)
+  models/                    the 3D models of Facility layout (topside, jacket, LQM, link bridge: Draco-compressed .glb files and their lists)
+  sequence/jacket/           the jacket fabrication sequence (Construction sequence): one .glb per component and sequence.json
   vendor/draco/              the Draco WebAssembly decoder the 3D page uses
   .htaccess / _headers       MIME types (.wasm, .glb), compression and cache rules for Apache / Netlify / Cloudflare Pages
 

@@ -8,6 +8,8 @@ Reads
   data/EPCIC/Procurement/Expediting/*Expediting Report*.xlsx  newest cut-off: sheet R1-Equipment (tag, shipments, ROS, on-site dates)
                                                              and Equipment-Summary (highlight and short-term action plan per package)
   data/3d-model/*INTRODUCTION UPDATE*.pptx                    ETA / ROS the project introduction deck gives for tags the report does not list
+  data/EPCIC/Schedule Progress/Milestones/FIM-expected-arrival.json  the client's expected arrival month of each Free Issue Material package (FIM.pdf)
+                                                             and the tags of the model it covers; it sets the ETA of those tags (ROS is left as it is)
 
 Key written (the other keys are left alone):
   facilityEquipment  rows {tag, name, deck, packageCode, vendor, rosDate, etaDate, status, packageStatus, method, remarks, comments, source}
@@ -20,6 +22,7 @@ import glob
 import json
 import os
 import re
+import sys
 import zipfile
 
 import openpyxl
@@ -120,7 +123,46 @@ def intro_deck(path):
     return out
 
 
+FIM_PATH = os.path.join(ROOT, 'data', 'EPCIC', 'Schedule Progress', 'Milestones', 'FIM-expected-arrival.json')
+
+
+def fim_by_tag():
+    """tag -> (ETA, note) from the client's Free Issue Material list; the client gives a month, the ETA is its last day."""
+    if not os.path.exists(FIM_PATH):
+        return {}
+    fim = json.load(open(FIM_PATH, encoding='utf-8'))
+    out = {}
+    for p in fim['packages']:
+        y, m = map(int, p['arrival'].split('-'))
+        last = (dt.date(y + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1)).isoformat()
+        label = dt.date(y, m, 1).strftime('%b-%Y')
+        for t in p['tags']:
+            out[t] = (last, f"Free Issue Material (client FIM list): {p['package']}, ETA {label}" + (' - tag matched by tag number' if p.get('inferred') else ''))
+    return out
+
+
+def apply_fim(rows):
+    """Sets the ETA of the tags a FIM package covers (ROS stays) and notes the package in the remarks; returns how many rows changed."""
+    fim, n = fim_by_tag(), 0
+    for row in rows:
+        f = fim.get(row['tag'])
+        if not f:
+            continue
+        old = '\n'.join(l for l in (row.get('remarks') or '').split('\n') if not l.startswith('Free Issue Material (client FIM list)')).strip()
+        row.update(etaDate=f[0], source='FIM list (client Free Issue Material expected arrival)', remarks=f[1] + ('\n' + old if old else ''))
+        n += 1
+    return n
+
+
 def main():
+    if '--fim-only' in sys.argv:
+        # patch the rows already in sttp2b.json; a full run rebuilds them from the report and from the deck that is in the folder now
+        seed = json.load(open(OUT, encoding='utf-8'))
+        n = apply_fim(seed['facilityEquipment'])
+        with open(OUT, 'w', encoding='utf-8') as f:
+            json.dump(seed, f, ensure_ascii=False, separators=(',', ':'))
+        print('FIM ETA set on', n, 'equipment')
+        return
     manifest = json.load(open(MANIFEST, encoding='utf-8'))
     decks = {d['id']: d for d in manifest['decks']}
     report_path = newest_report()
@@ -154,6 +196,7 @@ def main():
         if not row['source']:
             row['source'] = 'Not in the expediting report: add dates with Edit'
         rows.append(row)
+    apply_fim(rows)
     seed = json.load(open(OUT, encoding='utf-8'))
     seed['facilityEquipment'] = rows
     with open(OUT, 'w', encoding='utf-8') as f:

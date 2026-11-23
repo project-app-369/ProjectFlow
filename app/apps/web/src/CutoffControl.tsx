@@ -4,7 +4,7 @@ import { apiMode, errorText, request, type Snapshot } from './api';
 import { addDays, fmtDate, localToday } from './format';
 import { Icon } from './icons';
 import { useAccess, useApp, useToast } from './state';
-import { Btn, Field, Modal } from './ui';
+import { Btn, Field, Modal, DateInput } from './ui';
 
 const isFriday = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay() === 5;
 /** The most recent Friday on or before a date: reports are normally dated the Friday the data was imported. */
@@ -67,7 +67,7 @@ function SnapshotDialog({ existing, onClose }: { existing: Snapshot[]; onClose: 
         <p style={{ marginBottom: 16 }}>Stores a copy of the project's current data (schedule, milestones, procurement, expediting, risks and interfaces) so it can be opened later from the cut-off dropdown. Saved reports are read-only.</p>
         <div className="form-grid">
           <Field label="Cut-off date" hint={cutoff && !isFriday(cutoff) ? 'Reports are usually dated the Friday the data was imported.' : undefined}>
-            <input type="date" value={cutoff} max={addDays(localToday(), 1)} onChange={e => setCutoff(e.target.value)} />
+            <DateInput value={cutoff} max={addDays(localToday(), 1)} onChange={e => setCutoff(e.target.value)} />
           </Field>
           <div className="field" style={{ justifyContent: 'flex-end' }}>
             <Btn kind="small" onClick={() => setCutoff(latestFriday(localToday()))}>Latest Friday ({fmtDate(latestFriday(localToday()))})</Btn>

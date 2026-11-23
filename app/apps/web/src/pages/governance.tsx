@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { DISCIPLINE_NAME, DISCIPLINES, disciplineList } from '../disciplines';
 import { Icon } from '../icons';
+import type { StateTone } from '../ui';
 
 /** A filter that shows only an icon and its current choice; the label is the tooltip and the accessible name. */
 export function IconFilter({ icon, label, value, onChange, children }: { icon: string; label: string; value: string; onChange: (v: string) => void; children: ReactNode }) {
@@ -70,6 +71,51 @@ export function People({ names, empty = 'Nobody assigned' }: { names: string[]; 
 /** Read-only text block for drawers: label above, value kept with its line breaks. */
 export function Detail({ label, children, full }: { label: string; children: ReactNode; full?: boolean }) {
   return <div style={full ? { gridColumn: '1 / -1' } : undefined}><small>{label}</small><strong style={{ fontWeight: 500, whiteSpace: 'pre-wrap' }}>{children || '—'}</strong></div>;
+}
+
+/** Tones of the states shown in the drawers (the same colour language as the registers: grey, blue, amber, green, red). */
+export const ISSUE_PRIORITY_TONE: Record<string, StateTone> = { Critical: 'crit', High: 'warn', Medium: 'info', Low: 'neutral' };
+export const ISSUE_STATUS_TONE: Record<string, StateTone> = { 'Not started': 'neutral', Pending: 'info', 'In progress': 'warn', Completed: 'ok' };
+
+/**
+ * A dropdown of choices, each written as icon + text in its own full colour. The current one is shown on the button; in the open
+ * list it is highlighted in mild green. `clearable` adds an empty choice.
+ */
+export function StateSelect({ label, value, options, onChange, clearable, disabled, empty = 'Not set' }: {
+  label: string; value: string | null; options: { value: string; label: string; icon: string; tone: StateTone }[]; onChange: (v: string | null) => void; clearable?: boolean; disabled?: boolean; empty?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); setOpen(false); } };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc, true);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc, true); };
+  }, [open]);
+  const current = options.find(o => o.value === value);
+  const choose = (v: string | null) => { setOpen(false); if (v !== value) onChange(v); };
+  return (
+    <div className="state-select" ref={box}>
+      <button type="button" className={`state-select-btn${current ? ` t-${current.tone}` : ''}`} disabled={disabled} aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}: ${current?.label ?? empty}`} title={label} onClick={() => setOpen(o => !o)}>
+        {current ? <><Icon name={current.icon} /><span>{current.label}</span></> : <span className="muted">{empty}</span>}
+        <Icon name="chevron-down" />
+      </button>
+      {open && (
+        <ul className="state-select-menu" role="listbox" aria-label={label}>
+          {clearable && <li><button type="button" role="option" aria-selected={!value} className={`state-opt${!value ? ' on' : ''}`} onClick={() => choose(null)}><span className="muted">{empty}</span></button></li>}
+          {options.map(o => (
+            <li key={o.value}>
+              <button type="button" role="option" aria-selected={o.value === value} className={`state-opt t-${o.tone}${o.value === value ? ' on' : ''}`} onClick={() => choose(o.value)}>
+                <Icon name={o.icon} /><span>{o.label}</span>{o.value === value && <Icon name="tick" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /** A short fixed choice as a row of icon buttons; the label is the tooltip and the accessible name. Choosing the current one clears it when `clearable`. */

@@ -45,6 +45,7 @@ const pointFields = {
 };
 const pointCreate = z.object(pointFields).refine(v => !sameParty(v.originator, v.target), { message: 'Originating and target party must be different.', path: ['target'] });
 const pointPatch = z.object(pointFields).partial();
+const pointRevise = z.object({ description: z.string().trim().min(1).max(3000), action: txt(3000).optional(), targetDate: isoOpt.optional(), reason: txt(1000).optional() });
 const pointMove = z.object({ to: z.enum(POINT_STATUSES), resolvedDate: isoOpt.optional(), resolution: txt(3000).optional() });
 const pointQuery = listQuery(['id', 'title', 'status', 'targetDate', 'queryDate', 'ageDays', 'discipline', 'target', 'originator', 'owner', 'createdAt', 'updatedAt'] as const).extend({
   interfaceId: z.string().max(40).optional(), overdue: z.enum(['true', 'false']).optional(), party: z.string().max(120).optional(),
@@ -90,6 +91,7 @@ export class InterfacesService {
       daysLate: !settled && p.targetDate && String(p.targetDate) < cutoff ? daysBetween(String(p.targetDate), cutoff) : null,
       ageDays: p.queryDate && end ? Math.max(0, daysBetween(String(p.queryDate), end)) : null,
       interfaceTitle: p.interfaceId ? titles.get(String(p.interfaceId)) ?? null : null,
+      rev: Number(p.rev ?? 0) || 0,
     };
   }
 
@@ -129,15 +131,46 @@ export class InterfacesService {
     const { rows } = this.pointFilter(projectId, raw);
     return {
       filename: 'interface-points.csv',
-      csv: toCsv([['IP No', 'Subject', 'Discipline', 'Status', 'Originated party', 'Target party', 'IP owner', 'Interface description', 'Recommended action', 'Query date', 'Target date', 'Overdue', 'Age (days)', 'Reference document', 'Resolution', 'Resolved date', 'Resolved document', 'Remarks', 'Interface'],
-        ...rows.map(p => [p.id, p.title, p.discipline, p.status, p.originator, p.target, p.owner, p.description, p.action, p.queryDate, p.targetDate, p.overdue ? 'Yes' : 'No', p.ageDays, p.reference, p.resolution, p.resolvedDate, p.resolvedDocument, p.remarks, p.interfaceId])]),
+      csv: toCsv([['IP No', 'Subject', 'Discipline', 'Status', 'Originated party', 'Target party', 'IP owner', 'Interface description', 'Recommended action', 'Query date', 'Target date', 'Overdue', 'Age (days)', 'Reference document', 'Resolution', 'Resolved date', 'Resolved document', 'Remarks', 'Interface', 'Rev'],
+        ...rows.map(p => [p.id, p.title, p.discipline, p.status, p.originator, p.target, p.owner, p.description, p.action, p.queryDate, p.targetDate, p.overdue ? 'Yes' : 'No', p.ageDays, p.reference, p.resolution, p.resolvedDate, p.resolvedDocument, p.remarks, p.interfaceId, p.rev])]),
     };
   }
 
+  private revRows(projectId: string) { return this.svc.rows(SHEET.interfacePointRevs, COLUMNS.interfacePointRevs, projectId); }
+
+  /** The point with its earlier revisions (newest first), each kept as it stood when it was superseded. */
   pointGet(projectId: string, id: string) {
     const p = this.pointViews(projectId).all.find(x => x.id === id);
     if (!p) throw notFound('NOT_FOUND', `Interface point "${id}" was not found.`);
-    return p;
+    const revisions = this.revRows(projectId).filter(r => r.pointId === id).sort((a, b) => Number(b.rev) - Number(a.rev)).map(({ projectId: _p, pointId: _i, ...r }) => ({ ...r, rev: Number(r.rev), status: 'Superseded' }));
+    return { ...p, revisions };
+  }
+
+  /**
+   * The requestor revises a request whose response did not satisfy: the current revision (request, response, dates) is kept as
+   * superseded, the point moves to the next revision number with the new request, and waits for a new response.
+   */
+  pointRevise(projectId: string, id: string, body: unknown, actor: Actor) {
+    requireWrite(actor, projectId);
+    const v = parse(pointRevise, body);
+    return this.store.withLock(() => {
+      const current = this.pointRows(projectId).find(p => p.id === id);
+      if (!current) throw notFound('NOT_FOUND', `Interface point "${id}" was not found.`);
+      const from = normPointStatus(current.status);
+      if (from !== 'Responded') throw new HttpError(409, { code: 'NOT_RESPONDED', message: `Only a point that has been responded can be revised; this one is ${from}.` });
+      if (!current.resolution) throw new HttpError(409, { code: 'RESPONSE_REQUIRED', message: 'There is no response to revise against.' });
+      const rev = Number(current.rev ?? 0) || 0;
+      const now = this.now();
+      this.store.appendRows(SHEET.interfacePointRevs, COLUMNS.interfacePointRevs, [{
+        projectId, pointId: id, rev, description: current.description ?? null, action: current.action ?? null, queryDate: current.queryDate ?? null, targetDate: current.targetDate ?? null,
+        response: current.resolution ?? null, respondedDate: String(current.updatedAt ?? '').slice(0, 10) || null, supersededAt: now, supersededBy: actor.name || actor.email || actor.id, reason: v.reason ?? null,
+      }]);
+      this.store.updateRow(SHEET.interfacePoints, COLUMNS.interfacePoints, 'id', id, {
+        rev: rev + 1, description: v.description, action: v.action === undefined ? current.action : v.action, targetDate: v.targetDate === undefined ? current.targetDate : v.targetDate,
+        queryDate: now.slice(0, 10), resolution: null, resolvedDate: null, status: 'Open', updatedAt: now,
+      }, { projectId });
+      return this.pointGet(projectId, id);
+    });
   }
 
   private requireInterface(projectId: string, id: string | null | undefined) {
@@ -200,6 +233,8 @@ export class InterfacesService {
     requireManage(actor, projectId);
     this.store.withLock(() => {
       if (!this.store.deleteRow(SHEET.interfacePoints, COLUMNS.interfacePoints, 'id', id, { projectId })) throw notFound('NOT_FOUND', `Interface point "${id}" was not found.`);
+      const kept = this.revRows(projectId).filter(x => x.pointId === id).length;
+      for (let i = 0; i < kept; i++) this.store.deleteRow(SHEET.interfacePointRevs, COLUMNS.interfacePointRevs, 'pointId', id, { projectId });
     });
   }
 

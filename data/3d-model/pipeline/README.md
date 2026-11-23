@@ -66,3 +66,40 @@ Control has no allow list: it is on or off). The current files were extracted wi
 - `loadModel` needs absolute URLs (a path is resolved against the page's own address).
 - The glTF model has no instance tree and no dbId → fragment table: node names and ids come from `model.getData().gltf.nodes` and
   `nodeToDbId` (available a moment after the load callback), and `FacilityViewer.tsx` builds the fragment table that theming needs.
+
+## Jacket, LQM and Link Bridge (`Jacket All.nwd`, `LQM2.nwd`, `Link Bridge.nwd`)
+
+The same viewer shows these three beside the topside (Construction → Facility layout, model tabs). Each is split into systems that can be
+shown, hidden or highlighted; the 582 MB full-platform model is not processed yet. `run.ps1` now points at Navisworks Manage 2027.
+
+| Model | Systems | How the system of a part is decided |
+|---|---|---|
+| Jacket | Jacket structure, Piles & conductors, Bridge support, Buoyancy tanks, Flooding system, Mudmat & skirt, Anodes & supports | The BOCAD export carries no part names (“PANEL 235 of SBFRAMEWORK 1 of FRMWORK 2”) under nine fabrication phases, so `classify_models.py` uses where a part stands, its shape and its phase (anodes: the IFC import; buoyancy tanks: the nine cylinders found from their dense ring stiffeners (four vertical at the corners, five horizontal), each with its shell and rings; flooding system: the rest of phase 7, the tanks' outfitting of valves, collars, clamps, short tube sections and vents (the model has no continuous tubing along the legs to pick out); piles and conductors: below the mudline and long vertical tubes) |
+| LQM | Structural, Piping, Electrical & instrument, Telecom, HVAC, Architectural, Equipment, Lifting & laydown | The model keeps the discipline folders (`STRUCTURE-LQ2`, `PIPING-LQ2`, `ELECTRICAL & INSTRUMENT-LQ2`, …) and the HVAC and ARC files; `classify_lqm.py` maps them, telecom being the TELECOM / PAGA / SPEAKER / INTERCOM items of the instrument and telecom equipment |
+| Link Bridge | Structure, Grating & railing, Piping, Pipe supports, Electrical & instrument | By zone prefix (`SBC` structure, `PBC` piping, `EBC`/`JBC` electrical, `XBC` supports) |
+
+```powershell
+.
+un.ps1 <model.nwd> out\m\cmd_leaves.txt      # `leaves` (every geometry leaf with its path and box) and `rawleaves` (its triangles)
+python classify_models.py jacket                  # or linkbridge; LQM: python classify_lqm.py
+python preview_groups.py jacket                   # side / front / top views in the colour of each group, to check the grouping
+.
+un.ps1 LQM2.nwd out\m\cmd_groups.txt         # LQM only: `groups <outDir> <assign> <cell>` welds each system inside Navisworks (the raw dump is too large)
+python build_models.py jacket ..\..\..pppps\web\public\models      # writes <model>/<system>.glb and model.json
+```
+
+Jacket 4.6 M triangles in 13.7 MB, Link Bridge 1.5 M in 5.3 MB (Draco, vertices welded within 5 mm).
+LQM 1.85 M triangles in 8.8 MB: it holds about 48 M triangles in 42,000 parts, so `groups` leaves out the 17,400 parts under 15 cm (bolts, clamps, straps) and welds the rest on a 2 cm grid (about 5 minutes in Navisworks).
+
+## Jacket groups from the Selection Sets, and the fabrication sequence
+
+`CGF-Jacket.nwd` carries Selection Sets (Pile, Conductor, Caisson, J-tubes, Bridge support, Flooding system, Buoyancy tanks). `ModelTool sets <out.tsv>` exports them
+(leaf indexes in the order of `leaves`); `sets_map.py` maps those indexes to `out/m/jacket_leaves.tsv` (the file has 6 leaves fewer than `Jacket All.nwd`,
+so they are matched by path, name and box) and writes `out/m/jacket_sets.json`, which `classify_models.py` applies.
+`ModelTool timeliner <out.tsv>` lists TimeLiner tasks (the file has none).
+
+    $env:MODELTOOL_DLL = 'ModelTool_b.dll'   # optional: build the plugin under another name when Navisworks still has ModelTool.dll loaded
+    .\run.ps1 'E:\...\CGF-Jacket.nwd' cmds.txt   # cmds.txt lines: sets<TAB>E:/.../jacket_sets.tsv (absolute paths, forward slashes)
+
+`build_sequence.py <publicDir>` builds the Construction sequence page: the 22 steps of drawing 2021-4589-65-4015 are in `../Construction sequence/jacket-fabrication-steps.json`
+(transcribed from the drawing); each model part is given the step that builds it (from its row, bay and elevation, see the script) and one GLB per step is written to `public/sequence/jacket/`.

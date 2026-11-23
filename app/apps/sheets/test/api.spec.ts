@@ -33,7 +33,7 @@ describe('setup', () => {
       'Personal - Tasks', 'Personal - Subtasks',
       'EPCIC - Facility curves', 'EPCIC - Facility scopes', 'EPCIC - Facility WBS', 'EPCIC - Working schedule', 'EPCIC - CPN progress', 'EPCIC - S-curve', 'EPCIC - S-curve weekly', 'EPCIC - Work packages', 'EPCIC - Milestones', 'EPCIC - Procurement packages', 'EPCIC - Expediting packages', 'EPCIC - Logistics shipments', 'EPCIC - Material balance', 'EPCIC - Material summary', 'EPCIC - Procurement concerns', 'EPCIC - Procurement S-curves', 'EPCIC - Phase progress', 'EPCIC - Construction budget',
       'Governance - Risks', 'Governance - Risk actions', 'Governance - Risk matrix', 'Governance - Risk breakdown', 'Governance - Issues', 'Governance - Issue sub-tasks', 'Governance - Issue log',
-      'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
+      'Governance - Interfaces', 'Governance - Interface points', 'Governance - Interface point revisions', 'Governance - Interface parties', 'Governance - Responsibility matrix', 'Governance - RASCI',
       'Reports - Knowledge', 'Reports - Cut-off snapshots', 'Reports - Snapshot data', 'EPCIC - Facility equipment',
     ]);
   });
@@ -506,6 +506,25 @@ describe('interface management', () => {
     expect(ok(movePoint(id, 'Responded', { resolution: 'Rating is class 600' }))).toMatchObject({ status: 'Responded', resolution: 'Rating is class 600' });
     expect(ok(movePoint(id, 'Resolved'))).toMatchObject({ status: 'Resolved', resolvedDate: '2026-11-08', settled: true, overdue: false, ageDays: 0 });
     expect(ok(movePoint(id, 'Open'))).toMatchObject({ status: 'Open', resolvedDate: null });
+  });
+
+  it('revises a request after an unsatisfactory response and keeps every earlier revision', () => {
+    const { id } = ok(call('POST', `${P}/interface-points`, point));
+    const revise = (body: object) => call('POST', `${P}/interface-points/${id}/revise`, body);
+    expect(ok(call('GET', `${P}/interface-points/${id}`))).toMatchObject({ rev: 0, revisions: [] });
+    expect(err(revise({ description: 'Confirm rating and material' })).error.code).toBe('NOT_RESPONDED');
+    ok(movePoint(id, 'Responded', { resolution: 'Rating is class 600' }));
+    expect(err(revise({ description: '' })).status).toBe(400);
+    const r1 = ok(revise({ description: 'Confirm rating and material grade at the tie-in', reason: 'Material not stated', targetDate: '2026-12-01' }));
+    expect(r1).toMatchObject({ rev: 1, status: 'Open', resolution: null, targetDate: '2026-12-01', description: 'Confirm rating and material grade at the tie-in' });
+    expect(r1.revisions).toHaveLength(1);
+    expect(r1.revisions[0]).toMatchObject({ rev: 0, status: 'Superseded', description: point.description, response: 'Rating is class 600', reason: 'Material not stated' });
+    ok(movePoint(id, 'Responded', { resolution: 'Class 600, A105' }));
+    const r2 = ok(revise({ description: 'Provide the gasket type as well' }));
+    expect(r2.rev).toBe(2);
+    expect(r2.revisions.map((r: any) => r.rev)).toEqual([1, 0]);
+    expect(r2.revisions[0].response).toBe('Class 600, A105');
+    expect(ok(call('GET', `${P}/interface-points?pageSize=200`)).items.find((x: any) => x.id === id).rev).toBe(2);
   });
 
   it('summarises points and filters by party, window, age and status', () => {

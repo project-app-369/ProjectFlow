@@ -9,10 +9,6 @@ import { IconSelect, ProjectChips, StatusBadges, statusOptions, SubtaskProgress,
 
 interface ViewProps { tasks: PTask[]; onOpen: (t: PTask) => void; today: string }
 
-function HeaderIcon({ name, label }: { name: string; label: string }) {
-  return <span className="task-head-icon" title={label}><Icon name={name} /><span className="sr-only">{label}</span></span>;
-}
-
 /* ============================ List ============================ */
 const URGENCY_RANK = { Low: 0, Normal: 1, High: 2, Urgent: 3 } as const;
 const STATUS_RANK = Object.fromEntries(TASK_STATUSES.map((s, i) => [s, i])) as Record<TaskStatus, number>;
@@ -39,19 +35,19 @@ export function TaskList({ tasks, onOpen, today }: ViewProps) {
     return [...tasks].sort((a, b) => (get(a) < get(b) ? -1 : get(a) > get(b) ? 1 : 0) * (sort.order === 'asc' ? 1 : -1));
   }, [tasks, sort]);
   const columns = useMemo<ColumnDef<PTask>[]>(() => [
-    { id: 'taskNo', header: () => <HeaderIcon name="sheet" label="Task number" />, meta: { sortKey: 'taskNo' }, cell: ({ row: { original: t } }) => <span className="mono">{t.taskNo}</span> },
+    { id: 'taskNo', header: 'TASK NO', meta: { sortKey: 'taskNo' }, cell: ({ row: { original: t } }) => <span className="mono">{t.taskNo}</span> },
     {
-      id: 'title', header: () => <HeaderIcon name="doc" label="Task" />, meta: { sortKey: 'title' },
+      id: 'title', header: 'TASK', meta: { sortKey: 'title' },
       cell: ({ row: { original: t } }) => <button className="link-button" onClick={() => onOpen(t)}><strong className={t.status === 'Completed' ? 'struck' : ''}>{t.title}</strong>{t.description && <small className="muted clamp">{t.description}</small>}</button>,
     },
-    { id: 'urgency', header: () => <HeaderIcon name="flag" label="Urgency" />, meta: { sortKey: 'urgency' }, cell: ({ row: { original: t } }) => <UrgencyBadge urgency={t.urgency} /> },
-    { id: 'status', header: () => <HeaderIcon name="check" label="Status" />, meta: { sortKey: 'status' }, cell: ({ row: { original: t } }) => <StatusBadges task={t} /> },
-    { id: 'assigner', header: () => <HeaderIcon name="user" label="Assigned by" />, meta: { sortKey: 'assigner' }, cell: ({ row: { original: t } }) => t.assigner ?? '—' },
-    { id: 'projects', header: () => <HeaderIcon name="layers" label="Projects" />, cell: ({ row: { original: t } }) => <ProjectChips ids={t.projects} /> },
-    { id: 'plan', header: () => <HeaderIcon name="calendar" label="Plan dates" />, meta: { sortKey: 'planStart' }, cell: ({ row: { original: t } }) => (t.planStart || t.planFinish ? `${t.planStart ? fmtShort(t.planStart) : '…'} → ${t.planFinish ? fmtShort(t.planFinish) : '…'}` : '—') },
-    { id: 'due', header: () => <HeaderIcon name="clock" label="Due date" />, meta: { sortKey: 'due' }, cell: ({ row: { original: t } }) => <span className={t.overdue ? 'negative' : ''}>{fmtDate(t.due)}</span> },
-    { id: 'effort', header: () => <HeaderIcon name="chart" label="Effort" />, meta: { sortKey: 'effort' }, cell: ({ row: { original: t } }) => (t.effort != null ? hours(t.effort) : '—') },
-    { id: 'subs', header: () => <HeaderIcon name="status-completed" label="Subtasks" />, cell: ({ row: { original: t } }) => <SubtaskProgress task={t} /> },
+    { id: 'urgency', header: 'URGENCY', meta: { sortKey: 'urgency' }, cell: ({ row: { original: t } }) => <UrgencyBadge urgency={t.urgency} text /> },
+    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: t } }) => <StatusBadges task={t} text /> },
+    { id: 'assigner', header: 'ASSIGNED BY', meta: { sortKey: 'assigner' }, cell: ({ row: { original: t } }) => t.assigner ?? '—' },
+    { id: 'projects', header: 'PROJECTS', cell: ({ row: { original: t } }) => <ProjectChips ids={t.projects} /> },
+    { id: 'plan', header: 'PLAN DATES', meta: { sortKey: 'planStart' }, cell: ({ row: { original: t } }) => (t.planStart || t.planFinish ? `${t.planStart ? fmtShort(t.planStart) : '…'} → ${t.planFinish ? fmtShort(t.planFinish) : '…'}` : '—') },
+    { id: 'due', header: 'DUE DATE', meta: { sortKey: 'due' }, cell: ({ row: { original: t } }) => <span className={t.overdue ? 'negative' : ''}>{fmtDate(t.due)}</span> },
+    { id: 'effort', header: 'EFFORT', meta: { sortKey: 'effort' }, cell: ({ row: { original: t } }) => (t.effort != null ? hours(t.effort) : '—') },
+    { id: 'subs', header: 'SUBTASKS', cell: ({ row: { original: t } }) => <SubtaskProgress task={t} /> },
   ], [onOpen]);
   if (phone) return <div className="task-cards-wrap"><TaskCards tasks={rows} onOpen={onOpen} today={today} /></div>;
   return (

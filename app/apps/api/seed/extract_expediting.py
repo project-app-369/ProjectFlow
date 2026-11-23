@@ -165,7 +165,7 @@ def package_status(v):
 
 def progress_sheet(wb, sheet, discipline, header, status_header, name_header=None):
     index, rows = table(wb[sheet], header)
-    c = dict(code=col(index, header), status=col(index, status_header), pe=col(index, 'Plan EXW'), ae=col(index, 'Actual EXW'), pa=col(index, 'Plan Arrival'), aa=col(index, 'Actual Arrival'),
+    c = dict(code=col(index, header), status=col(index, *(status_header if isinstance(status_header, tuple) else (status_header,))), pe=col(index, 'Plan EXW'), ae=col(index, 'Actual EXW'), pa=col(index, 'Plan Arrival'), aa=col(index, 'Actual Arrival'),
              plan=col(index, 'Planned Cumulation To'), act=col(index, 'Actual Cumulation To'), var=col(index, 'Variance'))
     name = col(index, name_header) if name_header else None
     out = []
@@ -204,7 +204,7 @@ def expediting(wb):
     rows = (equipment(wb)
             + progress_sheet(wb, 'Structural Steel-Summary', 'Structural', 'Package Code', 'Package Status', 'Package Name')
             + progress_sheet(wb, 'Pipe-Fitting - Summary', 'Piping', 'Package', 'Status')
-            + progress_sheet(wb, 'Misc-Summary', 'Misc', 'Package Code', 'Column 11', 'Package Desc')
+            + progress_sheet(wb, 'Misc-Summary', 'Misc', 'Package Code', ('Column 11', 'Status'), 'Package Desc')
             + valves(wb))
     return [{'id': f'EX-{i + 1:03d}', **r} for i, r in enumerate(rows)]
 

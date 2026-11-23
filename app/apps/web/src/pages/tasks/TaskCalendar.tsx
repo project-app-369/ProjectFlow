@@ -113,8 +113,8 @@ export default function TaskCalendar() {
                     <td className="mono">{e.task.taskNo}</td>
                     <td><button className="link-button" onClick={() => open(e.task)}><strong>{e.task.title}</strong></button></td>
                     <td><span className="task-meta-item"><Icon name={e.kind === 'due' ? 'flag' : 'calendar'} />{e.kind === 'due' ? 'Deadline' : `${fmtShort(e.task.planStart ?? anchor)} → ${fmtShort(e.task.planFinish ?? e.task.planStart ?? anchor)}`}</span></td>
-                    <td><UrgencyBadge urgency={e.task.urgency} /></td>
-                    <td><StatusBadges task={e.task} /></td>
+                    <td><UrgencyBadge urgency={e.task.urgency} text /></td>
+                    <td><StatusBadges task={e.task} text /></td>
                     <td>{e.task.effort != null ? hours(e.task.effort) : '—'}</td>
                   </tr>
                 ))}</tbody>

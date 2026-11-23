@@ -79,6 +79,8 @@ interface Props {
 
 export default function SCurveChart({ points, milestones = [], cutoff, expanded = false, schedule = null }: Props) {
   const el = useRef<HTMLDivElement>(null);
+  /** The first paint draws the curves in; later updates (theme, zoom, resize) are instant. */
+  const painted = useRef(false);
   const { dark } = usePrefs();
   const chart = useChart(el);
 
@@ -165,8 +167,8 @@ export default function SCurveChart({ points, milestones = [], cutoff, expanded 
     const nearby = (idx: number) => marks.filter(k => Math.abs(k.value[0] - idx) <= 0.55).map(k => k.m);
 
     chart.setOption({
-      animation: false,
-      grid: { left: 44, right: 40, top: expanded ? 52 : 44, bottom: ZOOM_BOTTOM },
+      animation: !painted.current, animationDuration: 1200, animationEasing: 'cubicOut', animationDelay: 250,
+      grid: { left: 44, right: 40, top: expanded ? 52 : (el.current?.clientWidth ?? 800) < 560 ? 70 : 44, /* the legend wraps to a second line on a phone */ bottom: ZOOM_BOTTOM },
       dataZoom: timeZoom(theme),
       legend: { top: 0, right: 0, textStyle: { color: muted, fontSize: fs }, itemWidth: 14, itemHeight: 6, data: ['Plan', 'Forecast', 'Actual', `Plan / ${unit}`, `Actual / ${unit}`, ...(aligned ? ['Baseline schedule', 'Working schedule'] : []), ...(marks.length ? ['Major milestones'] : [])] },
       tooltip: {
@@ -186,9 +188,10 @@ export default function SCurveChart({ points, milestones = [], cutoff, expanded 
       ],
       series: [bar(`Plan / ${unit}`, bars.plan, theme.plan), bar(`Actual / ${unit}`, bars.actual, theme.teal), series('Plan', 'plan', theme.plan), ...scheduleSeries, forecast, actual, ...(marks.length ? [milestoneSeries] : [])],
     }, true);
+    painted.current = true;
   }, [chart, points, milestones, cutoff, expanded, dark, schedule]);
 
   const doneCount = milestones.filter(m => m.actual).length;
   const label = `EPCIC S-curve, plan versus forecast and actual, with ${isWeekly(points) ? 'weekly' : 'monthly'} progress bars${cutoff ? `, cut-off ${fmtDate(cutoff)}` : ''}${milestones.length ? `, with ${milestones.length} major milestones, ${doneCount} achieved` : ''}`;
-  return <div className={`chart ${expanded ? 'chart-expanded' : ''}`}><div ref={el} role="img" aria-label={label} style={{ minHeight: expanded ? 460 : 300 }} /></div>;
+  return <div className={`chart ${expanded ? 'chart-expanded' : ''}`}><div ref={el} role="img" aria-label={label} style={expanded ? { minHeight: 460 } : undefined} /></div>;
 }

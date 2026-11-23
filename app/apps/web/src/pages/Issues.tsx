@@ -16,6 +16,9 @@ import { MultiFilter } from './governance';
 
 const PAGE_SIZE = 50;
 const PRIORITY_ICON: Record<string, string> = { Critical: 'urgency-urgent', High: 'urgency-high', Medium: 'urgency-normal', Low: 'urgency-low' };
+import { StateTag, type StateTone } from '../ui';
+const PRIORITY_TONE: Record<string, StateTone> = { Critical: 'crit', High: 'warn', Medium: 'info', Low: 'neutral' };
+const STATUS_TONE: Record<string, StateTone> = { 'Not started': 'neutral', Pending: 'info', 'In progress': 'warn', Completed: 'ok' };
 const STATUS_ICON: Record<string, string> = { 'Not started': 'status-backlog', Pending: 'status-planned', 'In progress': 'status-ongoing', Completed: 'status-completed' };
 const WINDOWS: [string, string][] = [['overdue', 'Overdue'], ['30', 'Due within 30 days'], ['45', 'Due within 45 days'], ['60', 'Due within 60 days'], ['none', 'No due date']];
 
@@ -72,7 +75,7 @@ export default function Issues() {
       ),
     },
     { id: 'discipline', header: 'DISCIPLINE', meta: { sortKey: 'discipline' }, cell: ({ row: { original: i } }) => (i.discipline ? <span className="discipline-cell" title={disciplineTitle(i.discipline)}>{i.discipline}</span> : <span className="muted">—</span>) },
-    { id: 'priority', header: 'PRI', meta: { sortKey: 'priorityRank' }, cell: ({ row: { original: i } }) => <span className="issue-icon" title={`${i.priority} priority`}><Icon name={PRIORITY_ICON[i.priority]} /><span className="sr-only">{i.priority}</span></span> },
+    { id: 'priority', header: 'PRIORITY', meta: { sortKey: 'priorityRank' }, cell: ({ row: { original: i } }) => <StateTag icon={PRIORITY_ICON[i.priority]} label={i.priority} tone={PRIORITY_TONE[i.priority] ?? 'neutral'} title={`${i.priority} priority`} /> },
     {
       id: 'pic', header: 'PIC',
       cell: ({ row: { original: i } }) => (i.pics.length
@@ -81,7 +84,7 @@ export default function Issues() {
     },
     { id: 'due', header: 'DUE', meta: { sortKey: 'dueDate' }, cell: ({ row: { original: i } }) => <span className={`task-meta-item ${i.overdue ? 'negative' : ''}`} title={i.overdue ? 'Overdue' : undefined}>{i.dueDate ? <><Icon name="calendar" />{fmtDate(i.dueDate)}</> : <span className="muted">—</span>}</span> },
     { id: 'subtasks', header: '', cell: ({ row: { original: i } }) => (i.subtasksTotal ? <span className="issue-sub" title={`${i.subtasksDone} of ${i.subtasksTotal} sub-tasks done`}><Icon name="status-completed" />{i.subtasksDone}/{i.subtasksTotal}</span> : null) },
-    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: i } }) => <span className="issue-icon" title={i.status}><Icon name={STATUS_ICON[i.status]} /><span className="sr-only">{i.status}</span></span> },
+    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: i } }) => <StateTag icon={STATUS_ICON[i.status]} label={i.status} tone={STATUS_TONE[i.status] ?? 'neutral'} /> },
   ], []);
 
   return (

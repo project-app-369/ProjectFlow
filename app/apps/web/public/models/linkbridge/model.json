@@ -1,0 +1,80 @@
+{
+ "model": "linkbridge",
+ "name": "Link Bridge",
+ "origin": [
+  -72.87837028503418,
+  93.34185028076172,
+  27.7189998626709
+ ],
+ "upAxis": "Y",
+ "bounds": {
+  "min": [
+   -114.13172149658203,
+   86.94200134277344,
+   27.7189998626709
+  ],
+  "max": [
+   -31.625019073486328,
+   99.74169921875,
+   38.32048034667969
+  ]
+ },
+ "groups": [
+  {
+   "id": "structure",
+   "name": "Structure",
+   "file": "structure.glb",
+   "color": "#8fa3c4",
+   "bytes": 864452,
+   "triangles": 250096
+  },
+  {
+   "id": "grating_railing",
+   "name": "Grating & railing",
+   "file": "grating_railing.glb",
+   "color": "#c9a227",
+   "bytes": 771636,
+   "triangles": 247086
+  },
+  {
+   "id": "piping",
+   "name": "Steel piping",
+   "file": "piping.glb",
+   "color": "#2f9d83",
+   "bytes": 210972,
+   "triangles": 81014
+  },
+  {
+   "id": "piping_frp",
+   "name": "FRP piping",
+   "file": "piping_frp.glb",
+   "color": "#9bd14b",
+   "bytes": 221160,
+   "triangles": 71727
+  },
+  {
+   "id": "supports",
+   "name": "Pipe supports",
+   "file": "supports.glb",
+   "color": "#a98467",
+   "bytes": 2490652,
+   "triangles": 698308
+  },
+  {
+   "id": "electrical",
+   "name": "Electrical & instrument",
+   "file": "electrical.glb",
+   "color": "#e5a93a",
+   "bytes": 721020,
+   "triangles": 181311
+  },
+  {
+   "id": "misc",
+   "name": "Miscellaneous",
+   "file": "misc.glb",
+   "color": "#7c8aa5",
+   "bytes": 1596,
+   "triangles": 72
+  }
+ ]
+}

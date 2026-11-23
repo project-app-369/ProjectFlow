@@ -13,7 +13,7 @@ import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced } from '../ui';
+import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced, ModalSkeleton, DateInput } from '../ui';
 import { Detail, DisciplinePicker, IconFilter, MultiFilter, People } from './governance';
 import { disciplineTitle } from '../disciplines';
 import { useDeepLink } from '../deepLink';
@@ -22,9 +22,10 @@ const PAGE_SIZE = 50;
 const STATUS_TONE: Record<InterfaceStatus, Tone> = {
   Identified: 'indigo', Assigned: 'indigo', 'Information requested': 'amber', Responded: 'amber', 'Under review': 'amber', Agreed: 'green', Closed: 'green',
 };
-const POINT_TONE: Record<PointStatus, Tone> = { Open: 'amber', Responded: 'indigo', Resolved: 'green', Closed: 'green' };
 const POINT_SORTS: [string, string][] = [['id', 'Point no.'], ['targetDate', 'Target date'], ['queryDate', 'Date raised'], ['updatedAt', 'Last updated'], ['ageDays', 'Age'], ['discipline', 'Discipline'], ['originator', 'From'], ['target', 'To'], ['owner', 'Owner'], ['status', 'Status']];
 const INTERFACE_SORTS: [string, string][] = [['id', 'Interface no.'], ['needDate', 'Needed by'], ['createdAt', 'Date created'], ['updatedAt', 'Last updated'], ['originator', 'From'], ['receiver', 'To'], ['status', 'Status'], ['title', 'Title']];
+import { StateTag, type StateTone } from '../ui';
+const POINT_STATE: Record<PointStatus, StateTone> = { Open: 'info', Responded: 'warn', Resolved: 'ok', Closed: 'ok' };
 const POINT_ICON: Record<PointStatus, string> = { Open: 'status-planned', Responded: 'status-ongoing', Resolved: 'tick', Closed: 'status-completed' };
 const POINT_HELP: Record<PointStatus, string> = {
   Open: 'Raised and waiting for an answer from the target party',
@@ -88,7 +89,8 @@ export function InterfacePointsPage() {
         : <span className="tiny warning" title="No target date">No date</span>,
     },
     { id: 'age', header: 'AGE', meta: { sortKey: 'ageDays' }, cell: ({ row: { original: p } }) => (p.ageDays == null ? <span className="muted">—</span> : <span className="mono tiny" title={p.settled ? 'Days from query to resolution' : 'Days open since the query date'}>{p.ageDays} d</span>) },
-    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: p } }) => <span className="issue-icon" title={`${p.status}: ${POINT_HELP[p.status]}`}><Icon name={POINT_ICON[p.status]} /><span className="sr-only">{p.status}</span></span> },
+    { id: 'rev', header: 'REV', cell: ({ row: { original: p } }) => <span className={`rev-chip ${(p.rev ?? 0) ? 'up' : ''}`} title={p.rev ? `Revised ${p.rev} time${p.rev === 1 ? '' : 's'}; earlier revisions are kept` : 'First issue'}>Rev {p.rev ?? 0}</span> },
+    { id: 'status', header: 'STATUS', meta: { sortKey: 'status' }, cell: ({ row: { original: p } }) => <StateTag icon={POINT_ICON[p.status]} label={p.status} tone={POINT_STATE[p.status]} title={`${p.status}: ${POINT_HELP[p.status]}`} /> },
   ], [parties.data]);
 
   const chips = filter.chips.filter(([k]) => !['owner', 'flag'].includes(k)).map(([k, v]) => [k, k === 'target' || k === 'originator' ? partyName(parties.data, v) : v] as [string, string]);
@@ -138,9 +140,9 @@ export function InterfacePointsPage() {
 /** One point from the right: what was asked, of whom, the answer, and the workflow buttons. */
 function PointDrawer({ id, onClose, interfaceId }: { id: string | null; onClose: () => void; interfaceId?: string }) {
   const { project } = useApp();
-  const detail = useQuery({ queryKey: ['interface-point', project.id, id], enabled: !!id, queryFn: () => request<InterfacePoint>(`/projects/${project.id}/interface-points/${id}`) });
+  const detail = useQuery({ queryKey: ['interface-point', project.id, id], enabled: !!id, queryFn: () => request<InterfacePoint>(`/projects/${project.id}/interface-points/${id}`), select: d => ({ ...d, rev: d.rev ?? 0 }) });
   if (id && !detail.data) {
-    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}><div className="dialog-body">{detail.error ? <p className="negative">{errorText(detail.error)}</p> : <p className="muted">Loading…</p>}</div></Modal>;
+    return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}>{detail.error ? <div className="dialog-body"><p className="negative">{errorText(detail.error)}</p></div> : <ModalSkeleton />}</Modal>;
   }
   return <PointForm key={detail.data?.updatedAt ?? 'new'} point={id ? detail.data : undefined} interfaceId={interfaceId} onClose={onClose} />;
 }
@@ -162,6 +164,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
   const [v, setV] = useState<PointDraft>(() => pointDraft(point, interfaceId));
   const [error, setError] = useState('');
   const [removing, setRemoving] = useState(false);
+  const [revising, setRevising] = useState<{ description: string; targetDate: string; reason: string } | null>(null);
   const up = (k: keyof PointDraft, val: string) => setV(s => ({ ...s, [k]: val }));
   const readOnly = !access.canWrite;
   const same = !!v.originator && v.originator.trim().toLowerCase() === v.target.trim().toLowerCase();
@@ -175,6 +178,10 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
   const move = useMutation({
     mutationFn: (to: PointStatus) => request<InterfacePoint>(`${base}/${point!.id}/transition`, { method: 'POST', body: JSON.stringify({ to, resolution: v.resolution.trim() || undefined }) }),
     onSuccess: r => { refresh(); toast(`${r.id} is now ${r.status}.`); }, onError: (e: Error) => setError(errorText(e)),
+  });
+  const revise = useMutation({
+    mutationFn: () => request<InterfacePoint>(`${base}/${point!.id}/revise`, { method: 'POST', body: JSON.stringify({ description: revising!.description.trim(), targetDate: revising!.targetDate || undefined, reason: revising!.reason.trim() || undefined }) }),
+    onSuccess: r => { setRevising(null); setError(''); refresh(); toast(`${r.id} is now Rev ${r.rev}; the previous revision is kept as superseded.`); }, onError: (e: Error) => setError(errorText(e)),
   });
   const remove = useMutation({
     mutationFn: () => request<void>(`${base}/${point!.id}`, { method: 'DELETE' }),
@@ -195,7 +202,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
             <div className="drawer-intro">
               <div className="eyebrow">{point.discipline ?? 'Unclassified'}{point.workPackage ? ` · ${point.workPackage}` : ''}</div>
               <h1>{point.title}</h1>
-              <Badge tone={POINT_TONE[point.status]}>{point.status}</Badge> {point.overdue && <Badge tone="red">{point.daysLate} d late</Badge>}{' '}
+              <span className={`rev-chip ${point.rev ? 'up' : ''}`} title="Revision">Rev {point.rev}</span> <StateTag icon={POINT_ICON[point.status]} label={point.status} tone={POINT_STATE[point.status]} /> {point.overdue && <Badge tone="red">{point.daysLate} d late</Badge>}{' '}
               <span className="tiny muted">{partyName(parties.data, point.originator)} → {partyName(parties.data, point.target)}{point.ageDays != null ? ` · ${point.ageDays} days ${point.settled ? 'to resolve' : 'open'}` : ''}</span>
             </div>
           )}
@@ -203,9 +210,24 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
             <div style={{ margin: '0 0 16px' }}>
               <div className="tiny muted" style={{ marginBottom: 6 }}>{POINT_HELP[point.status]}. Move to</div>
               <div className="actions">
+                {point.status === 'Responded' && !revising && <Btn kind="small" icon="refresh" iconOnly={false} title="The response did not satisfy: issue the next revision of this request. The current one is kept as superseded." onClick={() => { setError(''); setRevising({ description: point.description, targetDate: '', reason: '' }); }}>Revise to Rev {point.rev + 1}</Btn>}
                 {point.allowedNext.map(n => (
                   <Btn key={n} kind="small" disabled={move.isPending || needsAnswer(n)} title={needsAnswer(n) ? 'Write the response below first' : POINT_HELP[n]} onClick={() => { setError(''); move.mutate(n); }}>{n === 'Open' ? 'Reopen' : n}</Btn>
                 ))}
+              </div>
+            </div>
+          )}
+          {point && revising && (
+            <div className="rev-panel" role="group" aria-label={`Revise to Rev ${point.rev + 1}`}>
+              <h3><Icon name="refresh" />Revise to Rev {point.rev + 1} <span className="tiny muted">Rev {point.rev} and its response stay on record as superseded</span></h3>
+              <div className="form-grid">
+                <Field label="Revised request" full hint="What the target party must now answer"><textarea value={revising.description} maxLength={3000} rows={4} autoFocus onChange={e => setRevising(r => r && ({ ...r, description: e.target.value }))} /></Field>
+                <Field label="Why the response was not accepted" full><textarea value={revising.reason} maxLength={1000} rows={2} onChange={e => setRevising(r => r && ({ ...r, reason: e.target.value }))} /></Field>
+                <Field label="New target date" hint="Optional"><DateInput value={revising.targetDate} onChange={e => setRevising(r => r && ({ ...r, targetDate: e.target.value }))} /></Field>
+              </div>
+              <div className="actions" style={{ marginTop: 8 }}>
+                <Btn kind="primary small" icon="tick" iconOnly={false} disabled={revise.isPending || !revising.description.trim()} onClick={() => { setError(''); revise.mutate(); }}>{revise.isPending ? 'Saving…' : `Issue Rev ${point.rev + 1}`}</Btn>
+                <Btn kind="small" iconOnly={false} onClick={() => setRevising(null)}>Cancel</Btn>
               </div>
             </div>
           )}
@@ -228,8 +250,8 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
               <Field label="Linked interface" hint="Optional, from the interface register"><input value={v.interfaceId} maxLength={40} placeholder="INT-…" onChange={e => up('interfaceId', e.target.value)} /></Field>
               <Field label="Description" full><textarea value={v.description} maxLength={3000} rows={4} onChange={e => up('description', e.target.value)} /></Field>
               <Field label="Recommended action" full><textarea value={v.action} maxLength={3000} onChange={e => up('action', e.target.value)} /></Field>
-              <Field label="Query date"><input type="date" value={v.queryDate} onChange={e => up('queryDate', e.target.value)} /></Field>
-              <Field label="Target date"><input type="date" value={v.targetDate} onChange={e => up('targetDate', e.target.value)} /></Field>
+              <Field label="Query date"><DateInput value={v.queryDate} onChange={e => up('queryDate', e.target.value)} /></Field>
+              <Field label="Target date"><DateInput value={v.targetDate} onChange={e => up('targetDate', e.target.value)} /></Field>
               <Field label="Reference document" full><input value={v.reference} maxLength={500} onChange={e => up('reference', e.target.value)} /></Field>
             </div>
             </div>
@@ -244,6 +266,28 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
             </div>}
             </div>
           </fieldset>
+          {point && point.revisions && point.revisions.length > 0 && (
+            <section className="rev-history" aria-label="Revision history">
+              <h3><Icon name="clock" />Revision history <span className="tiny muted">{point.revisions.length} earlier revision{point.revisions.length === 1 ? '' : 's'}, kept for the record</span></h3>
+              <ol>
+                {point.revisions.map(r => (
+                  <li key={r.rev}>
+                    <details>
+                      <summary><span className="rev-chip">Rev {r.rev}</span> <StateTag icon="status-backlog" label="Superseded" tone="neutral" /> <span className="tiny muted">{r.queryDate ? `asked ${fmtDate(r.queryDate)}` : ''}{r.supersededAt ? ` · superseded ${fmtDate(r.supersededAt.slice(0, 10))}` : ''}{r.supersededBy ? ` by ${r.supersededBy}` : ''}</span></summary>
+                      <div className="detail-grid">
+                        <Detail label="Request" full>{r.description}</Detail>
+                        {r.action && <Detail label="Recommended action" full>{r.action}</Detail>}
+                        <Detail label="Response given" full>{r.response}</Detail>
+                        {r.reason && <Detail label="Why it was not accepted" full>{r.reason}</Detail>}
+                        <Detail label="Target date">{r.targetDate ? fmtDate(r.targetDate) : null}</Detail>
+                        <Detail label="Responded">{r.respondedDate ? fmtDate(r.respondedDate) : null}</Detail>
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
         </div>
       </Modal>
@@ -537,7 +581,7 @@ function InterfaceForm({ item, base, onClose, onSaved }: { item: InterfaceRecord
           <datalist id="int-parties">{parties.data?.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}</datalist>
           {same && <p className="negative tiny" style={{ gridColumn: '1/-1' }}>Originator and receiving party must be different.</p>}
           <Field label="Accountable coordinator" hint="Required before the interface can be assigned"><input value={v.coordinator} maxLength={120} onChange={e => up('coordinator', e.target.value)} /></Field>
-          <Field label="Needed by"><input type="date" value={v.needDate} onChange={e => up('needDate', e.target.value)} /></Field>
+          <Field label="Needed by"><DateInput value={v.needDate} onChange={e => up('needDate', e.target.value)} /></Field>
           <Field label="Boundary" full><textarea value={v.boundary} maxLength={1000} onChange={e => up('boundary', e.target.value)} /></Field>
           <Field label="Required input"><textarea value={v.requiredInput} maxLength={1000} onChange={e => up('requiredInput', e.target.value)} /></Field>
           <Field label="Required output"><textarea value={v.requiredOutput} maxLength={1000} onChange={e => up('requiredOutput', e.target.value)} /></Field>
@@ -586,8 +630,8 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
         {i && access.canWrite && <Btn onClick={() => onEdit(i)}>Edit</Btn>}
         <Btn onClick={onClose}>Close</Btn>
       </>}>
-        <div className="dialog-body">
-          {q.error ? <ErrorBox error={q.error} /> : !i ? <div className="empty">Loading…</div> : (
+        {!i && !q.error ? <ModalSkeleton /> : <div className="dialog-body">
+          {q.error ? <ErrorBox error={q.error} /> : !i ? null : (
             <>
               <div className="drawer-intro">
                 <div className="eyebrow">{i.type}{i.discipline ? ` · ${i.discipline}` : ''}</div>
@@ -616,7 +660,7 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
                 <ul className="subtask-list">
                   {i.points.map(p => (
                     <li key={p.id} className={`subtask ${p.settled ? "done" : ""}`}>
-                      <span className="issue-icon" title={p.status}><Icon name={POINT_ICON[p.status]} /></span>
+                      <StateTag icon={POINT_ICON[p.status]} label={p.status} tone={POINT_STATE[p.status]} />
                       <button className="link-button grow" style={{ textAlign: 'left' }} onClick={() => setPoint(p.id)}><span className="mono tiny muted">{p.id}</span> {p.title}</button>
                       <span className="tiny muted">{p.originator} → {p.target}</span>
                       {p.targetDate && <span className={`tiny ${p.overdue ? 'negative' : 'muted'}`}><Icon name="calendar" /> {fmtDate(p.targetDate)}</span>}
@@ -628,7 +672,7 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
               {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
             </>
           )}
-        </div>
+        </div>}
       </Modal>
       {point && <PointDrawer id={point === 'new' ? null : point} interfaceId={id} onClose={() => setPoint(null)} />}
       {removing && i && (

@@ -68,7 +68,7 @@ export const COLUMNS = {
    * Large equipment of the 3D facility model, one row per tag. The page joins a row to the model by `tag` (the part's name in the GLB files),
    * so the dates, installation method (Lift by Crane / Skidding), remarks and comments are edited here, in the sheet.
    */
-  facilityEquipment: [...text('projectId', 'tag', 'name', 'deck', 'packageCode', 'vendor'), ...date('rosDate', 'etaDate'), ...text('status', 'packageStatus', 'method', 'remarks', 'comments', 'source'), ...stamp('updatedAt')],
+  facilityEquipment: [...text('projectId', 'tag', 'name', 'deck', 'packageCode', 'vendor', 'model'), ...date('rosDate', 'etaDate'), ...text('status', 'packageStatus', 'method', 'remarks', 'comments', 'source'), ...stamp('updatedAt')],
   knowledge: [
     ...text('projectId', 'id', 'domain', 'category', 'title', 'summary', 'body', 'tags', 'sources', 'status'),
     ...stamp('createdAt', 'updatedAt'), ...text('createdBy', 'updatedBy'),
@@ -113,7 +113,11 @@ export const COLUMNS = {
   /** Interface points (queries) raised by one party to another; an interface in the register may group them. */
   interfacePoints: [
     ...text('projectId', 'id', 'interfaceId', 'title', 'description', 'owner', 'workPackage', 'discipline', 'originator', 'target', 'action'),
-    ...date('queryDate', 'targetDate'), ...text('reference', 'status', 'resolution'), ...date('resolvedDate'), ...text('resolvedDocument', 'remarks'), ...stamp('createdAt', 'updatedAt'),
+    ...date('queryDate', 'targetDate'), ...text('reference', 'status', 'resolution'), ...date('resolvedDate'), ...text('resolvedDocument', 'remarks'), ...stamp('createdAt', 'updatedAt'), ...num('rev'),
+  ],
+  /** Earlier revisions of an interface point. A revision is superseded, never removed, when the requestor revises the request after an unsatisfactory response. */
+  interfacePointRevs: [
+    ...text('projectId', 'pointId'), ...num('rev'), ...text('description', 'action'), ...date('queryDate', 'targetDate'), ...text('response'), ...date('respondedDate'), ...stamp('supersededAt'), ...text('supersededBy', 'reason'),
   ],
   interfaceParties: text('projectId', 'code', 'name'),
   /** Who performs each scope activity, per facility: one row per cell of the responsibility matrix. */
@@ -165,6 +169,7 @@ export const SHEET = {
   issueLog: 'Governance - Issue log',
   interfaces: 'Governance - Interfaces',
   interfacePoints: 'Governance - Interface points',
+  interfacePointRevs: 'Governance - Interface point revisions',
   interfaceParties: 'Governance - Interface parties',
   responsibility: 'Governance - Responsibility matrix',
   rasci: 'Governance - RASCI',
@@ -190,7 +195,7 @@ export const tabColorOf = (sheetName: string): string | undefined => {
 };
 
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
-export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'facilityEquipment', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
+export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfacePointRevs', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'facilityEquipment', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 
 /** Datasets copied into a cut-off snapshot. Settings, module states and personal tasks are not part of a report. */
 export const SNAPSHOT_DATASETS = ['scurve', 'workPackages', 'milestones', 'procurement', 'expediting', 'budget', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'phaseProgress', 'issues', 'issueSubtasks', 'risks', 'riskActions', 'interfaces', 'interfacePoints'] as const satisfies readonly SheetKey[];

@@ -2,14 +2,14 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { errorText, request, type FacilityEquipment } from '../api';
 import { useToast } from '../state';
-import { Btn, Field, Modal } from '../ui';
+import { Btn, DateInput, Field, Modal } from '../ui';
 
 export const METHODS = ['Lift by Crane', 'Skidding'] as const;
 const PACKAGE_STATUSES = ['Normal', 'At Risk', 'Delay'] as const;
 
 /** Add or edit one equipment of the facility list (Supabase through the API; the tag is the key and cannot change). */
-export function FacilityEquipmentForm({ item, decks, base, onClose, onSaved }: {
-  item: FacilityEquipment | null; decks: string[]; base: string; onClose: () => void; onSaved: (tag: string) => void;
+export function FacilityEquipmentForm({ item, model = 'topside', decks, base, onClose, onSaved }: {
+  item: FacilityEquipment | null; model?: FacilityEquipment['model']; decks: string[]; base: string; onClose: () => void; onSaved: (tag: string) => void;
 }) {
   const toast = useToast();
   const [v, setV] = useState({
@@ -27,7 +27,7 @@ export function FacilityEquipmentForm({ item, decks, base, onClose, onSaved }: {
       };
       return item
         ? request<FacilityEquipment>(`${base}/${encodeURIComponent(item.tag)}`, { method: 'PATCH', body: JSON.stringify(body) })
-        : request<FacilityEquipment>(base, { method: 'POST', body: JSON.stringify({ ...body, tag: v.tag.trim() }) });
+        : request<FacilityEquipment>(base, { method: 'POST', body: JSON.stringify({ ...body, tag: v.tag.trim(), model }) });
     },
     onSuccess: saved => { toast(item ? 'Equipment updated.' : 'Equipment added.'); onSaved(saved.tag); },
     onError: (e: Error) => setError(errorText(e)),
@@ -42,13 +42,13 @@ export function FacilityEquipmentForm({ item, decks, base, onClose, onSaved }: {
           <Field label="Tag" hint={item ? 'The tag cannot be changed: it names the part in the 3D model' : 'Unique in the project; matches the part name in the 3D model, e.g. MBD-2501'}>
             <input value={v.tag} disabled={!!item} maxLength={40} onChange={e => up('tag', e.target.value)} autoFocus={!item} />
           </Field>
-          <Field label="Deck">
+          <Field label={model === 'lqm' ? 'Floor' : 'Deck'}>
             <input list="fl-decks" value={v.deck} maxLength={60} onChange={e => up('deck', e.target.value)} />
             <datalist id="fl-decks">{decks.map(d => <option key={d} value={d} />)}</datalist>
           </Field>
           <Field label="Equipment name" full><input value={v.name} maxLength={200} onChange={e => up('name', e.target.value)} autoFocus={!!item} /></Field>
-          <Field label="ROS (required on site)"><input type="date" value={v.rosDate} onChange={e => up('rosDate', e.target.value)} /></Field>
-          <Field label="ETA (expected on site)"><input type="date" value={v.etaDate} onChange={e => up('etaDate', e.target.value)} /></Field>
+          <Field label="ROS (required on site)"><DateInput value={v.rosDate} onChange={e => up('rosDate', e.target.value)} /></Field>
+          <Field label="ETA (expected on site)"><DateInput value={v.etaDate} onChange={e => up('etaDate', e.target.value)} /></Field>
           <Field label="Installation method">
             <select value={v.method} onChange={e => up('method', e.target.value)}>
               <option value="">Not set</option>

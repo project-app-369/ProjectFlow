@@ -1,10 +1,11 @@
 $ErrorActionPreference = 'Stop'
-$nw  = 'C:\Program Files\Autodesk\Navisworks Manage 2025'
+$nw  = 'C:\Program Files\Autodesk\Navisworks Manage 2027'
 $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $out = Join-Path $PSScriptRoot 'bin'
 New-Item -ItemType Directory -Force $out | Out-Null
-$refs = @("$nw\Autodesk.Navisworks.Api.dll", "$nw\Autodesk.Navisworks.Interop.ComApi.dll", "$nw\Autodesk.Navisworks.ComApi.dll", 'System.Core.dll') | ForEach-Object { "/r:$_" }
-$dll = "$out\ModelTool.dll"
+$refs = @("$nw\Autodesk.Navisworks.Api.dll", "$nw\Autodesk.Navisworks.Interop.ComApi.dll", "$nw\Autodesk.Navisworks.ComApi.dll", "$nw\Autodesk.Navisworks.Timeliner.dll", 'System.Core.dll') | ForEach-Object { "/r:$_" }
+$name = if ($env:MODELTOOL_DLL) { $env:MODELTOOL_DLL } else { 'ModelTool.dll' }   # a different name sidesteps a DLL still loaded by a running Navisworks
+$dll = Join-Path $out $name
 
 & $csc /nologo /target:library /platform:x64 /out:$dll @refs "$PSScriptRoot\ModelTool.cs" "$PSScriptRoot\Extract.cs" | Where-Object { $_ -notmatch 'warning' }
 if ($LASTEXITCODE) { throw 'ModelTool build failed' }

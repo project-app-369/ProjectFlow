@@ -5,8 +5,14 @@ import { HttpError, notFound, parse } from './http';
 import type { Service } from './service';
 import type { Row } from './store';
 
+/** The 3D models the equipment list covers: the topside has equipment, the others one row per system. */
+export const MODELS = ['topside', 'jacket', 'lqm', 'linkbridge'] as const;
+export type ModelId = typeof MODELS[number];
+
 export interface FacilityEquipment {
   tag: string;
+  /** Which 3D model the row belongs to; rows typed before the column existed are topside. */
+  model: ModelId;
   name: string | null;
   deck: string;
   packageCode: string | null;
@@ -35,7 +41,7 @@ const fields = {
   name: text(200), deck: z.string().trim().min(1).max(60), packageCode: text(60), vendor: text(160), rosDate: date, etaDate: date,
   status: text(60), packageStatus: text(40), method: z.enum(METHODS).nullish().transform(v => v ?? null), remarks: text(2000), comments: text(2000), source: text(200),
 };
-const createIn = z.object({ tag: tagCode, ...fields });
+const createIn = z.object({ tag: tagCode, model: z.enum(MODELS).default('topside'), ...fields });
 const patchIn = z.object(fields).partial();
 
 const str = (v: unknown) => (v === null || v === undefined || v === '' ? null : String(v));
@@ -54,7 +60,7 @@ export class FacilityLayoutService {
   private get store() { return this.svc.store; }
   private rows(projectId: string): Row[] { return this.svc.rows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, projectId) as Row[]; }
   private item = (r: Row): FacilityEquipment => ({
-    tag: String(r.tag).trim(), name: str(r.name), deck: str(r.deck) ?? 'Unassigned', packageCode: str(r.packageCode), vendor: str(r.vendor),
+    tag: String(r.tag).trim(), model: (MODELS as readonly string[]).includes(String(r.model)) ? String(r.model) as ModelId : 'topside', name: str(r.name), deck: str(r.deck) ?? 'Unassigned', packageCode: str(r.packageCode), vendor: str(r.vendor),
     rosDate: str(r.rosDate), etaDate: str(r.etaDate), status: str(r.status), packageStatus: str(r.packageStatus), method: str(r.method),
     remarks: str(r.remarks), comments: str(r.comments), source: str(r.source),
   });

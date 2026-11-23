@@ -1512,6 +1512,9 @@ body.dark .sheet-glyph{background:#17352a;color:#7bd69a}
 .chart{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 .chart>[role=img]{flex:1 1 auto;width:100%}
 .chart-fill>.chart{flex:1}
+/* S-curve card: tall on desktop, compact on phones */
+.scurve-panel .chart:not(.chart-expanded)>[role=img]{min-height:420px}
+@media (max-width:640px){.scurve-panel .chart:not(.chart-expanded)>[role=img]{min-height:260px}}
 
 /* ---------- S-curve card and its expanded dialog ---------- */
 .scurve-panel .panel-head{align-items:flex-start}
@@ -1564,7 +1567,7 @@ body.dark .sheet-glyph{background:#17352a;color:#7bd69a}
 @media(max-width:720px){.zoom-slider input[type=range]{width:5rem}}
 
 /* Dashboard KPI cards: overall figures in blue, in-week figures in teal */
-.stat.stat-overall{background:color-mix(in srgb,#4f6bed 9%,var(--surface));border-color:color-mix(in srgb,#4f6bed 28%,var(--line))}
+.stat.stat-overall{background:var(--surface);border-color:color-mix(in srgb,#4f6bed 16%,var(--surface))}
 .stat.stat-week{background:color-mix(in srgb,#0d9488 10%,var(--surface));border-color:color-mix(in srgb,#0d9488 30%,var(--line))}
 .stat.stat-overall .stat-label{color:color-mix(in srgb,#4f6bed 75%,var(--muted))}
 .stat.stat-week .stat-label{color:color-mix(in srgb,#0d9488 80%,var(--muted))}
@@ -1686,8 +1689,94 @@ details.multi-form{min-width:7rem}
 .sk-table{display:grid;gap:var(--sp-2);padding:var(--sp-3)}
 .sk-row{height:2.25rem}
 
+/* ---------- One colour language for states: grey neutral / blue planned / amber in progress / green done / red critical ---------- */
+:root{--t-neutral:#6b7a90;--t-neutral-bg:#eceff4;--t-info:#3560c4;--t-info-bg:#e9eefb;--t-warn:#9a6513;--t-warn-bg:#fcf0d6;--t-ok:#1a7656;--t-ok-bg:#e3f4ec;--t-crit:#b0334a;--t-crit-bg:#f9e4ea}
+body.dark{--t-neutral:#b3bfd1;--t-neutral-bg:#2a364b;--t-info:#9db8ff;--t-info-bg:#26365c;--t-warn:#f1cd8b;--t-warn-bg:#443821;--t-ok:#93dfbf;--t-ok-bg:#1d4239;--t-crit:#ffadbc;--t-crit-bg:#482d3b}
+.icon.i-urgency-urgent{color:var(--t-crit)}.icon.i-urgency-high{color:var(--t-warn)}.icon.i-urgency-normal{color:var(--t-info)}.icon.i-urgency-low{color:var(--t-neutral)}
+.icon.i-status-backlog{color:var(--t-neutral)}.icon.i-status-planned{color:var(--t-info)}.icon.i-status-ongoing{color:var(--t-warn)}.icon.i-status-completed{color:var(--t-ok)}
+.task-symbol.urgency-low,.task-symbol.status-backlog{color:var(--t-neutral);background:var(--t-neutral-bg)}
+.task-symbol.urgency-normal,.task-symbol.status-planned{color:var(--t-info);background:var(--t-info-bg)}
+.task-symbol.urgency-high,.task-symbol.status-ongoing{color:var(--t-warn);background:var(--t-warn-bg)}
+.task-symbol.urgency-urgent,.task-symbol.overdue{color:var(--t-crit);background:var(--t-crit-bg)}
+.task-symbol.status-completed{color:var(--t-ok);background:var(--t-ok-bg)}
+.state-tag{display:inline-flex;align-items:center;gap:.35rem;padding:.12rem .55rem .12rem .4rem;border-radius:999px;font-size:var(--fs-sm);font-weight:600;white-space:nowrap;vertical-align:middle}
+.state-tag .icon{width:1rem;height:1rem;color:inherit}
+.state-tag.t-neutral{color:var(--t-neutral);background:var(--t-neutral-bg)}.state-tag.t-info{color:var(--t-info);background:var(--t-info-bg)}
+.state-tag.t-warn{color:var(--t-warn);background:var(--t-warn-bg)}.state-tag.t-ok{color:var(--t-ok);background:var(--t-ok-bg)}.state-tag.t-crit{color:var(--t-crit);background:var(--t-crit-bg)}
+.task-symbols{flex-wrap:wrap}
+
+/* ---------- Date field: typed or picked ---------- */
+.date-input{position:relative;display:flex;align-items:center;width:100%}
+.date-input>input[type=text]{width:100%;padding-right:2.2rem}
+.date-input>input.invalid{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.date-pick{position:absolute;right:.25rem;top:50%;transform:translateY(-50%);display:inline-grid;place-items:center;width:1.8rem;height:1.8rem;border:0;border-radius:var(--r);background:none;cursor:pointer;padding:0}
+.date-pick:hover:not(:disabled){background:var(--soft)}
+.date-pick .icon{width:1.05rem;height:1.05rem}
+.date-native{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.meta-item .date-input{width:auto;display:inline-flex}
+.meta-item .date-input>input{width:9.6rem}
+.subtask-add .date-input,.dialog-body .date-input[style]{width:auto}
+/* ---------- Detail drawers: placeholders while loading; a swap of placeholder for record does not slide in again ---------- */
+.modal-backdrop.still,.modal.still{animation:none!important}
+.sk-modal{display:grid;gap:var(--sp-4);align-content:start}
+.sk-chips{display:flex;gap:var(--sp-2)}.sk-chips .sk{height:1.8rem;width:5.5rem;border-radius:999px}
+.sk-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3)}
+.sk-field{height:2.6rem}
+
+/* ---------- Dropdown of states in the detail drawers: icon + text in full colour, current one in mild green ---------- */
+.meta-item:has(.state-select){padding:0;border:0;background:none;overflow:visible}
+.state-select{position:relative;display:inline-block}
+.state-select-btn{display:inline-flex;align-items:center;gap:.4rem;min-height:2rem;padding:0 .55rem;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);font:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer;color:var(--ink)}
+.state-select-btn:disabled{cursor:default}
+.state-select-btn .icon{width:1rem;height:1rem}
+.state-select-btn>.icon:last-child{color:var(--muted)}
+.state-select-btn.t-neutral{color:var(--t-neutral);background:var(--t-neutral-bg)}.state-select-btn.t-info{color:var(--t-info);background:var(--t-info-bg)}
+.state-select-btn.t-warn{color:var(--t-warn);background:var(--t-warn-bg)}.state-select-btn.t-ok{color:var(--t-ok);background:var(--t-ok-bg)}.state-select-btn.t-crit{color:var(--t-crit);background:var(--t-crit-bg)}
+.state-select-btn.t-neutral>.icon:last-child,.state-select-btn[class*=" t-"]>.icon:last-child{color:inherit}
+.state-select-btn:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.state-select-menu{position:absolute;z-index:400;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:18rem;margin:0;padding:4px;list-style:none;display:grid;gap:2px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:0 10px 28px #17203c33}
+.state-opt{display:flex;align-items:center;gap:.5rem;width:100%;padding:.4rem .6rem;border:1px solid transparent;border-radius:var(--r-sm,6px);background:none;font:inherit;font-size:var(--fs-sm);font-weight:600;text-align:left;cursor:pointer;color:var(--ink)}
+.state-opt .icon{width:1.05rem;height:1.05rem;flex:none}
+.state-opt>span{flex:1}
+.state-opt.t-neutral{color:var(--t-neutral)}.state-opt.t-info{color:var(--t-info)}.state-opt.t-warn{color:var(--t-warn)}.state-opt.t-ok{color:var(--t-ok)}.state-opt.t-crit{color:var(--t-crit)}
+.state-opt:hover{background:var(--surface-subtle);border-color:var(--line)}
+.state-opt.on{background:var(--t-ok-bg);border-color:var(--t-ok)}
+.state-opt.on>.icon:last-child{color:var(--t-ok)}
+
+/* a detail popped out into its own window (opened at the item's address): only the dialog, filling the window */
+body.is-popout #root{display:none}
+body.is-popout{overflow:hidden!important}
+
+/* Sub-tasks: slim rows, small action buttons, an inline editor */
+.subtask-list{gap:var(--sp-1)}
+.subtask{padding:.2rem .5rem .2rem .6rem;gap:.15rem var(--sp-2);min-height:0}
+.subtask .grow{flex:1 1 10rem;gap:0}
+.subtask .grow small{font-size:var(--fs-xs)}
+.subtask .btn.small.icon-only,.subtask .btn.icon-only{width:1.7rem;height:1.7rem;min-width:0;padding:0}
+.subtask .btn .icon{width:.95rem;height:.95rem}
+.subtask.editing{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 9.6rem auto auto;gap:var(--sp-2);padding:.4rem .5rem;align-items:center}
+.subtask.editing .subtask-edit-title{grid-column:1/-1}
+.subtask.editing .date-input{width:auto}
+@media (max-width:720px){.subtask.editing{grid-template-columns:minmax(0,1fr) auto auto}.subtask.editing>input[type=email],.subtask.editing .date-input{grid-column:1/-1}}
+
+.subtask.editing{grid-template-columns:minmax(0,1fr) 9.8rem}
+.subtask.editing .date-input{width:100%}
+.subtask-edit-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:var(--sp-2)}
+@media (max-width:720px){.subtask.editing{grid-template-columns:minmax(0,1fr) 9.8rem}.subtask.editing>input[type=email]{grid-column:auto}.subtask.editing .date-input{grid-column:auto}}
+
+/* Interface point revisions */
+.rev-chip{display:inline-flex;align-items:center;padding:.1rem .5rem;border-radius:999px;border:1px solid var(--line);background:var(--surface-subtle);color:var(--muted);font-size:var(--fs-xs);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rev-chip.up{background:var(--t-info-bg);border-color:transparent;color:var(--t-info)}
+.rev-panel{margin:0 0 var(--sp-4);padding:var(--sp-3) var(--card-px);border-radius:var(--r-lg);background:var(--t-info-bg);box-shadow:inset 0 0 0 1px var(--line)}
+.rev-history{margin-top:var(--sp-4)}
+.rev-history ol{list-style:none;margin:var(--sp-2) 0 0;padding:0;display:grid;gap:var(--sp-1)}
+.rev-history li{border:1px solid var(--line);border-radius:var(--r);background:var(--surface-subtle)}
+.rev-history summary{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2);padding:.4rem .7rem;cursor:pointer;list-style:none}
+.rev-history summary::-webkit-details-marker{display:none}
+.rev-history .detail-grid{padding:.2rem .8rem .7rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-2) var(--sp-4)}
+
 /* Construction → Facility layout: the 3D model beside the equipment list (ADR 0006 spacing: tokens only) */
-.fl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(18rem,22rem);gap:var(--gap);align-items:start}
+.fl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(calc(18rem + 100px),calc(22rem + 100px));gap:var(--gap);align-items:start}
 .fl-view{display:flex;flex-direction:column;min-width:0}
 .fl-stage{position:relative;height:clamp(24rem,68vh,46rem);margin:0 var(--card-px);border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--surface-subtle)}
 .fl-canvas{position:absolute;inset:0}
@@ -1727,6 +1816,9 @@ details.multi-form{min-width:7rem}
 .fl-row.selected td:first-child{box-shadow:inset 3px 0 0 var(--teal)}
 .fl-hud .btn{margin-top:var(--sp-3)}
 .fl-stage-wrap{position:relative}
+/* full screen: the stage sits inside the wrap, so the wrap takes the free height and the stage fills the wrap (a block wrap left the stage 0 high) */
+.fl-view:fullscreen .fl-stage-wrap,.fl-view.fl-expanded .fl-stage-wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.fl-view:fullscreen .fl-stage,.fl-view.fl-expanded .fl-stage{flex:1 1 auto;height:auto;min-height:16rem}
 .fl-stage-wrap .fl-hud{top:var(--sp-3);right:calc(var(--card-px) + var(--sp-3))}
 /* the equipment list is a narrow card: tight cells, the name wraps to two lines, dates are short */
 .fl-table{table-layout:auto;font-size:var(--fs-xs)}
@@ -1741,3 +1833,89 @@ details.multi-form{min-width:7rem}
 @media (max-width:720px){.fl-table td:nth-child(2){width:auto}.fl-name{display:inline;-webkit-line-clamp:unset}}
 .fl-source{margin-top:var(--sp-5)}
 .dialog-body>.detail-grid{margin-top:0}
+
+/* Facility layout: model tabs and the system chips of the jacket, LQM and link bridge */
+.model-tabs{margin-bottom:var(--sp-1)}
+.chip-filter.model-tab{font-weight:700}
+.chip-split{display:inline-flex;align-items:stretch}
+.chip-split>.chip-filter:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+.chip-split>.chip-hl{border-top-left-radius:0;border-bottom-left-radius:0;border-left:0;padding-inline:.45rem}
+.chip-split .fl-dot{margin-right:.4rem}
+.fl-actions{white-space:nowrap;text-align:right}
+.fl-actions .link-button+.link-button{margin-left:.6rem}
+
+/* Construction sequence */
+.seq-scrub{padding:0 var(--card-px) var(--sp-2)}
+.seq-scrub input[type=range]{width:100%;accent-color:var(--brand)}
+.seq-note{padding:0 var(--card-px) var(--card-py);margin:0}
+.seq-steps{list-style:none;margin:0;padding:0 0 var(--card-py);max-height:clamp(24rem,68vh,46rem);overflow:auto;display:grid;gap:2px;align-content:start}
+.seq-step{border-radius:var(--r);margin:0 var(--sp-2)}
+.seq-step.on{background:var(--t-info-bg)}
+.seq-head{display:flex;align-items:center;gap:var(--sp-2);width:100%;text-align:left;background:none;border:0;padding:.45rem var(--sp-2);cursor:pointer;color:inherit;font:inherit;border-radius:var(--r)}
+.seq-head:hover{background:var(--surface-subtle)}
+.seq-no{flex:none;display:inline-grid;place-items:center;min-width:1.6rem;height:1.6rem;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-xs);font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+.seq-step.done .seq-no{background:var(--t-ok-bg,var(--surface-subtle));color:var(--t-ok,var(--muted))}
+.seq-step.on .seq-no{background:var(--brand);border-color:var(--brand);color:#fff}
+.seq-title{flex:1;min-width:0;font-weight:600}
+.seq-3d{flex:none;display:inline-flex;color:var(--muted)}
+.seq-body{padding:0 var(--sp-2) var(--sp-3) calc(var(--sp-2) + 2.1rem)}
+.seq-items{margin:var(--sp-2) 0 0;padding:0;list-style:none;display:grid;gap:var(--sp-1);font-size:var(--fs-sm)}
+.seq-item.l0{list-style:decimal;margin-left:1.2rem;display:list-item}
+.seq-item.l1{margin-left:1.2rem;padding-left:.9rem;position:relative}
+.seq-item.l2{margin-left:2.4rem;padding-left:.9rem;position:relative;color:var(--muted)}
+.seq-item.l1::before,.seq-item.l2::before{content:'–';position:absolute;left:0}
+.seq-rev{margin-left:.4rem;padding:.05rem .4rem;border-radius:999px;background:var(--t-info-bg);color:var(--t-info);font-size:var(--fs-xs);font-style:normal;font-weight:700;white-space:nowrap}
+@media (max-width:1100px){.seq-steps{max-height:none}}
+.seq-caption{position:absolute;left:calc(var(--card-px) + var(--sp-3));bottom:var(--sp-3);padding:.35rem .75rem;border-radius:999px;background:var(--surface);box-shadow:var(--shadow,0 1px 6px rgba(0,0,0,.2));font-size:var(--fs-sm);font-weight:600;pointer-events:none;max-width:80%}
+.seq-speed{display:inline-flex;align-items:center;gap:var(--sp-2);margin-left:auto;font-size:var(--fs-xs);color:var(--muted)}
+.seq-sub{margin:var(--sp-3) 0 var(--sp-1);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.seq-acts{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:var(--fs-sm)}
+.seq-acts li{padding:.15rem .4rem;border-radius:var(--r-sm);opacity:.65}
+.seq-acts li.done{opacity:1}
+.seq-acts li.now{background:var(--brand);color:#fff;opacity:1}
+.seq-kind{display:inline-block;min-width:4.6rem;font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;color:var(--t-info)}
+.seq-acts li.now .seq-kind{color:#fff}
+
+/* ---------- phones: compact KPI cards that stand out from the page background ---------- */
+@media (max-width:640px){
+  .lintel .stats{gap:var(--sp-2)}
+  .stats .stat{padding:var(--sp-2) var(--sp-3);gap:0;border-width:1px;box-shadow:0 1px 2px rgb(15 23 42/.08),0 4px 12px rgb(15 23 42/.10)}
+  .stats .stat-label{min-height:0;font-size:var(--fs-xs)}
+  .stats .stat-value{font-size:1.25rem;line-height:1.2}
+  .stats .stat-value small{font-size:var(--fs-sm)}
+  .stats .stat-foot{padding-top:0;margin-top:0;font-size:.6875rem;line-height:1.3;-webkit-line-clamp:1;line-clamp:1}
+  .stat.stat-week{background:color-mix(in srgb,#0d9488 5%,var(--surface));border-color:color-mix(in srgb,#0d9488 30%,var(--surface))}
+  body.dark .stats .stat{box-shadow:0 1px 2px rgb(0 0 0/.4),0 4px 12px rgb(0 0 0/.35)}
+}
+.fl-table.no-tag th:nth-child(n+2),.fl-table.no-tag td:nth-child(n+2){width:1%;white-space:nowrap}
+
+.fl-details{min-width:0;width:1.75rem;height:1.75rem}.fl-details .icon{width:1rem;height:1rem}
+.fl-table td.fl-actions{padding-inline:var(--sp-1)}
+
+/* ---- Dashboard: cards, figures and charts come in; the cards fit every width ---- */
+.dash{display:contents}
+@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes grow-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes tick-in{from{opacity:0;transform:translateX(-50%) scaleY(.2)}to{opacity:1;transform:translateX(-50%) scaleY(1)}}
+.dash .stats .stat{animation:rise .55s cubic-bezier(.22,.9,.3,1) both}
+.dash .stats .stat:nth-child(2){animation-delay:.06s}.dash .stats .stat:nth-child(3){animation-delay:.12s}
+.dash .stats .stat:nth-child(4){animation-delay:.18s}.dash .stats .stat:nth-child(5){animation-delay:.24s}.dash .stats .stat:nth-child(6){animation-delay:.3s}
+.dash .grid-main>.panel:nth-child(1){animation:rise .6s .3s cubic-bezier(.22,.9,.3,1) both}
+.dash .grid-main>.panel:nth-child(2){animation:rise .6s .42s cubic-bezier(.22,.9,.3,1) both}
+.dash .bottom-grid>.panel:nth-child(1){animation:rise .6s .54s cubic-bezier(.22,.9,.3,1) both}
+.dash .bottom-grid>.panel:nth-child(2){animation:rise .6s .66s cubic-bezier(.22,.9,.3,1) both}
+.dash .list-card{animation:rise .45s cubic-bezier(.22,.9,.3,1) both}
+.dash .list-card:nth-child(2){animation-delay:.6s}.dash .list-card:nth-child(3){animation-delay:.68s}.dash .list-card:nth-child(4){animation-delay:.76s}.dash .list-card:nth-child(5){animation-delay:.84s}.dash .list-card:nth-child(6){animation-delay:.92s}
+.apbar.anim .apbar-fill{transform-origin:left center;animation:grow-x 1s .75s cubic-bezier(.22,.9,.3,1) both}
+.apbar.anim .apbar-plan{animation:tick-in .4s 1.5s ease-out both}
+/* KPI cards: six in a row on wide screens, then two rows of three (cumulative / in-week), then pairs with the variance across the row */
+.lintel .stats.dash-stats{grid-template-columns:repeat(6,minmax(0,1fr))}
+.lintel .stats.dash-stats>.stat{grid-column:auto}
+@media (max-width:1399px){.lintel .stats.dash-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:639px){
+  .lintel .stats.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lintel .stats.dash-stats>.stat:nth-child(3n){grid-column:1/-1}
+}
+/* the two panels of the second row share the width until the page is one column; the milestone card never gets narrower than its text needs */
+.grid-main{grid-template-columns:minmax(0,1fr) clamp(17rem,26vw,23rem)}
+@media (max-width:1279px){.grid-main{grid-template-columns:minmax(0,1fr)}}

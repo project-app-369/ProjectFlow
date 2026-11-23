@@ -9,6 +9,8 @@ const VIEWER_CDN = 'https://developer.api.autodesk.com/modelderivative/v2/viewer
 
 export interface ViewerDeck { id: string; name: string; url: string }
 
+export interface ViewerControl { setTransform(id: string, m: readonly number[] | null): void; fit(): void }
+
 export interface FacilityViewerProps {
   decks: ViewerDeck[];
   /** The part names that are equipment (their tag); everything else in a deck is structure. */
@@ -18,11 +20,17 @@ export interface FacilityViewerProps {
   /** Theming colour (CSS hex) per tag; a tag without one keeps the model's own colour. */
   colors: Readonly<Record<string, string>>;
   dark: boolean;
+  /** A deck or group to show in its own colours while every other one is greyed out. */
+  highlight?: string | ReadonlySet<string> | null;
+  /** A system that runs through every deck (LQM#2): its parts, the nodes named `<deck code>-<suffix>`, keep their colour and everything else turns grey. */
+  systemHL?: { suffix: string; colour: string } | null;
+  /** Receives handles to move a deck (a 16-number column-major matrix, null = back in place) and to frame everything shown. */
+  controlRef?: { current: ViewerControl | null };
   onPick: (tag: string | null) => void;
   onLoaded?: (loaded: number, total: number) => void;
 }
 
-interface Entry { model: any; tagToDb: Map<string, number>; dbToTag: Map<number, string> }
+interface Entry { model: any; tagToDb: Map<string, number>; dbToTag: Map<number, string>; rootDb: number | null }
 
 let assets: Promise<void> | null = null;
 function loadAssets(): Promise<void> {
@@ -73,7 +81,7 @@ const toVec4 = (hex: string) => {
   return new window.THREE.Vector4(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1);
 };
 
-export default function FacilityViewer({ decks, tags, visible, selected, colors, dark, onPick, onLoaded }: FacilityViewerProps) {
+export default function FacilityViewer({ decks, tags, visible, selected, colors, dark, highlight = null, systemHL = null, controlRef, onPick, onLoaded }: FacilityViewerProps) {
   const host = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const entries = useRef(new Map<string, Entry>());
@@ -84,6 +92,7 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
 
   useEffect(() => {
     let dead = false;
+    const ctl = new AbortController(); // leaving the page, or another model being picked, stops the downloads and the decoding of this one
     const entriesNow = entries.current;
     (async () => {
       try {
@@ -104,14 +113,17 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
         });
         let loaded = 0;
         // every deck downloads and decodes at once; they are handed to the viewer in order as each is ready
-        const ready = decks.map(deck => fetchDeckUrl(deck.url, text => { if (!dead) setDetail(d => ({ ...d, [deck.id]: text })); }));
+        const ready = decks.map(deck => fetchDeckUrl(deck.url, text => { if (!dead) setDetail(d => ({ ...d, [deck.id]: text })); }, ctl.signal));
         ready.forEach(p => p.catch(() => undefined));
         for (const [i, deck] of decks.entries()) {
           if (dead) return;
           const blobUrl = await ready[i];
+          if (dead) { URL.revokeObjectURL(blobUrl); return; }
           // the loader picks its format from a file extension, which a blob URL lacks: the fragment supplies one
           const model = await new Promise<any>((resolve, reject) => viewer.loadModel(`${blobUrl}#${deck.id}.glb`, {}, resolve, (code: number, msg: string, extra: unknown) => { console.error('glTF load failed', deck.url, code, msg, extra); reject(new Error(`${deck.name}: ${msg || code}`)); }));
+          if (dead) return;
           const data = await nodeTable(model);
+          if (dead) return;
           URL.revokeObjectURL(blobUrl);
           setDetail(d => ({ ...d, [deck.id]: '' }));
           const tagToDb = new Map<number | string, number>() as Map<string, number>;
@@ -120,7 +132,9 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
             const db = data.nodeToDbId[i];
             if (n.name && db !== undefined && live.current.tags.has(n.name)) { tagToDb.set(n.name, db); dbToTag.set(db, n.name); }
           });
-          entriesNow.set(deck.id, { model, tagToDb, dbToTag });
+          const rootIndex = data.gltf.nodes.findIndex(n => n.name === deck.id);
+          const rootDb = data.nodeToDbId[rootIndex >= 0 ? rootIndex : 0];
+          entriesNow.set(deck.id, { model, tagToDb, dbToTag, rootDb: rootDb ?? null });
           onLoaded?.(++loaded, decks.length);
           setState({ phase: 'loading', loaded });
         }
@@ -138,6 +152,7 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
     })();
     return () => {
       dead = true;
+      ctl.abort();
       try { viewerRef.current?.finish(); } catch { /* the viewer was never fully started */ }
       viewerRef.current = null;
       entriesNow.clear();
@@ -147,20 +162,58 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
   }, []);
 
   useEffect(() => {
+    if (!controlRef || state.phase !== 'ready') return;
+    controlRef.current = {
+      setTransform: (id, m) => {
+        const v = viewerRef.current, e = entries.current.get(id);
+        if (!v || !e) return;
+        e.model.setPlacementTransform(m ? new window.THREE.Matrix4().fromArray([...m]) : new window.THREE.Matrix4());
+        v.impl.invalidate(true, true, true);
+      },
+      fit: () => {
+        const v = viewerRef.current;
+        if (!v) return;
+        const bb = v.impl.getVisibleBounds(true);
+        const c = bb.getCenter(new window.THREE.Vector3());
+        const size = bb.getSize(new window.THREE.Vector3());
+        const r = Math.max(size.x, size.z, size.y * 0.8) * 0.95;
+        v.navigation.setView(new window.THREE.Vector3(c.x + r, c.y + Math.max(size.y * 0.7, r * 0.5), c.z + r), c);
+        v.navigation.setCameraUpVector(new window.THREE.Vector3(0, 1, 0));
+      },
+    };
+    return () => { controlRef.current = null; };
+  }, [controlRef, state.phase]);
+
+  useEffect(() => {
     const v = viewerRef.current;
     if (state.phase !== 'ready' || !v) return;
     for (const [id, e] of entries.current) { if (visible.has(id)) v.showModel(e.model.id); else v.hideModel(e.model.id); }
   }, [visible, state.phase]);
 
+  const isolated = useRef(new Set<string>());
   useEffect(() => {
     const v = viewerRef.current;
     if (state.phase !== 'ready' || !v) return;
-    for (const e of entries.current.values()) {
+    for (const [id, e] of entries.current) {
       ensureFragmentTable(e.model);
       v.clearThemingColors(e.model);
+      if (systemHL && e.rootDb !== null) {
+        // the system keeps its colour; everything else is ghosted (see-through), so the system shows through the parts in front of it
+        const ids: number[] = [];
+        for (const [tag, db] of e.tagToDb) if (tag.endsWith(`-${systemHL.suffix}`)) { ids.push(db); v.setThemingColor(db, toVec4(colors[tag] ?? systemHL.colour), e.model, true); }
+        v.isolate(ids.length ? ids : [-1], e.model);
+        isolated.current.add(id);
+        continue;
+      }
+      if (isolated.current.has(id)) { v.isolate([], e.model); isolated.current.delete(id); }
+      if (highlight && !(typeof highlight === 'string' ? id === highlight : highlight.has(id)) && e.rootDb !== null) {
+        // everything but the highlighted part is washed out to a pale grey
+        v.setThemingColor(e.rootDb, new window.THREE.Vector4(0.82, 0.85, 0.9, 0.9), e.model, true);
+        continue;
+      }
       for (const [tag, db] of e.tagToDb) if (colors[tag]) v.setThemingColor(db, toVec4(colors[tag]), e.model, false);
     }
-  }, [colors, state.phase]);
+  }, [colors, highlight, systemHL, state.phase]);
 
   useEffect(() => {
     const v = viewerRef.current;
@@ -186,7 +239,7 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
     <div className="fl-stage" aria-busy={state.phase === 'loading'}>
       <div ref={host} className="fl-canvas" />
       {state.phase === 'loading' && (
-        <div className="fl-overlay"><span className="sk sk-row" /><p>Loading the 3D model… {state.loaded}/{decks.length} decks</p>
+        <div className="fl-overlay"><span className="sk sk-row" /><p>Loading the 3D model… {state.loaded}/{decks.length}</p>
           <p className="tiny">{decks.filter(d => detail[d.id]).map(d => `${d.name}: ${detail[d.id]}`).join(' · ')}</p></div>
       )}
       {state.phase === 'error' && <div className="fl-overlay error" role="alert"><p>{state.message}</p></div>}

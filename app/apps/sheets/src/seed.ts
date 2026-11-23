@@ -244,12 +244,13 @@ export function ensureAllSheets(store: Store) {
     [SHEET.scurve, COLUMNS.scurve], [SHEET.scurveWeekly, COLUMNS.scurveWeekly], [SHEET.workPackages, COLUMNS.workPackages], [SHEET.milestones, COLUMNS.milestones], [SHEET.procurement, COLUMNS.procurement], [SHEET.expediting, COLUMNS.expediting], [SHEET.logistics, COLUMNS.logistics], [SHEET.materialBalance, COLUMNS.materialBalance], [SHEET.materialSummary, COLUMNS.materialSummary], [SHEET.procConcerns, COLUMNS.procConcerns], [SHEET.procCurves, COLUMNS.procCurves], [SHEET.phaseProgress, COLUMNS.phaseProgress], [SHEET.budget, COLUMNS.budget],
     [SHEET.risks, COLUMNS.risks], [SHEET.riskActions, COLUMNS.riskActions], [SHEET.riskMatrix, COLUMNS.riskMatrix], [SHEET.riskBreakdown, COLUMNS.riskBreakdown],
     [SHEET.issues, COLUMNS.issues], [SHEET.issueSubtasks, COLUMNS.issueSubtasks], [SHEET.issueLog, COLUMNS.issueLog],
-    [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
+    [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfacePointRevs, COLUMNS.interfacePointRevs], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData], [SHEET.budget, COLUMNS.budget], [SHEET.facilityEquipment, COLUMNS.facilityEquipment],
   ];
   for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
   store.addMissingColumns(SHEET.milestones, COLUMNS.milestones); // the optional Major column
   store.addMissingColumns(SHEET.budget, COLUMNS.budget); // the actual and earned manhours
+  store.addMissingColumns(SHEET.interfacePoints, COLUMNS.interfacePoints); // the revision number
   store.addMissingColumns(SHEET.users, COLUMNS.users); // workbooks made before profiles lack title, company, party and password columns
 }
 
@@ -280,9 +281,12 @@ export function enableModuleChain(store: Store, key: string, now = new Date().to
 /** The large equipment of the 3D model with their dates (Expediting report). Loaded once; a project that already has rows keeps its own. */
 export function appendSeedFacilityEquipment(store: Store, raw: SeedData, now = new Date().toISOString()): number {
   const rows = seedRows(raw).facilityEquipment;
-  if (!rows.length || store.readRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment).some(r => r.projectId === PROJECT_ID)) return 0;
-  store.appendRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, rows.map(r => ({ ...r, updatedAt: now })));
-  return rows.length;
+  const have = store.readRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment).filter(r => r.projectId === PROJECT_ID);
+  // A project that already has equipment keeps its own, but still gets the system rows of the jacket, LQM and link bridge it does not have yet.
+  const add = have.length ? rows.filter(r => r.model && r.model !== 'topside' && !have.some(h => String(h.tag) === String(r.tag))) : rows;
+  if (!add.length) return 0;
+  store.appendRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, add.map(r => ({ ...r, updatedAt: now })));
+  return add.length;
 }
 
 function appendSeedIssues(store: Store, issues: RawRow[], cutoff: string, now: string) {

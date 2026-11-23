@@ -30,9 +30,9 @@ export default function Dashboard() {
   const varFoot = (v: number | null) => v == null ? 'Not available' : <span className={v < -0.05 ? 'negative' : v > 0.05 ? 'positive' : ''}>{v < -0.05 ? 'Behind plan' : v > 0.05 ? 'Ahead of plan' : 'On plan'}</span>;
 
   return (
-    <>
+    <div className="dash">
       <PageHead title="Project overview" desc={`${project.name} — EPCIC progress${op?.reportDate ? ` at ${fmtDate(op.reportDate)}` : ''}, by work package and phase.`} />
-      <div className="stats">
+      <div className="stats dash-stats">
         <Stat tone="overall" label="Cumulative actual" value={cum ? cum.actual : '—'} unit={cum ? '%' : undefined} foot={op ? 'Overall, to the cut-off' : 'Overall Progress is off'} icon="chart" />
         <Stat tone="overall" label="Cumulative planned" value={cum ? cum.plan : '—'} unit={cum ? '%' : undefined} foot="Overall, to the cut-off" icon="chart" />
         <Stat tone="overall" label="Cumulative variance" value={cumVar != null ? `${cumVar > 0 ? '+' : ''}${cumVar.toFixed(1)}` : '—'} unit={cumVar != null ? '%' : undefined} foot={varFoot(cumVar)} icon="chart" />
@@ -69,7 +69,7 @@ export default function Dashboard() {
             <div style={{ padding: '5px 24px 22px' }}>
               {wp.items.map(w => (
                 <div style={{ margin: '14px 0' }} key={w.code}>
-                  <ActualPlanBar label={w.name} actual={w.thisWeekActual} plan={w.thisWeekPlan} />
+                  <ActualPlanBar animate label={w.name} actual={w.thisWeekActual} plan={w.thisWeekPlan} />
                 </div>
               ))}
             </div>
@@ -81,50 +81,12 @@ export default function Dashboard() {
           <div className="panel">
             <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick){op.reportDate ? ` · ${fmtDate(op.reportDate)}` : ''}</p></div></div>
             <div style={{ padding: '5px 24px 22px' }}>
-              {op.phases.map(p => <div style={{ margin: '14px 0' }} key={p.id}><ActualPlanBar label={p.phase} actual={p.actual} plan={p.plan} /></div>)}
+              {op.phases.map(p => <div style={{ margin: '14px 0' }} key={p.id}><ActualPlanBar animate label={p.phase} actual={p.actual} plan={p.plan} /></div>)}
             </div>
             <div className="panel-foot"><Link className="btn text" to="/m/planning.overall-progress">Open overall progress →</Link></div>
           </div>
         ) : null}
       </div>
-
-      {(data.milestones !== undefined || data.risks !== undefined || data.interfaces !== undefined) && (
-        <div className="bottom-grid dashboard-registers">
-          {data.milestones === undefined ? null : data.milestones ? (
-            <div className="panel">
-              <div className="panel-head"><div><h2>Milestones</h2><p>{data.milestones.done} of {data.milestones.total} achieved</p></div><Icon name="flag" /></div>
-              {data.milestones.next.slice(0, 3).map(m => (
-                <div className="list-card" key={m.id}><div className="grow"><p>{m.description}</p><small>{m.subName ?? '—'} · {fmtDate(m.forecast ?? m.planBaseline)}</small></div><Badge>{m.status}</Badge></div>
-              ))}
-              <div className="list-card"><div className="grow"><small>{data.milestones.overdue} overdue · {data.milestones.dueSoon} due in 30 days</small></div></div>
-              <div className="panel-foot"><Link className="btn text" to="/m/planning.milestones">Open milestones →</Link></div>
-            </div>
-          ) : <Unavailable label="Milestones" />}
-
-          {data.risks === undefined ? null : data.risks ? (
-            <div className="panel">
-              <div className="panel-head"><div><h2>Risks</h2><p>{data.risks.active} active of {data.risks.total}</p></div><Icon name="risk" /></div>
-              {data.risks.levels.map(l => (
-                <div className="list-card" key={l}><span className={`dot level-${l.toLowerCase()}`} /><div className="grow"><p>{l}</p></div><span className="tiny muted">{data.risks!.byLevel[l]}</span></div>
-              ))}
-              <div className="list-card"><div className="grow"><small>{data.risks.responseOverdue} responses overdue · {data.risks.reviewOverdue} reviews overdue</small></div></div>
-              <div className="panel-foot"><Link className="btn text" to="/m/management.risks">Open risk register →</Link></div>
-            </div>
-          ) : <Unavailable label="Risks" />}
-
-          {data.interfaces === undefined ? null : data.interfaces ? (
-            <div className="panel">
-              <div className="panel-head"><div><h2>Interfaces</h2><p>{data.interfaces.pointsOpen} open points of {data.interfaces.points} · {data.interfaces.open} open interfaces</p></div><Icon name="link" /></div>
-              <div className="list-card"><div className="grow"><p>Points overdue</p></div><span className={`tiny ${data.interfaces.pointsOverdue ? 'negative' : 'muted'}`}>{data.interfaces.pointsOverdue}</span></div>
-              <div className="list-card"><div className="grow"><p>Interfaces overdue</p></div><span className={`tiny ${data.interfaces.overdue ? 'negative' : 'muted'}`}>{data.interfaces.overdue}</span></div>
-              {Object.entries(data.interfaces.byStatus).filter(([, n]) => n > 0).map(([st, n]) => (
-                <div className="list-card" key={st}><div className="grow"><small>{st}</small></div><span className="tiny muted">{n}</span></div>
-              ))}
-              <div className="panel-foot"><Link className="btn text" to="/m/interface.points">Open interface points →</Link></div>
-            </div>
-          ) : <Unavailable label="Interface Management" />}
-        </div>
-      )}
-    </>
+    </div>
   );
 }

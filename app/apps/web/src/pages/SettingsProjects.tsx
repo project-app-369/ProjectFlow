@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { errorText, LIFECYCLE_NEXT, request, ROLES, type DirectoryUser, type Lifecycle, type Member, type Project, type Role } from '../api';
 import { fmtDate, type Tone } from '../format';
 import { useApp, useToast } from '../state';
-import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal } from '../ui';
+import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, ModalSkeleton, DateInput } from '../ui';
 
 const LIFE_TONE: Record<Lifecycle, Tone> = { Draft: 'indigo', Setup: 'indigo', Active: 'green', 'On hold': 'amber', Closing: 'amber', Archived: 'red' };
 const LIFE_HELP: Record<Lifecycle, string> = {
@@ -119,7 +119,7 @@ function ProjectForm({ project, isAdmin, onClose, onSaved }: { project: Project 
           <Field label="Client"><input value={v.client} maxLength={120} onChange={e => up('client', e.target.value)} /></Field>
           <Field label="Location"><input value={v.location} maxLength={120} onChange={e => up('location', e.target.value)} /></Field>
           <Field label="Contract" full><input value={v.contract} maxLength={160} onChange={e => up('contract', e.target.value)} /></Field>
-          <Field label="Reporting cut-off" hint="Treated as “today” for overdue and due-soon statuses"><input type="date" value={v.cutoff} onChange={e => up('cutoff', e.target.value)} /></Field>
+          <Field label="Reporting cut-off" hint="Treated as “today” for overdue and due-soon statuses"><DateInput value={v.cutoff} onChange={e => up('cutoff', e.target.value)} /></Field>
         </div>
         {!project && <p className="tiny muted" style={{ marginTop: 14 }}>The new project starts in Setup with you as Project Manager and the default modules switched on.</p>}
         {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
@@ -178,8 +178,8 @@ function MembersModal({ project, canEdit, onClose }: { project: Project; canEdit
 
   return (
     <Modal title={`${project.code} · Members`} onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}>
-      <div className="dialog-body">
-        {members.isPending ? <Loading /> : members.error ? <ErrorBox error={members.error} /> : (
+      {members.isPending ? <ModalSkeleton /> : <div className="dialog-body">
+        {members.error ? <ErrorBox error={members.error} /> : (
           <div className="table-wrap"><table>
             <thead><tr><th>PERSON</th><th>ROLE</th><th>TITLE</th>{canEdit && <th />}</tr></thead>
             <tbody>{members.data.map(m => (
@@ -209,7 +209,7 @@ function MembersModal({ project, canEdit, onClose }: { project: Project; canEdit
         )}
         {!canEdit && <p className="tiny muted" style={{ marginTop: 14 }}>Only an administrator or the project's Project Manager can change members.</p>}
         {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
-      </div>
+      </div>}
     </Modal>
   );
 }

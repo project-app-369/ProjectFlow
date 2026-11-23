@@ -4,7 +4,7 @@ import { downloadCsv, errorText, request, type BudgetHistogram, type BudgetInput
 import { fmtDate, fmtShort } from '../format';
 import { Icon } from '../icons';
 import { useAccess, useApp, useToast } from '../state';
-import { Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Stat } from '../ui';
+import { Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Stat, DateInput } from '../ui';
 import { parseBudgetImport } from './budgetImport';
 import { lazyPage } from '../lazyPage';
 
@@ -203,8 +203,8 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
           <Field label="Earned manhours" hint={hasChildren ? 'Summed from the activities below' : 'Budget × progress achieved; earned ÷ spent is the cost performance index'}>
             <input type="number" min={0} step="any" value={v.earnedHours} disabled={hasChildren} onChange={e => up('earnedHours', e.target.value)} />
           </Field>
-          <Field label="Plan start"><input type="date" value={v.planStart} onChange={e => up('planStart', e.target.value)} /></Field>
-          <Field label="Plan finish" hint="With a start date, this spreads the hours over time"><input type="date" value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></Field>
+          <Field label="Plan start"><DateInput value={v.planStart} onChange={e => up('planStart', e.target.value)} /></Field>
+          <Field label="Plan finish" hint="With a start date, this spreads the hours over time"><DateInput value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></Field>
           {bad && <p className="negative tiny" style={{ gridColumn: '1/-1' }}>Plan finish cannot be before plan start.</p>}
           <Field label="Notes" full><textarea value={v.notes} maxLength={500} onChange={e => up('notes', e.target.value)} /></Field>
         </div>

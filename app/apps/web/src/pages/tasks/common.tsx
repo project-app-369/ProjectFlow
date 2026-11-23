@@ -6,7 +6,7 @@ import {
 import { fmtDate, localToday, type Tone } from '../../format';
 import { Icon } from '../../icons';
 import { useApp, useToast } from '../../state';
-import { ActualPlanBar, Btn, Confirm, Modal } from '../../ui';
+import { ActualPlanBar, Btn, Confirm, DateInput, Modal, StateTag, type StateTone } from '../../ui';
 
 export const urgencyTone: Record<Urgency, Tone> = { Low: 'indigo', Normal: 'green', High: 'amber', Urgent: 'red' };
 export const statusTone: Record<TaskStatus, Tone> = { Backlog: 'indigo', Planned: 'indigo', Ongoing: 'amber', Completed: 'green' };
@@ -80,11 +80,17 @@ export function ProjectChips({ ids = [] }: { ids?: string[] }) {
   return <>{ids.map(id => <span key={id} className="chip task-project-chip"><Icon name="layers" />{label(id)}</span>)}</>;
 }
 
-export function UrgencyBadge({ urgency }: { urgency: Urgency }) {
+const urgencyStateTone: Record<Urgency, StateTone> = { Low: 'neutral', Normal: 'info', High: 'warn', Urgent: 'crit' };
+const taskStateTone: Record<TaskStatus, StateTone> = { Backlog: 'neutral', Planned: 'info', Ongoing: 'warn', Completed: 'ok' };
+
+/** `text` writes the word next to the icon (list and table views); cards keep the compact icon. */
+export function UrgencyBadge({ urgency, text }: { urgency: Urgency; text?: boolean }) {
+  if (text) return <StateTag icon={`urgency-${urgency.toLowerCase()}`} label={urgency} tone={urgencyStateTone[urgency]} title={`Urgency: ${urgency}`} />;
   return <span className={`task-symbol urgency-${urgency.toLowerCase()}`} role="img" aria-label={`Urgency: ${urgency}`} title={`Urgency: ${urgency}`}><Icon name={`urgency-${urgency.toLowerCase()}`} /></span>;
 }
 
-export function StatusBadges({ task }: { task: PTask }) {
+export function StatusBadges({ task, text }: { task: PTask; text?: boolean }) {
+  if (text) return <span className="task-symbols"><StateTag icon={`status-${task.status.toLowerCase()}`} label={task.status} tone={taskStateTone[task.status]} title={`Status: ${task.status}`} />{task.overdue && <StateTag icon="clock" label="Overdue" tone="crit" />}</span>;
   return <span className="task-symbols"><span className={`task-symbol status-${task.status.toLowerCase()}`} role="img" aria-label={`Status: ${task.status}`} title={`Status: ${task.status}`}><Icon name={`status-${task.status.toLowerCase()}`} /></span>{task.overdue && <span className="task-symbol overdue" role="img" aria-label="Overdue" title="Overdue"><Icon name="clock" /></span>}</span>;
 }
 
@@ -216,9 +222,9 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
 
           <section className="task-editor-section" aria-label="Plan and deadline">
             <div className="task-date-grid">
-              <TaskField icon="calendar" label="Start"><input type="date" value={v.planStart} onChange={e => up('planStart', e.target.value)} /></TaskField>
-              <TaskField icon="calendar" label="Finish"><input type="date" value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></TaskField>
-              <TaskField icon="clock" label="Due"><input type="date" value={v.due} onChange={e => up('due', e.target.value)} /></TaskField>
+              <TaskField icon="calendar" label="Start"><DateInput value={v.planStart} onChange={e => up('planStart', e.target.value)} /></TaskField>
+              <TaskField icon="calendar" label="Finish"><DateInput value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></TaskField>
+              <TaskField icon="clock" label="Due"><DateInput value={v.due} onChange={e => up('due', e.target.value)} /></TaskField>
             </div>
             {badRange && <p className="negative tiny" role="alert">Plan finish cannot be before plan start.</p>}
           </section>

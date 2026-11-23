@@ -1,9 +1,18 @@
-import { Component, useContext, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Component, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { signed, statusTone, type Tone } from './format';
 import { Link } from 'react-router-dom';
 import { CrumbContext, type Crumb } from './state';
+
+/**
+ * One colour language for every state shown as an icon: grey = not started or low, blue = planned, waiting or normal,
+ * amber = in progress or needs attention, green = done, red = critical or overdue. Always icon and words together.
+ */
+export type StateTone = 'neutral' | 'info' | 'warn' | 'ok' | 'crit';
+export function StateTag({ icon, label, tone, title }: { icon: string; label: string; tone: StateTone; title?: string }) {
+  return <span className={`state-tag t-${tone}`} title={title ?? label}><Icon name={icon} /><span>{label}</span></span>;
+}
 
 export function Badge({ children, tone }: { children: ReactNode; tone?: Tone }) {
   return <span className={`pill ${tone ?? statusTone(String(children))}`}>{children}</span>;
@@ -48,18 +57,18 @@ export function Stat({ label, value, unit, foot, icon, tone }: { label: string; 
 }
 
 /** A progress bar that shows the actual figure as the fill and the plan as a tick, with both numbers written out. */
-export function ActualPlanBar({ actual, plan, label, compact, hideActual }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean; /** Inside a KPI card the actual is already the big number. */ hideActual?: boolean }) {
+export function ActualPlanBar({ actual, plan, label, compact, hideActual, animate }: { actual: number | null; plan: number | null; label?: ReactNode; compact?: boolean; /** Inside a KPI card the actual is already the big number. */ hideActual?: boolean; /** Counts the figures up and grows the bar when it appears. */ animate?: boolean }) {
   const a = actual != null && Number.isFinite(actual) ? actual : null;
   const p = plan != null && Number.isFinite(plan) ? plan : null;
   const gap = p == null || a == null ? null : a - p;
   const at = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
   const text = `${a == null ? 'Actual unavailable' : `${a.toFixed(1)}% actual`}, ${p == null ? 'plan unavailable' : `${p.toFixed(1)}% plan`}${gap == null ? '' : `, ${signed(gap)}%`}`;
   return (
-    <div className={`apbar ${compact ? 'compact' : ''}`}>
+    <div className={`apbar ${compact ? 'compact' : ''}${animate ? ' anim' : ''}`}>
       <div className="apbar-figures">
         {label && <span className="apbar-label">{label}</span>}
-        {!hideActual && <span><strong>{a == null ? '—' : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>}
-        <span className="muted">{p == null ? '—' : `${p.toFixed(1)}%`} plan</span>
+        {!hideActual && <span><strong>{a == null ? '—' : animate ? <><CountUp value={a.toFixed(1)} />%</> : `${a.toFixed(1)}%`}</strong> <span className="muted">actual</span></span>}
+        <span className="muted">{p == null ? '—' : animate ? <><CountUp value={p.toFixed(1)} />%</> : `${p.toFixed(1)}%`} plan</span>
         {gap != null && <span className={`apbar-gap ${gap < 0 ? 'negative' : gap > 0 ? 'positive' : 'muted'}`}>{signed(gap)}%</span>}
       </div>
       <div className="apbar-track" role="img" aria-label={text} title={text}>
@@ -143,6 +152,9 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([typ
  * <dialog>, so its position cannot depend on a browser's default dialog styles. It traps focus, closes on Escape or a
  * click on the dimmed page, locks page scrolling while open, and gives focus back when it closes.
  */
+/** When on-screen content swaps one Modal for another (a loading placeholder for the loaded record), the new one must not slide in again. */
+let lastModalGone: { at: number; who: object } = { at: 0, who: {} };
+
 export function Modal({ title, onClose, children, actions, size = 'md', popout = size !== 'sm', startPopped = false }: {
   title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Offers a button that moves the dialog into a window of its own (on by default, except for small confirmations). */
@@ -155,12 +167,24 @@ export function Modal({ title, onClose, children, actions, size = 'md', popout =
   const [blocked, setBlocked] = useState(false);
   const poppedRef = useRef(popped);
   poppedRef.current = popped;
+  /** This window was opened by a pop-out of a detail with its own address: show only the dialog, and closing it closes the window. */
+  const [ownWindow] = useState(() => popout && typeof window !== 'undefined' && window.name.startsWith('pf-popout'));
   const close = useRef(onClose);
-  close.current = onClose;
+  close.current = ownWindow ? () => window.close() : onClose;
+  useEffect(() => { if (!ownWindow) return; document.body.classList.add('is-popout'); return () => document.body.classList.remove('is-popout'); }, [ownWindow]);
   const id = useId();
+  const me = useRef({});
+  // A Modal that replaces another in the same commit (placeholder -> record) appears in place; the layout phase is before the first paint.
+  useLayoutEffect(() => { if (lastModalGone.who !== me.current && performance.now() - lastModalGone.at < 250) { const el = panel.current; el?.classList.add('still'); el?.parentElement?.classList.add('still'); } return () => { lastModalGone = { at: performance.now(), who: me.current }; }; }, []);
 
   /** Opens a window beside the app and copies the page's styles and theme into it; the dialog is then drawn there, from this same component. */
   const openWindow = () => {
+    // A detail that is open at its own address (?id=…) pops out as that address in a new window, so the window's URL can be copied and shared.
+    const here = new URL(window.location.href);
+    if (!startPopped && here.searchParams.get('id') && here.searchParams.get('id') !== 'new') {
+      const own = window.open(here.href, `pf-popout-${Date.now()}`, 'popup=yes,width=1100,height=860');
+      if (own) { close.current(); return true; }
+    }
     const win = window.open('', '', 'popup=yes,width=1100,height=860');
     if (!win) return false;
     const doc = win.document;
@@ -225,12 +249,12 @@ export function Modal({ title, onClose, children, actions, size = 'md', popout =
 
   if (startPopped && !popped && !blocked) return null;
   const frame = (
-    <div className={`modal-backdrop${popped ? ' popout' : ''}`} onMouseDown={popped ? undefined : e => { if (e.target === e.currentTarget) close.current(); }}>
-      <div className={`modal size-${size}${popped ? ' popout' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={panel} tabIndex={-1}>
+    <div className={`modal-backdrop${popped || ownWindow ? ' popout' : ''}`} onMouseDown={popped ? undefined : e => { if (e.target === e.currentTarget) close.current(); }}>
+      <div className={`modal size-${size}${popped || ownWindow ? ' popout' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id} ref={panel} tabIndex={-1}>
         <div className="dialog-head">
           <h2 id={id}>{title}</h2>
-          {popout && !popped && <button className="icon-btn" type="button" aria-label="Open in a new window" title="Open in a new window" onClick={openWindow}><Icon name="popout" /></button>}
-          <button className="icon-btn" type="button" aria-label="Close dialog" title="Close" onClick={onClose}><Icon name="close" /></button>
+          {popout && !popped && !ownWindow && <button className="icon-btn" type="button" aria-label="Open in a new window" title="Open in a new window" onClick={openWindow}><Icon name="popout" /></button>}
+          <button className="icon-btn" type="button" aria-label="Close dialog" title="Close" onClick={() => close.current()}><Icon name="close" /></button>
         </div>
         {children}
         {actions && <div className="dialog-actions">{actions}</div>}
@@ -248,6 +272,18 @@ export function Skeleton({ lines = 3, height }: { lines?: number; height?: strin
   return (
     <div className="sk-block" role="status" aria-busy="true" aria-label="Loading" style={height ? { minHeight: height } : undefined}>
       {Array.from({ length: lines }, (_, i) => <span key={i} className="sk sk-line" style={{ width: `${92 - ((i * 17) % 40)}%` }} />)}
+    </div>
+  );
+}
+
+/** The body of a detail drawer while its record loads: a heading, a row of chips, a grid of fields and some text. */
+export function ModalSkeleton() {
+  return (
+    <div className="dialog-body sk-modal" role="status" aria-busy="true" aria-label="Loading">
+      <span className="sk sk-title" />
+      <div className="sk-chips"><span className="sk" /><span className="sk" /><span className="sk" /><span className="sk" /></div>
+      <div className="sk-fields">{Array.from({ length: 6 }, (_, i) => <span key={i} className="sk sk-field" />)}</div>
+      <Skeleton lines={4} />
     </div>
   );
 }
@@ -339,6 +375,63 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
 export function Field({ label, full, hint, children }: { label: string; full?: boolean; hint?: string; children: ReactNode }) {
   return <label className={`field ${full ? 'full' : ''}`}>{label}{children}{hint && <small className="muted">{hint}</small>}</label>;
+}
+
+/* ---------- Dates: typed or picked, written the same way everywhere (dd/mm/yyyy, stored as yyyy-mm-dd) ---------- */
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const isoOf = (y: number, m: number, d: number) => {
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d ? `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` : null;
+};
+/** Reads what a person types: 13/11/2026, 13-11-26, 13.11.2026, 2026-11-13 or 13 Nov 2026. Null when it is not a real date. */
+export function parseDateText(raw: string): string | null {
+  const t = raw.trim().toLowerCase();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (m) return isoOf(+m[1], +m[2], +m[3]);
+  m = /^(\d{1,2})[/.\-\s](\d{1,2})[/.\-\s](\d{2}|\d{4})$/.exec(t);
+  if (m) return isoOf(m[3].length === 2 ? 2000 + +m[3] : +m[3], +m[2], +m[1]);
+  m = /^(\d{1,2})[\s\-/]([a-z]{3})[a-z]*[\s\-/,]*(\d{2}|\d{4})$/.exec(t);
+  if (m && MONTHS.includes(m[2])) return isoOf(m[3].length === 2 ? 2000 + +m[3] : +m[3], MONTHS.indexOf(m[2]) + 1, +m[1]);
+  return null;
+}
+export const showDate = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
+
+type DateChange = { target: { value: string } };
+/**
+ * The one date field: type the date, or press the calendar button to pick it. Takes the props of the native date input it
+ * replaces (value or defaultValue as yyyy-mm-dd, min, max, name, onChange(e) with e.target.value as yyyy-mm-dd).
+ */
+export function DateInput({ value, defaultValue, onChange, min, max, name, required, disabled, className, style, ...aria }: {
+  value?: string; defaultValue?: string; onChange?: (e: DateChange) => void; min?: string; max?: string; name?: string; required?: boolean; disabled?: boolean;
+  className?: string; style?: React.CSSProperties; 'aria-label'?: string;
+}) {
+  const [inner, setInner] = useState(defaultValue ?? '');
+  const iso = value ?? inner;
+  const [text, setText] = useState(showDate(iso));
+  const [bad, setBad] = useState(false);
+  const editing = useRef(false);
+  const native = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (!editing.current) { setText(showDate(iso)); setBad(false); } }, [iso]);
+  const commit = (next: string) => { if (value === undefined) setInner(next); onChange?.({ target: { value: next } }); };
+  const finish = () => {
+    editing.current = false;
+    if (!text.trim()) { setBad(false); if (iso) commit(''); return; }
+    const parsed = parseDateText(text);
+    if (parsed) { setBad(false); setText(showDate(parsed)); if (parsed !== iso) commit(parsed); } else { setBad(false); setText(showDate(iso)); }
+  };
+  const pick = () => { const el = native.current; if (!el || disabled) return; try { el.showPicker(); } catch { el.focus(); el.click(); } };
+  return (
+    <span className="date-input" style={style}>
+      <input type="text" inputMode="numeric" autoComplete="off" placeholder="dd/mm/yyyy" className={`${className ?? ''}${bad ? ' invalid' : ''}`} value={text} disabled={disabled} required={required} aria-label={aria['aria-label']} aria-invalid={bad || undefined}
+        onFocus={() => { editing.current = true; }}
+        onChange={e => { setText(e.target.value); setBad(!!e.target.value.trim() && parseDateText(e.target.value) === null); }}
+        onBlur={finish}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); finish(); } else if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); pick(); } }} />
+      <button type="button" className="date-pick" tabIndex={-1} disabled={disabled} aria-label="Pick a date" title="Pick a date" onClick={pick}><Icon name="calendar" /></button>
+      <input ref={native} type="date" className="date-native" tabIndex={-1} aria-hidden="true" value={iso} min={min} max={max} disabled={disabled} onChange={e => { editing.current = false; setBad(false); setText(showDate(e.target.value)); commit(e.target.value); }} />
+      {name && <input type="hidden" name={name} value={iso} />}
+    </span>
+  );
 }
 
 /** Asks before something that cannot be undone. */

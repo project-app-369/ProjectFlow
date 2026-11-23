@@ -2,46 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "v1_claude-demo",
-      "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "4173",
-        "--directory",
-        "v1_claude"
-      ],
-      "port": 4173
-    },
-    {
-      "name": "mvp-claude-demo",
-      "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "4174",
-        "--directory",
-        "MVP/Claude"
-      ],
-      "port": 4174
-    },
-    {
-      "name": "app-api",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "app/apps/api",
-        "start"
-      ],
-      "port": 3100
-    },
-    {
-      "name": "app-web",
+      "name": "app-web-v3",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "--dir",
         "app/apps/web",
-        "dev"
+        "dev:v3",
+        "--port",
+        "5173"
       ],
       "port": 5173
     },
@@ -56,16 +24,14 @@
       "port": 3200
     },
     {
-      "name": "app-web-sheets",
+      "name": "app-sheets-sim-secure",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "--dir",
-        "app/apps/web",
-        "dev:sheets",
-        "--port",
-        "5174"
+        "app/apps/sheets",
+        "dev:secure"
       ],
-      "port": 5174
+      "port": 3200
     },
     {
       "name": "app-web-sim",
@@ -80,56 +46,16 @@
       "port": 5174
     },
     {
-      "name": "app-api-v2",
-      "runtimeExecutable": "pnpm",
+      "name": "static-dist",
+      "runtimeExecutable": "python",
       "runtimeArgs": [
-        "--dir",
-        "app/apps/api-v2",
-        "dev"
+        "-m",
+        "http.server",
+        "5180",
+        "-d",
+        "dist-static/project-flow-static"
       ],
-      "port": 3300
-    },
-    {
-      "name": "app-web-v2",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "app/apps/web",
-        "dev:v2"
-      ],
-      "port": 5173
-    },
-    {
-      "name": "app-web-v3",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "app/apps/web",
-        "dev:v3",
-        "--port",
-        "5173"
-      ],
-      "port": 5173
-    },
-    {
-      "name": "app-sheets-sim-secure",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "app/apps/sheets",
-        "dev:secure"
-      ],
-      "port": 3200
-    },
-    {
-      "name": "app-api-v2-local",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--dir",
-        "app/apps/api-v2",
-        "dev:local"
-      ],
-      "port": 3300
+      "port": 5180
     }
   ]
 }

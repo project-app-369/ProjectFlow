@@ -195,6 +195,7 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/interface-points/(?<id>[^/]+)`, c => c.api.interfaces.pointGet(c.p.pid, c.p.id), { module: IF_POINTS }),
   route('PATCH', `${PID}/interface-points/(?<id>[^/]+)`, c => c.api.interfaces.pointUpdate(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
   route('POST', `${PID}/interface-points/(?<id>[^/]+)/transition`, c => c.api.interfaces.pointTransition(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
+  route('POST', `${PID}/interface-points/(?<id>[^/]+)/revise`, c => c.api.interfaces.pointRevise(c.p.pid, c.p.id, c.body, c.actor), { module: IF_POINTS }),
   route('DELETE', `${PID}/interface-points/(?<id>[^/]+)`, c => { c.api.interfaces.pointDelete(c.p.pid, c.p.id, c.actor); return null; }, { module: IF_POINTS, status: 204 }),
 
   // facility layout: the equipment of the 3D model with their dates and method, created, edited and removed in the app

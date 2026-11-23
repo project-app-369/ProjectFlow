@@ -8,6 +8,8 @@ The [Project Flow Supabase project](https://supabase.com/dashboard/project/dulzd
 
 ## Setup
 
+Environment variables and credential placement are listed in [Supabase configuration](../../../docs/Supabase_configuration.md).
+
 1. Create a private Supabase project. Keep the `projectflow_v2` schema out of Supabase's [exposed Data API schemas](https://supabase.com/docs/guides/api/using-custom-schemas). Copy the **Session pooler** URI from the project's Connect dialog (do not guess the host), as described in the [connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres). The `pg` client uses the bundled Supabase root certificate with full server verification. Do not add `sslmode` to the URI because it overrides the explicit client TLS settings.
 2. Copy `example.env` to `.env.local`. Set `SUPABASE_DB_URL`, a new random `API_V2_TOKEN`, the existing Apps Script deployment URL and API token, and the original Sheet URL. Keep `.env.local` private.
 3. From `app/`, run `pnpm install` and `pnpm --filter @projectflow/api-v2 db:migrate`.

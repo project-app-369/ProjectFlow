@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { request, type Task } from '../api';
 import { fmtDate } from '../format';
 import { useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, Modal, PageHead, Stat, PageSkeleton } from '../ui';
+import { Badge, Btn, ErrorBox, Modal, PageHead, Stat, PageSkeleton, DateInput } from '../ui';
 
 const COLUMNS: Task['status'][] = ['To do', 'In progress', 'Done'];
 const priorityTone = { High: 'red', Normal: 'amber', Low: 'indigo' } as const;
@@ -81,7 +81,7 @@ export default function Tasks() {
             <div className="dialog-body">
               <div className="form-grid">
                 <label className="field full">Task title<input name="title" required maxLength={120} placeholder="Describe the next action" autoFocus /></label>
-                <label className="field">Due date<input type="date" name="due" defaultValue={project.cutoff} required /></label>
+                <label className="field">Due date<DateInput name="due" defaultValue={project.cutoff} required /></label>
                 <label className="field">Priority<select name="priority" defaultValue="Normal"><option>Normal</option><option>High</option><option>Low</option></select></label>
                 <label className="field full">Notes<textarea name="note" placeholder="Optional context" maxLength={500} /></label>
               </div>

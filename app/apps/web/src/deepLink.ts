@@ -12,11 +12,11 @@ export function useDeepLink(): [string | null, (id: string | null) => void] {
   const location = useLocation();
   const id = params.get('id');
   const set = useCallback((next: string | null) => {
-    const p = new URLSearchParams(window.location.search);
+    const p = new URLSearchParams(location.search); // the router's own query: with hash routes (static build) window.location.search is empty
     if (next) p.set('id', next); else p.delete('id');
     const search = p.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: !next });
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, location.search]);
   return [id, set];
 }
 

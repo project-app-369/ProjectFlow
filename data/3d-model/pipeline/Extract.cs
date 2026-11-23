@@ -122,6 +122,116 @@ namespace ModelTool
             log.AppendLine("using translation3=" + bestT + " (err " + best.ToString("F3") + ")");
         }
 
+        // rawleaves <outFile>: every geometry leaf (the same order as the "leaves" listing) as int32 triangle count + 9 float32 per triangle (world metres),
+        // so that the grouping can be decided afterwards without opening the model again
+        public static void Raw(string outPath)
+        {
+            Document doc = Autodesk.Navisworks.Api.Application.ActiveDocument;
+            var log = new StringBuilder();
+            int n = 0; long tris = 0;
+            using (var bw = new BinaryWriter(new BufferedStream(File.Create(outPath), 1 << 20)))
+            {
+                foreach (Model m in doc.Models)
+                    foreach (ModelItem leaf in m.RootItem.DescendantsAndSelf)
+                    {
+                        if (!leaf.HasGeometry) continue;
+                        CheckConvention(leaf, log);
+                        var buf = new List<float>();
+                        try
+                        {
+                            Stream(leaf, (ax, ay, az, bx, by, bz, cx, cy, cz) =>
+                            {
+                                buf.Add((float)ax); buf.Add((float)ay); buf.Add((float)az); buf.Add((float)bx); buf.Add((float)by); buf.Add((float)bz); buf.Add((float)cx); buf.Add((float)cy); buf.Add((float)cz);
+                            });
+                        }
+                        catch (Exception ex) { log.AppendLine("FAILED leaf " + n + " " + ex.Message); buf.Clear(); }
+                        bw.Write(buf.Count / 9);
+                        foreach (float f in buf) bw.Write(f);
+                        tris += buf.Count / 9; n++;
+                    }
+            }
+            log.AppendLine("rawleaves: " + n + " leaves, " + tris + " triangles");
+            File.WriteAllText(outPath + ".log", log.ToString());
+        }
+
+        class Welded
+        {
+            public Dictionary<long, int> Cells = new Dictionary<long, int>();
+            public List<double> X = new List<double>(), Y = new List<double>(), Z = new List<double>();
+            public List<int> N = new List<int>(), Tri = new List<int>();
+            public HashSet<long> Seen = new HashSet<long>();
+            public long In;
+        }
+
+        // groups <outDir> <assignFile> <cell>: one welded mesh per group, written as <outDir>/<group>.bin (the format of "equip").
+        // assignFile holds one group id per geometry leaf, in the order of the "leaves" listing; vertices are welded on a grid of <cell> metres.
+        public static void Groups(string outDir, string assignFile, double cell, double minDiag)
+        {
+            Document doc = Autodesk.Navisworks.Api.Application.ActiveDocument;
+            Directory.CreateDirectory(outDir);
+            string[] assign = File.ReadAllLines(assignFile);
+            BoundingBox3D all = doc.Models.First().RootItem.BoundingBox();
+            double ox = all.Min.X, oy = all.Min.Y, oz = all.Min.Z;
+            var groups = new Dictionary<string, Welded>();
+            var log = new StringBuilder();
+            int i = 0, skipped = 0; bool first = true; long trisAll = 0;
+            var sw = Stopwatch.StartNew();
+            foreach (Model m in doc.Models)
+                foreach (ModelItem leaf in m.RootItem.DescendantsAndSelf)
+                {
+                    if (!leaf.HasGeometry) continue;
+                    string g = i < assign.Length ? assign[i].Trim() : "";
+                    i++;
+                    if (g.Length == 0 || g == "-") continue;
+                    if (minDiag > 0)
+                    {
+                        BoundingBox3D lb = leaf.BoundingBox();
+                        double ddx = lb.Max.X - lb.Min.X, ddy = lb.Max.Y - lb.Min.Y, ddz = lb.Max.Z - lb.Min.Z;
+                        if (Math.Sqrt(ddx * ddx + ddy * ddy + ddz * ddz) < minDiag) { skipped++; continue; }
+                    }
+                    if (first) { CheckConvention(leaf, log); first = false; }
+                    Welded w;
+                    if (!groups.TryGetValue(g, out w)) { w = new Welded(); groups[g] = w; }
+                    Welded ww = w;
+                    Func<double, double, double, int> vert = (x, y, z) =>
+                    {
+                        long kx = (long)Math.Floor((x - ox) / cell), ky = (long)Math.Floor((y - oy) / cell), kz = (long)Math.Floor((z - oz) / cell);
+                        long key = (kx & 0x1FFFFF) | ((ky & 0x1FFFFF) << 21) | ((kz & 0x1FFFFF) << 42);
+                        int idx;
+                        if (!ww.Cells.TryGetValue(key, out idx)) { idx = ww.X.Count; ww.Cells[key] = idx; ww.X.Add(0); ww.Y.Add(0); ww.Z.Add(0); ww.N.Add(0); }
+                        ww.X[idx] += x; ww.Y[idx] += y; ww.Z[idx] += z; ww.N[idx]++;
+                        return idx;
+                    };
+                    try
+                    {
+                        w.In += Stream(leaf, (ax, ay, az, bx, by, bz, cx, cy, cz) =>
+                        {
+                            int a1 = vert(ax, ay, az), b1 = vert(bx, by, bz), c1 = vert(cx, cy, cz);
+                            if (a1 == b1 || b1 == c1 || a1 == c1) return;
+                            int lo = Math.Min(a1, Math.Min(b1, c1)), hi = Math.Max(a1, Math.Max(b1, c1)), mid = a1 + b1 + c1 - lo - hi;
+                            if (ww.X.Count < 2097152) { long k = ((long)lo << 42) | ((long)mid << 21) | (long)hi; if (!ww.Seen.Add(k)) return; }
+                            ww.Tri.Add(a1); ww.Tri.Add(b1); ww.Tri.Add(c1);
+                        });
+                    }
+                    catch (Exception ex) { log.AppendLine("FAILED leaf " + (i - 1) + " " + ex.Message); }
+                    trisAll = 0; foreach (var kv0 in groups) trisAll += kv0.Value.In;
+                    if (i % 250 == 0) { log.AppendLine(i + " leaves, skipped " + skipped + ", " + trisAll + " triangles read, " + sw.Elapsed.TotalSeconds.ToString("F0") + " s"); File.WriteAllText(Path.Combine(outDir, "groups.log"), log.ToString()); }
+                }
+            foreach (var kv in groups)
+            {
+                Welded w = kv.Value;
+                using (var bw = new BinaryWriter(File.Create(Path.Combine(outDir, kv.Key + ".bin"))))
+                {
+                    bw.Write(w.X.Count); bw.Write(w.Tri.Count / 3);
+                    for (int k = 0; k < w.X.Count; k++) { bw.Write((float)(w.X[k] / w.N[k])); bw.Write((float)(w.Y[k] / w.N[k])); bw.Write((float)(w.Z[k] / w.N[k])); }
+                    foreach (int t in w.Tri) bw.Write(t);
+                }
+                log.AppendLine(kv.Key + ": trisIn=" + w.In + " verts=" + w.X.Count + " tris=" + w.Tri.Count / 3);
+            }
+            log.AppendLine("done " + i + " leaves " + sw.Elapsed.TotalSeconds.ToString("F0") + " s");
+            File.WriteAllText(Path.Combine(outDir, "groups.log"), log.ToString());
+        }
+
         public static void Run(string outDir, string jobsFile)
         {
             Document doc = Autodesk.Navisworks.Api.Application.ActiveDocument;

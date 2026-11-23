@@ -43,6 +43,7 @@ Worksheets are named `<Area> - <dataset>`, created in area order and given a tab
 | `Governance - Risk breakdown` | Governance | Risk breakdown structure: category and discipline codes (37) | Risk register |
 | `Governance - Interfaces` | Governance | Interface register | Interface register and matrix |
 | `Governance - Interface points` | Governance | Interface points: originator → target query, dates, resolution (34 seeded) | Interface points, matrix |
+| `Governance - Interface point revisions` | Governance | Earlier revisions of an interface point (request, response, dates), kept as superseded when the requestor revises it | Interface points |
 | `Governance - Interface parties` | Governance | Party codes and names (24) | Interface pages |
 | `Governance - Responsibility matrix` | Governance | Activity × facility → responsible party (425 cells) | Interface matrix |
 | `Governance - RASCI` | Governance | RASCI role per activity and party/phase (340 cells) | Interface matrix |

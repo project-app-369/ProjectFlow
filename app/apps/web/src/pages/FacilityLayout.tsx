@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { errorText, request, type FacilityEquipment, type FacilityEquipmentResponse } from '../api';
 import { useDeepLink } from '../deepLink';
@@ -15,6 +16,21 @@ interface DeckFile { id: string; name: string; file: string; bytes: number; equi
 interface Manifest { decks: DeckFile[]; units: { tag: string; deck: string }[] }
 
 const MODEL_BASE = `${import.meta.env.BASE_URL}models/facility/`;
+
+/** The models of the project: the topside is split by deck into equipment, the others by system; both are listed with Tag, name, ROS and ETA. */
+type ModelId = 'topside' | 'jacket' | 'lqm' | 'linkbridge';
+/** `slug` is the facility in the address: ?facility=cgf-topside */
+const MODELS: { id: ModelId; label: string; slug: string }[] = [{ id: 'topside', label: 'ST-CGF Topside', slug: 'cgf-topside' }, { id: 'jacket', label: 'ST-CGF Jacket', slug: 'cgf-jacket' }, { id: 'lqm', label: 'LQM#2', slug: 'lqm2' }, { id: 'linkbridge', label: 'Link Bridge', slug: 'link-bridge' }];
+/** A system row of the jacket, LQM or link bridge is tagged <prefix>-<group id>; the group id names the part of the 3D model. */
+/** The systems of the LQM#2 that run through every floor: a chip highlights one in all floors (nodes named LQ-<floor>-<id>). */
+const LQM_SYSTEMS = [
+  { id: 'hvac', label: 'HVAC', colour: '#3b82f6' }, { id: 'piping', label: 'Steel piping', colour: '#2f9d83' }, { id: 'piping_frp', label: 'FRP piping', colour: '#9bd14b' },
+  { id: 'telecom', label: 'Telecom', colour: '#d4543b' }, { id: 'lighting', label: 'Lighting', colour: '#ffe066' }, { id: 'fg', label: 'Fire & gas', colour: '#f06292' },
+  { id: 'e_i', label: 'E&I', colour: '#e5a93a' }, { id: 'safety', label: 'Safety', colour: '#d62839' },
+];
+const groupOf = (tag: string) => tag.replace(/^[A-Za-z]+-/, '');
+interface GroupFile { id: string; name: string; file: string; color: string; bytes: number; triangles: number }
+interface GroupManifest { name: string; groups: GroupFile[] }
 const SOON_DAYS = 14;
 
 type ColourBy = 'delivery' | 'method' | 'none';
@@ -34,6 +50,9 @@ export function delivery(i: Pick<FacilityEquipment, 'rosDate' | 'etaDate'>): { s
 const shortDate = (d: string | null) => (d ? fmtDate(d).replace(/ \d{2}(\d{2})$/, ' $1') : '—');
 const methodKey = (m: string | null) => (m && /skid/i.test(m) ? 'Skidding' : m && /crane|lift/i.test(m) ? 'Lift by Crane' : null);
 
+const NO_TAGS: ReadonlySet<string> = new Set();
+const NO_COLOURS: Readonly<Record<string, string>> = {};
+
 function Dot({ colour }: { colour: string }) {
   return <span className="fl-dot" style={{ background: colour }} aria-hidden="true" />;
 }
@@ -51,6 +70,17 @@ export default function FacilityLayout() {
   const [filter, setFilter] = useState('');
   const [colourBy, setColourBy] = useState<ColourBy>('delivery');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [params, setParams] = useSearchParams();
+  /** The facility shown lives in the address (`?facility=`), so each one has its own link; none given means the topside. */
+  const model: ModelId = MODELS.find(m => m.slug === params.get('facility'))?.id ?? 'topside';
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [systemHL, setSystemHL] = useState<string | null>(null);
+  const switchModel = (m: ModelId) => {
+    setHidden(new Set()); setHighlight(null); setSystemHL(null); setPicked(null);
+    const p = new URLSearchParams(params);
+    p.set('facility', MODELS.find(x => x.id === m)!.slug); p.delete('id');
+    setParams(p);
+  };
   const [folded, setFolded] = useState<Set<string>>(new Set());
   /** The equipment picked in the 3D model or in the list: highlighted in both. The detail drawer (`?id=`) is a separate step. */
   const [picked, setPicked] = useState<string | null>(null);
@@ -86,11 +116,25 @@ export default function FacilityLayout() {
     queryFn: () => request<FacilityEquipmentResponse>(`/projects/${project.id}/construction/facility-layout/equipment`),
     refetchInterval: 60_000,
   });
+  /** The topside and the LQM#2 are split by deck / floor into equipment; the jacket and the link bridge by system. */
+  const decked = model === 'topside' || model === 'lqm';
   const manifest = useQuery({
-    queryKey: ['facility-manifest'],
-    queryFn: async () => { const r = await fetch(`${MODEL_BASE}facility-model.json`, { cache: 'no-cache' }); if (!r.ok) throw new Error('The 3D model files are missing.'); return (await r.json()) as Manifest; },
+    queryKey: ['facility-manifest', model],
+    enabled: decked,
+    queryFn: async () => { const r = await fetch(model === 'topside' ? `${MODEL_BASE}facility-model.json` : `${import.meta.env.BASE_URL}models/${model}/model.json`, { cache: 'no-cache' }); if (!r.ok) throw new Error('The 3D model files are missing.'); return (await r.json()) as Manifest; },
     staleTime: 60_000, // a rebuilt model must show up: a stale copy in the persisted query cache would list the old decks
   });
+
+  const other = useQuery({
+    queryKey: ['model-manifest', model],
+    enabled: !decked,
+    queryFn: async () => { const r = await fetch(`${import.meta.env.BASE_URL}models/${model}/model.json`, { cache: 'no-cache' }); if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return null; return (await r.json()) as GroupManifest; },
+    staleTime: 60_000,
+  });
+  /** A model whose files have not been built yet (the manifest is not there). */
+  const notBuilt = !decked && other.isSuccess && other.data === null;
+  const modelLabel = MODELS.find(m => m.id === model)!.label;
+  const deckWord = model === 'lqm' ? 'floor' : 'deck';
 
   const base = `/projects/${project.id}/construction/facility-layout/equipment`;
   const refresh = () => qc.invalidateQueries({ queryKey: ['facility-equipment', project.id] });
@@ -100,24 +144,47 @@ export default function FacilityLayout() {
     onError: (e: Error) => { setRemoving(null); toast(errorText(e)); },
   });
 
-  const items = equipment.data?.items ?? [];
+  const items = useMemo(() => (equipment.data?.items ?? []).filter(i => i.model === model), [equipment.data, model]);
+  // The address always names the facility; a link to an item (?id=) of another facility switches to that facility.
+  useEffect(() => {
+    const p = new URLSearchParams(params); // the router's query (window.location.search is empty with hash routes: the facility would be reset to the topside after every switch)
+    if (MODELS.some(m => m.slug === p.get('facility'))) return; // the address already names a facility
+    const hit = openTag && openTag !== 'new' ? equipment.data?.items.find(i => i.tag === openTag) : undefined;
+    // a link to an item, with no facility yet: wait until the list holds the item to know where it is
+    if (openTag && openTag !== 'new' && !hit) return;
+    p.set('facility', MODELS.find(m => m.id === (hit?.model ?? 'topside'))!.slug);
+    setParams(p, { replace: true });
+  }, [params, openTag, equipment.data, setParams]);
   const inModel = useMemo(() => new Set((manifest.data?.units ?? []).map(u => u.tag)), [manifest.data]);
-  const modelDecks = manifest.data?.decks ?? [];
+  /** In 3D: a topside equipment is a part of the model; a system row is a group of it. */
+  const systemIds = useMemo(() => new Set((other.data?.groups ?? []).map(g => g.id)), [other.data]);
+  const modelled = (tag: string) => (decked ? inModel.has(tag) : systemIds.has(groupOf(tag)));
+  const topDecks = manifest.data?.decks ?? [];
+  const groupColours = useMemo(() => Object.fromEntries((other.data?.groups ?? []).map(g => [g.id, g.color])), [other.data]);
+  const modelDecks = decked ? topDecks : (other.data?.groups ?? []).map(g => ({ id: g.id, name: g.name, file: g.file, bytes: g.bytes, equipment: 0 }));
   const deckNames = useMemo(() => {
-    const order = new Map(modelDecks.map((d, i) => [d.name, i]));
-    const ids = new Map(modelDecks.map(d => [d.name, d.id]));
+    if (!decked) return items.length ? [{ name: items[0].deck, id: null as string | null }] : [];
+    const order = new Map(topDecks.map((d, i) => [d.name, i]));
+    const ids = new Map(topDecks.map(d => [d.name, d.id]));
     return [...(equipment.data?.decks ?? [])]
+      .filter(name => (equipment.data?.items ?? []).some(i => i.model === model && i.deck === name))
       .sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99) || a.localeCompare(b))
       .map(name => ({ name, id: ids.get(name) ?? null }));
-  }, [modelDecks, equipment.data]);
+  }, [topDecks, equipment.data, decked, items]);
 
   const q = filter.trim().toLowerCase();
-  const shown = useMemo(() => items.filter(i => !q || [i.tag, i.name, i.packageCode, i.vendor, i.method, i.deck].some(x => x?.toLowerCase().includes(q))), [items, q]);
+  const shown = useMemo(() => {
+    const order = new Map((other.data?.groups ?? []).map((g, n) => [g.id, n])); // systems follow the order of the model's chips
+    const list = items.filter(i => !q || [i.tag, i.name, i.packageCode, i.vendor, i.method, i.deck].some(x => x?.toLowerCase().includes(q)));
+    return decked ? list : [...list].sort((a, b) => (order.get(groupOf(a.tag)) ?? 99) - (order.get(groupOf(b.tag)) ?? 99));
+  }, [items, q, other.data, decked]);
   const byDeck = useMemo(() => {
     const m = new Map<string, FacilityEquipment[]>();
     for (const i of shown) m.set(i.deck, [...(m.get(i.deck) ?? []), i]);
     return m;
   }, [shown]);
+
+  const systemRows = useMemo(() => new Map(items.map(i => [groupOf(i.tag), i])), [items]);
 
   const colours = useMemo(() => {
     const out: Record<string, string> = {};
@@ -137,9 +204,12 @@ export default function FacilityLayout() {
   const toggleFold = (deck: string) => setFolded(f => { const n = new Set(f); if (n.has(deck)) n.delete(deck); else n.add(deck); return n; });
   const creating = openTag === 'new';
   const active = creating ? null : openTag ?? picked;
-  /** A click in the 3D model only highlights the equipment (in the list too); a click in the list also opens its details. */
+  /** A click in the 3D model or on a row of the list only focuses the equipment (highlighted in both); the Details button of the row opens its details. */
   const pickInModel = useCallback((tag: string | null) => setPicked(tag), []);
-  const pickInList = (tag: string) => { setPicked(tag); setOpenTag(tag); };
+  const focusInList = (tag: string) => setPicked(tag);
+  const openDetails = (tag: string) => { setPicked(tag); setOpenTag(tag); };
+  // a system picked in the list turns the rest of the model grey, like the highlight chip does
+  useEffect(() => { if (!decked) setHighlight(active ? groupOf(active) : null); }, [active, decked]);
 
   // Show the picked equipment in the list: unfold its deck, clear a search that hides it, and scroll the row to the middle of the list.
   useEffect(() => {
@@ -166,51 +236,79 @@ export default function FacilityLayout() {
   const hud = full ? open ?? pickedItem : open ? null : pickedItem;
   const today = localToday();
   // the viewer resolves a path against the page's own address (/m/...), so it gets full URLs
-  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${MODEL_BASE}${d.file}`, document.baseURI).href }));
+  const fileBase = model === 'topside' ? MODEL_BASE : `${import.meta.env.BASE_URL}models/${model}/`;
+  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${fileBase}${d.file}`, document.baseURI).href }));
+  const triangles = (other.data?.groups ?? []).reduce((s, g) => s + g.triangles, 0);
+  const megabytes = (other.data?.groups ?? []).reduce((s, g) => s + g.bytes, 0) / 1e6;
 
   return (
     <>
-      <PageHead title="Facility layout" desc="The CGF topside by deck in 3D: structure and large equipment, with each equipment's ROS, ETA and installation method. Equipment can be added, edited and deleted."
+      <PageHead title="Facility layout" desc="The ST-CGF topside, ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
         actions={<>
-          {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>Add equipment</Btn>}
+          {decked && access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>Add equipment</Btn>}
           <Btn kind="small" icon="refresh" onClick={refresh}>Refresh</Btn>
         </>} />
       <div className="stats">
-        <Stat label="Equipment" value={equipment.data ? stats.total : '—'} foot={`${inModel.size} shown in 3D`} icon="box" />
+        <Stat label={decked ? 'Equipment' : 'Systems'} value={equipment.data ? stats.total : '—'} foot={decked ? `${inModel.size} shown in 3D` : `${systemIds.size} shown in 3D`} icon="box" />
         <Stat label="ETA after ROS" value={equipment.data ? stats.late : '—'} foot={<span className={stats.late ? 'negative' : ''}>Arrives after it is needed on site</span>} icon="risk" />
         <Stat label="Close to ROS" value={equipment.data ? stats.soon : '—'} foot={`Less than ${SOON_DAYS} days of margin`} icon="clock" />
-        <Stat label="No dates" value={equipment.data ? stats.none : '—'} foot={<span className={stats.none ? 'warning' : ''}>Edit an equipment to add its ROS and ETA</span>} icon="calendar" />
-        <Stat label="Method set" value={equipment.data ? `${stats.method}/${stats.total}` : '—'} foot="Lift by Crane or Skidding" icon="anchor" />
+        <Stat label="No dates" value={equipment.data ? stats.none : '—'} foot={<span className={stats.none ? 'warning' : ''}>{decked ? 'Edit an equipment' : 'Edit a system'} to add its ROS and ETA</span>} icon="calendar" />
+        {decked
+          ? <Stat label="Method set" value={equipment.data ? `${stats.method}/${stats.total}` : '—'} foot="Lift by Crane or Skidding" icon="anchor" />
+          : <Stat label="3D model" value={other.data ? `${(triangles / 1e6).toFixed(2)} M` : '—'} foot={other.data ? `triangles · ${megabytes.toFixed(1)} MB` : 'Loading'} icon="chart" />}
       </div>
 
       <div className="fl-grid">
         <div className={`panel fl-view${expanded ? ' fl-expanded' : ''}`} ref={viewPanel}>
           <div className="panel-head">
-            <div><h2>3D model</h2><p>Drag to orbit, right-drag to pan, scroll to zoom. Click an equipment to see its dates.</p></div>
+            <div><h2>{modelLabel}</h2><p>Drag to orbit, right-drag to pan, scroll to zoom.{decked ? ' Click an equipment to see its dates.' : ' Use the chips to show, hide or highlight a system.'}</p></div>
             <div className="actions">
               <Btn kind="small" icon={full || expanded ? 'shrink' : 'expand'} iconOnly aria-label={full || expanded ? 'Exit full screen' : 'Full screen'} onClick={toggleFull} />
-              <select className="filter" aria-label="Colour equipment by" value={colourBy} onChange={e => setColourBy(e.target.value as ColourBy)}>
+              {decked && <select className="filter" aria-label="Colour equipment by" value={colourBy} onChange={e => setColourBy(e.target.value as ColourBy)}>
                 <option value="delivery">Colour by delivery</option><option value="method">Colour by method</option><option value="none">Model colours</option>
-              </select>
+              </select>}
             </div>
           </div>
-          <div className="chip-bar" role="group" aria-label="Decks shown">
-            {modelDecks.map(d => (
-              <button key={d.id} type="button" className={`chip-filter ${visibleDecks.has(d.id) ? 'active' : ''}`} aria-pressed={visibleDecks.has(d.id)} onClick={() => toggleDeck(d.id)} onDoubleClick={() => onlyDeck(d.id)} title="Click to show or hide, double-click to show this deck alone">
-                {d.name}<span>{d.equipment}</span>
-              </button>
+          <div className="chip-bar model-tabs" role="tablist" aria-label="Model">
+            {MODELS.map(m => (
+              <button key={m.id} type="button" role="tab" aria-selected={model === m.id} className={`chip-filter model-tab ${model === m.id ? 'active' : ''}`} onClick={() => switchModel(m.id)}>{m.label}</button>
             ))}
-            <button type="button" className="chip-filter" onClick={() => setHidden(new Set())}>All decks</button>
           </div>
+          <div className="chip-bar" role="group" aria-label={decked ? `${deckWord[0].toUpperCase()}${deckWord.slice(1)}s shown` : 'Systems shown'}>
+            {modelDecks.map(d => (
+              <span key={d.id} className="chip-split">
+                <button type="button" className={`chip-filter ${visibleDecks.has(d.id) ? 'active' : ''}`} aria-pressed={visibleDecks.has(d.id)} onClick={() => toggleDeck(d.id)} onDoubleClick={() => onlyDeck(d.id)} title={`Click to show or hide, double-click to show this ${decked ? 'deck' : 'system'} alone`}>
+                  {!decked && <i className="fl-dot" style={{ background: groupColours[d.id] }} aria-hidden="true" />}{d.name}{decked ? <span>{model === 'topside' ? d.equipment : items.filter(i => i.deck === d.name).length}</span> : (() => { const it = systemRows.get(d.id); const st = it ? delivery(it).state : 'none'; return <span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>; })()}
+                </button>
+                {!decked && <button type="button" className={`chip-filter chip-hl ${highlight === d.id ? 'active' : ''}`} aria-pressed={highlight === d.id} aria-label={`Highlight ${d.name}`} title={highlight === d.id ? 'Clear the highlight' : `Highlight ${d.name}: the rest turns grey`} onClick={() => setHighlight(h => (h === d.id ? null : d.id))}><Icon name="search" /></button>}
+              </span>
+            ))}
+            <button type="button" className="chip-filter" onClick={() => { setHidden(new Set()); setHighlight(null); setSystemHL(null); }}>{decked ? `All ${deckWord}s` : 'All systems'}</button>
+          </div>
+          {model === 'lqm' && (
+            <div className="chip-bar" role="group" aria-label="Systems, in all floors">
+              <span className="tiny muted">Systems in all floors</span>
+              {LQM_SYSTEMS.map(sy => {
+                const rows = items.filter(i => i.tag.endsWith(`-${sy.id}`));
+                const states = rows.map(i => delivery(i).state);
+                const st: Delivery = states.includes('late') ? 'late' : states.includes('soon') ? 'soon' : states.includes('ok') ? 'ok' : 'none';
+                return (
+                  <button key={sy.id} type="button" className={`chip-filter ${systemHL === sy.id ? 'active' : ''}`} aria-pressed={systemHL === sy.id} disabled={!rows.length} title={systemHL === sy.id ? 'Clear the highlight' : `Highlight ${sy.label} in all floors: the rest turns grey`} onClick={() => setSystemHL(h => (h === sy.id ? null : sy.id))}>
+                    <i className="fl-dot" style={{ background: sy.colour }} aria-hidden="true" />{sy.label}<span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="fl-stage-wrap">
-            {manifest.error ? <ErrorBox error={manifest.error} /> : !modelDecks.length ? <Loading label="Loading the model list…" /> : (
+            {notBuilt ? <div className="panel empty">The {modelLabel} model has not been prepared yet. Its files are produced from the Navisworks model by the 3D pipeline (data/3d-model/pipeline).</div> : (decked ? manifest.error : other.error) ? <ErrorBox error={(decked ? manifest.error : other.error)!} /> : !modelDecks.length ? <Loading label="Loading the model list…" /> : (
               <Suspense fallback={<Loading label="Loading the 3D viewer…" />}>
-                <FacilityViewer decks={decks} tags={inModel} visible={visibleDecks} selected={active} colors={colours} dark={dark} onPick={pickInModel} />
+                <FacilityViewer key={model} decks={decks} tags={decked ? inModel : NO_TAGS} visible={visibleDecks} selected={decked ? active : null} colors={decked ? colours : NO_COLOURS} highlight={highlight} systemHL={model === 'lqm' && systemHL ? { suffix: systemHL, colour: LQM_SYSTEMS.find(x => x.id === systemHL)?.colour ?? '#3b82f6' } : null} dark={dark} onPick={pickInModel} />
               </Suspense>
             )}
             {hud && (
               <div className="fl-hud" role="dialog" aria-label={`${hud.tag} summary`}>
-                <div className="fl-hud-head"><strong>{hud.tag}</strong><button type="button" className="link-button" aria-label="Clear selection" onClick={() => { setPicked(null); setOpenTag(null); }}><Icon name="close" /></button></div>
+                <div className="fl-hud-head"><strong>{hud.tag}</strong><button type="button" className="link-button" aria-label="Clear selection" onClick={() => { setPicked(null); setOpenTag(null); if (!decked) setHighlight(null); }}><Icon name="close" /></button></div>
                 <p>{hud.name ?? '—'} · {hud.deck}</p>
                 <dl>
                   <div><dt>ROS</dt><dd>{fmtDate(hud.rosDate)}</dd></div>
@@ -222,41 +320,79 @@ export default function FacilityLayout() {
             )}
           </div>
           <div className="fl-legend" aria-label="Legend">
-            {colourBy === 'delivery' && (Object.keys(DELIVERY_LABEL) as Delivery[]).map(k => <span key={k}><Dot colour={DELIVERY_COLOUR[k]} />{DELIVERY_LABEL[k]}</span>)}
-            {colourBy === 'method' && <>{Object.entries(METHOD_COLOUR).map(([k, c]) => <span key={k}><Dot colour={c} />{k}</span>)}<span><Dot colour={NO_METHOD} />Method not set</span></>}
-            {colourBy === 'none' && <span><Dot colour="#e8943a" />Equipment <Dot colour="#6b7a99" />Structure</span>}
+            {!decked && modelDecks.map(d => <span key={d.id}><Dot colour={groupColours[d.id] ?? '#8b95a7'} />{d.name}</span>)}
+            {decked && colourBy === 'delivery' && (Object.keys(DELIVERY_LABEL) as Delivery[]).map(k => <span key={k}><Dot colour={DELIVERY_COLOUR[k]} />{DELIVERY_LABEL[k]}</span>)}
+            {decked && colourBy === 'method' && <>{Object.entries(METHOD_COLOUR).map(([k, c]) => <span key={k}><Dot colour={c} />{k}</span>)}<span><Dot colour={NO_METHOD} />Method not set</span></>}
+            {decked && colourBy === 'none' && <span><Dot colour="#e8943a" />Equipment <Dot colour="#6b7a99" />Structure</span>}
           </div>
         </div>
 
         <div className="panel fl-list">
-          <div className="panel-head"><div><h2>Equipment by deck</h2><p>{equipment.data ? `${shown.length} of ${items.length} equipment · ROS = required on site, ETA = expected on site` : '…'}</p></div></div>
+          <div className="panel-head"><div><h2>{decked ? `Equipment by ${deckWord}` : 'Systems'}</h2><p>{equipment.data ? `${shown.length} of ${items.length} ${decked ? 'equipment' : 'systems'} · ROS = required on site, ETA = expected on site` : '…'}</p></div></div>
           <div className="toolbar">
-            <label className="search"><Icon name="search" /><input placeholder="Search tag, name, vendor or package…" value={filter} onChange={e => setFilter(e.target.value)} aria-label="Search equipment" /></label>
+            <label className="search"><Icon name="search" /><input placeholder={decked ? 'Search tag, name, vendor or package…' : 'Search system, tag or package…'} value={filter} onChange={e => setFilter(e.target.value)} aria-label={decked ? 'Search equipment' : 'Search systems'} /></label>
           </div>
-          {equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">No equipment yet. Use Add equipment.</div> : (
+          {equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">{decked ? 'No equipment yet. Use Add equipment.' : 'No systems listed for this model yet.'}</div> : (
             <div className="fl-groups">
+              {model === 'lqm' && (() => {
+                const all = LQM_SYSTEMS.map(sy => {
+                  const rows = items.filter(i => i.tag.endsWith(`-${sy.id}`));
+                  if (!rows.length || (q && !sy.label.toLowerCase().includes(q))) return null;
+                  const latest = (k: 'rosDate' | 'etaDate') => rows.map(r => r[k]).filter((x): x is string => !!x).sort().pop() ?? null;
+                  const state = (['late', 'soon', 'ok', 'none'] as Delivery[]).find(st => rows.some(r => delivery(r).state === st)) ?? 'none';
+                  return { sy, rosDate: latest('rosDate'), etaDate: latest('etaDate'), state };
+                }).filter((x): x is NonNullable<typeof x> => !!x);
+                if (!all.length) return null;
+                const isFolded = folded.has('__all');
+                return (
+                  <section className="fl-group">
+                    <h3><button type="button" className="link-button" aria-expanded={!isFolded} onClick={() => toggleFold('__all')}>
+                      <Icon name={isFolded ? 'chevron-right' : 'chevron-down'} />All floors<span className="muted"> · {all.length} systems</span>
+                    </button>{systemHL && <button type="button" className="link-button tiny" title="Clear the highlight" onClick={() => setSystemHL(null)}>Clear</button>}</h3>
+                    {!isFolded && (
+                      <div className="table-wrap">
+                        <table className="fl-table">
+                          <thead><tr><th>SYSTEM</th><th>NAME</th><th>ROS</th><th>ETA</th></tr></thead>
+                          <tbody>
+                            {all.map(({ sy, rosDate, etaDate, state }) => (
+                              <tr key={sy.id} className={`fl-row ${systemHL === sy.id ? 'selected' : ''}`} aria-selected={systemHL === sy.id} tabIndex={0} title={`Highlight ${sy.label} in all floors`}
+                                onClick={() => setSystemHL(h => (h === sy.id ? null : sy.id))} onKeyDown={e => { if (e.key === 'Enter') setSystemHL(h => (h === sy.id ? null : sy.id)); }}>
+                                <td><strong><Dot colour={sy.colour} /> ALL</strong></td>
+                                <td><span className="fl-name">{sy.label}</span></td>
+                                <td>{shortDate(rosDate)}</td>
+                                <td><span className={state === 'late' ? 'negative' : state === 'soon' ? 'warning' : ''}>{shortDate(etaDate)}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
+                );
+              })()}
               {deckNames.map(({ name, id }) => {
                 const rows = byDeck.get(name) ?? [];
                 if (!rows.length) return null;
                 const isFolded = folded.has(name);
                 return (
                   <section key={name} className="fl-group">
-                    <h3><button type="button" className="link-button" aria-expanded={!isFolded} onClick={() => toggleFold(name)}>
+                    {decked && <h3><button type="button" className="link-button" aria-expanded={!isFolded} onClick={() => toggleFold(name)}>
                       <Icon name={isFolded ? 'chevron-right' : 'chevron-down'} />{name}<span className="muted"> · {rows.length}</span>
-                    </button>{id && <button type="button" className="link-button tiny" title="Show this deck alone in the 3D model" onClick={() => onlyDeck(id)}>Only</button>}</h3>
-                    {!isFolded && (
+                    </button>{id && <button type="button" className="link-button tiny" title="Show this deck alone in the 3D model" onClick={() => onlyDeck(id)}>Only</button>}</h3>}
+                    {(!decked || !isFolded) && (
                       <div className="table-wrap">
-                        <table className="fl-table">
-                          <thead><tr><th>TAG</th><th>NAME</th><th>ROS</th><th>ETA</th></tr></thead>
+                        <table className={`fl-table${decked ? "" : " no-tag"}`}>
+                          <thead><tr>{decked && <th>TAG</th>}<th>{decked ? 'NAME' : 'SYSTEM'}</th><th>ROS</th><th>ETA</th><th><span className="sr-only">Details</span></th></tr></thead>
                           <tbody>
                             {rows.map(i => {
                               const d = delivery(i);
                               return (
-                                <tr key={i.tag} className={`fl-row ${active === i.tag ? 'selected' : ''}`} data-tag={i.tag} aria-selected={active === i.tag} onClick={() => pickInList(i.tag)} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') pickInList(i.tag); }}>
-                                  <td><strong>{i.tag}</strong>{!inModel.has(i.tag) && <span className="tiny muted" title="Not modelled in 3D"> · no 3D</span>}</td>
-                                  <td>{i.name ? <span className="fl-name" title={i.name}>{i.name}</span> : <span className="muted">—</span>}</td>
+                                <tr key={i.tag} className={`fl-row ${active === i.tag ? 'selected' : ''}`} data-tag={i.tag} aria-selected={active === i.tag} onClick={() => focusInList(i.tag)} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') focusInList(i.tag); }}>
+                                  {decked && <td><strong>{i.tag}</strong>{!modelled(i.tag) && <span className="tiny muted" title="Not modelled in 3D"> · no 3D</span>}</td>}
+                                  <td>{i.name ? <span className="fl-name" title={i.name}>{i.name}</span> : <span className="muted">—</span>}{!decked && !modelled(i.tag) && <span className="tiny muted" title="Not modelled in 3D"> · no 3D</span>}</td>
                                   <td>{shortDate(i.rosDate)}</td>
                                   <td><span className={d.state === 'late' ? 'negative' : d.state === 'soon' ? 'warning' : ''}>{shortDate(i.etaDate)}</span></td>
+                                  <td className="fl-actions"><button type="button" className="icon-btn fl-details" title="Details" aria-label={`Details of ${i.name ?? i.tag}`} onClick={e => { e.stopPropagation(); openDetails(i.tag); }} onKeyDown={e => e.stopPropagation()}><Icon name="arrow" /></button></td>
                                 </tr>
                               );
                             })}
@@ -269,6 +405,7 @@ export default function FacilityLayout() {
               })}
             </div>
           )}
+          {model === 'jacket' && <p className="tiny muted" style={{ padding: '0 var(--card-px) var(--card-py)' }}>ETA = the last item of the expediting-report packages that feed the system (jacket steel, anodes, flooding, fenders, grating, cradle timber); piles, conductors, risers and J-tubes are in no package of the report. Every system but “Jacket structure” and “Anodes & supports” is a Selection Set saved in CGF-Jacket.nwd (the four rows, launch cradle, piles, conductors and their guides, caissons, risers, J-tubes, bridge landing, flooding, buoyancy tanks, fenders, gratings…). What no set holds is structure or anodes, told apart by fabrication phase.</p>}
         </div>
       </div>
 
@@ -280,7 +417,7 @@ export default function FacilityLayout() {
               <div className="dialog-body">
                 <div className="detail-grid">
                   <div><small>Tag</small><strong>{open.tag}</strong></div>
-                  <div><small>Deck</small><strong>{open.deck}</strong></div>
+                  <div><small>{open.model === 'lqm' ? 'Floor' : 'Deck'}</small><strong>{open.deck}</strong></div>
                   <div><small>ROS (required on site)</small><strong>{fmtDate(open.rosDate)}</strong></div>
                   <div><small>ETA (expected on site)</small><strong>{fmtDate(open.etaDate)}</strong></div>
                   <div><small>Margin</small><strong className={d.state === 'late' ? 'negative' : d.state === 'soon' ? 'warning' : ''}>{d.margin === null ? '—' : d.margin < 0 ? `${-d.margin} days late` : `${d.margin} days`}</strong></div>
@@ -292,14 +429,14 @@ export default function FacilityLayout() {
                 </div>
                 {open.remarks && <><h3 className="fl-sub">Remarks</h3><p className="fl-text">{open.remarks}</p></>}
                 {open.comments && <><h3 className="fl-sub">Comments</h3><p className="fl-text">{open.comments}</p></>}
-                <p className="tiny muted fl-source">Source: {open.source ?? '—'}{open.etaDate && open.etaDate < today && d.state !== 'none' ? ' · the ETA date has passed' : ''}{!inModel.has(open.tag) ? ' · not modelled in 3D' : ''}</p>
+                <p className="tiny muted fl-source">Source: {open.source ?? '—'}{open.etaDate && open.etaDate < today && d.state !== 'none' ? ' · the ETA date has passed' : ''}{!modelled(open.tag) ? ' · not modelled in 3D' : ''}</p>
               </div>
             );
           })()}
         </Modal>
       )}
       {(creating || editing) && (
-        <FacilityEquipmentForm item={editing} decks={deckNames.map(d => d.name).concat(modelDecks.map(d => d.name).filter(n => !deckNames.some(x => x.name === n)))} base={base}
+        <FacilityEquipmentForm item={editing} model={model} decks={deckNames.map(d => d.name).concat(modelDecks.map(d => d.name).filter(n => !deckNames.some(x => x.name === n)))} base={base}
           onClose={() => { setEditing(null); if (creating) setOpenTag(null); }}
           onSaved={tag => { setEditing(null); refresh(); setOpenTag(tag); }} />
       )}
