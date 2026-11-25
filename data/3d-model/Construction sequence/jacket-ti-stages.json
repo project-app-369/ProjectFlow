@@ -1,0 +1,71 @@
+{
+  "_comment": "Transcribed from the two drawings in 'Jacket T&I Sequence': ST-CGF Jacket Launch Sequence (2021-4589-66-0007 Rev 1B1) and ST-CGF Jacket Floatation & Upending Installation Sequence (2021-4589-66-0009-01/-02 Rev 2). Used by data/3d-model/pipeline/build_ti_sequence.py. Brackets on the drawing (extreme of the COG / weight sensitivity runs) are kept in the *_extreme fields.",
+  "launch": {
+    "drawing": "ST-CGF Jacket Launch Sequence, 2021-4589-66-0007 Rev 1B1 (TPGM 220480C-1100-DW-3601-7407)",
+    "notes": [
+      "Launching barge 142.5 m x 36 m x 8.5 m, mean draft 4.48 m before launch; vessel layout pending confirmation.",
+      "Design water depth for the bottom clearance during launch is 52.30 m (LAT); LAT is -2.80 m from MSL.",
+      "Results are for a dynamic friction of 0.05 and a winch speed of 0.30 m/s, from the ST-CGF launch analysis report 2021-4589-6K-1015_XA.",
+      "Jacket weight and COG are from the MOSES model; the Offshore Installation Contractor decides the final barge trim and draft for launch."
+    ],
+    "summary": { "jacket_weight_mt": 5340, "min_seabed_clearance_m": 5.4, "max_pin_reaction_mt": 3387, "jacket_buoyancy_mt": 7317, "min_reserve_buoyancy_pct": 27 },
+    "stages": [
+      { "no": 1, "name": "Pre-launch", "marker": "Stage 1 Pre-launch", "time_s": 0, "velocity_m_s": 0.0 },
+      { "no": 2, "name": "Tipping", "marker": "Stage 2 Tipping", "time_s": 34.8, "velocity_m_s": 2.06, "pin_reaction_mt": { "stbd": 1916, "stbd_extreme": 1923, "port": 3383, "port_extreme": 3387 } },
+      { "no": 3, "name": "Maximum vessel submergence", "marker": "Stage 3 Max submergence", "time_s": 36.7, "velocity_m_s": 1.85 },
+      { "no": 4, "name": "Separation", "marker": "Stage 4 Separation", "time_s": 42.9, "velocity_m_s": 4.5 },
+      { "no": 5, "name": "Jacket minimum bottom clearance", "marker": "Stage 5 Min bottom clearance", "time_s": 46.0, "velocity_m_s": 2.48 },
+      { "no": 6, "name": "Final position", "marker": "Stage 6 Final position", "time_s": 150.0, "velocity_m_s": null }
+    ]
+  },
+  "upending": {
+    "drawing": "ST-CGF Jacket Floatation & Upending Installation Sequence, 2021-4589-66-0009-01/-02 Rev 2 (TPGM 220480C-1100-DW-3601-7409)",
+    "notes": [
+      "Elevations are from MSL; dimensions in mm unless stated. Mudline is at EL (-) 52.300 m and the water level at (-) 2.80 m LAT.",
+      "The upending sequence is based on a jacket weight of 5435 MT (factored, no sensitivity on COG); results for the weight and COG sensitivity cases are in brackets.",
+      "Four slings are used (rows A2, A5, C2 and C5). Internal compartment pressure is assumed to be 0.3 bar.",
+      "Controlled flooding is needed for the buoyancy tanks and legs; free flooding may be used for compartments that can be manually flooded and lie below the waterline.",
+      "The minimum required seabed clearance during upending is 2.1 m for all cases. The Offshore Installation Contractor develops the final upending sequences.",
+      "Results are from the jacket floatation & upending analysis report 2021-4589-6J-1016 Rev 2."
+    ],
+    "jacket": { "weight_mt": 5435, "buoyancy_mt": 7501, "reserve_buoyancy_pct": 27.54, "sling_length_m": { "A5": 54, "A2": 56, "C2": 56, "C5": 54 } },
+    "buoyancy_tanks": [
+      { "code": "BT-A2-1", "deck": "tank-a2", "note": "row A2" },
+      { "code": "BT-A5-1", "deck": "tank-a5", "note": "row A5" },
+      { "code": "BT-C2-1", "deck": "tank-c2", "note": "row C2" },
+      { "code": "BT-C5-1", "deck": "tank-c5", "note": "row C5" },
+      { "code": "BT-H0-C", "deck": null, "note": "centre tank, not in the model" }
+    ],
+    "legs": ["L-B5-2", "L-B2-2", "L-B5-1", "L-B2-1", "L-C2-1", "L-C5-1"],
+    "stages": [
+      { "no": 0, "name": "Jacket free floating", "actions": ["Jacket free floating with the lifting slings connected to the padeyes.", "Hook at nominal load."],
+        "hook_height_m": 31.2, "hook_load": "nominal", "sling_loads_mt": { "A5": 0, "A2": 0, "C2": 0, "C5": 0 }, "pitch_deg": 16.5, "roll_deg": 5.6, "clearance_m": 16.3, "flood": {}, "highlight": [] },
+      { "no": 1, "name": "Flood buoyancy tank BT-H0-C", "actions": ["Commence controlled flooding of buoyancy tank BT-H0-C to 100%."],
+        "hook_height_m": 27.3, "hook_load": "nominal", "sling_loads_mt": { "A5": 0, "A2": 0, "C2": 0, "C5": 0 }, "pitch_deg": 10.8, "roll_deg": 3.5, "clearance_m": 6.0, "flood": { "BT-H0-C": 100 }, "highlight": [] },
+      { "no": 2, "name": "Lift the hook to 42 m", "actions": ["Lift the hook to a height of 42 m from the water surface."],
+        "hook_height_m": 42, "hook_load_mt": 827, "hook_load_extreme_mt": 911, "sling_loads_mt": { "A5": 0, "A2": 0, "C2": 351, "C5": 538 }, "sling_loads_extreme_mt": { "C2": null, "C5": 629 },
+        "pitch_deg": 40.9, "roll_deg": 2.2, "clearance_m": 12.1, "flood": { "BT-H0-C": 100 }, "highlight": [] },
+      { "no": 3, "name": "Flood buoyancy tanks BT-A2-1 and BT-A5-1 to 30%", "actions": ["Maintain the hook at 42 m from the water surface.", "Commence controlled flooding of buoyancy tanks BT-A2-1 and BT-A5-1 to 30%."],
+        "hook_height_m": 42, "hook_load_mt": 707, "sling_loads_mt": { "A5": 0, "A2": 0, "C2": 301, "C5": 460 }, "pitch_deg": 45.5, "roll_deg": 2.1, "clearance_m": 9.7,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30 }, "highlight": ["tank-a2", "tank-a5"] },
+      { "no": 4, "name": "Lift the hook to 47 m", "actions": ["Lift the hook to a height of 47 m from the water surface."],
+        "hook_height_m": 47, "hook_load_mt": 735, "sling_loads_mt": { "A5": 64, "A2": 26, "C2": 179, "C5": 223 }, "sling_loads_extreme_mt": { "C2": 431 }, "pitch_deg": 78.9, "roll_deg": 1.2, "clearance_m": 3.9, "clearance_extreme_m": 2.1,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30 }, "highlight": [] },
+      { "no": 5, "name": "Flood legs L-B5-2 and L-B2-2", "actions": ["Maintain the hook at 47 m from the water surface.", "Commence free flooding of legs L-B5-2 and L-B2-2 to 100%."],
+        "hook_height_m": 47, "hook_load_mt": 541, "sling_loads_mt": { "A5": 92, "A2": 49, "C2": 191, "C5": 239 }, "sling_loads_extreme_mt": { "A5": 325, "A2": 208 }, "pitch_deg": 81.2, "roll_deg": 1.1, "clearance_m": 4.4,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30, "L-B5-2": 100, "L-B2-2": 100 }, "highlight": [] },
+      { "no": 6, "name": "Flood legs L-B5-1, L-B2-1, L-C2-1 and L-C5-1", "actions": ["Maintain the hook at 47 m from the water surface.", "Commence free flooding of leg L-B5-1 to 100% and controlled flooding of legs L-B2-1 to 50%, L-C2-1 to 53% and L-C5-1 to 53%."],
+        "hook_height_m": 47, "hook_load_mt": 712, "sling_loads_mt": { "A5": 153, "A2": 93, "C2": 243, "C5": 308 }, "pitch_deg": 83.3, "roll_deg": 0.0, "clearance_m": 4.5,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30, "L-B5-2": 100, "L-B2-2": 100, "L-B5-1": 100, "L-B2-1": 50, "L-C2-1": 53, "L-C5-1": 53 }, "highlight": [] },
+      { "no": 7, "name": "Lower the hook to 43 m, 1 m above the seabed", "actions": ["Lower the main hook to 43 m from the water surface.", "The jacket is 1 m from the seabed, for ROV inspection."],
+        "hook_height_m": 43, "hook_load_mt": 262, "sling_loads_mt": { "A5": 82, "A2": 58, "C2": 66, "C5": 91 }, "pitch_deg": 90.0, "roll_deg": 0.0, "clearance_m": 1.0,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30, "L-B5-2": 100, "L-B2-2": 100, "L-B5-1": 100, "L-B2-1": 50, "L-C2-1": 53, "L-C5-1": 53 }, "highlight": [] },
+      { "no": 8, "name": "Lower the hook to 42 m, prepare for on-bottom", "actions": ["Lower the main hook to 42 m from the water surface.", "Prepare for the on-bottom condition."],
+        "hook_height_m": 42, "hook_load_mt": 154, "sling_loads_mt": { "A5": 48, "A2": 34, "C2": 39, "C5": 54 }, "pitch_deg": 90.0, "roll_deg": 0.0, "clearance_m": 0.0,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 30, "BT-A5-1": 30, "L-B5-2": 100, "L-B2-2": 100, "L-B5-1": 100, "L-B2-1": 50, "L-C2-1": 53, "L-C5-1": 53 }, "highlight": [] },
+      { "no": 9, "name": "On-bottom condition", "actions": ["Jacket at the seabed.", "All jacket leg compartments are flooded up to water level; buoyancy tanks at rows A2, A5, C2, C5 and H0 are 100% flooded.", "Open the drain caisson ABH-6204 (J-tube OD 273 x 12.7 WT) and the caissons ABH-4901A and ABH-4901B, flooded up to water level.", "See the jacket on-bottom stability analysis and mudmat design report 2021-4589-6J-1017 for the minimum and maximum on-bottom weight."],
+        "hook_height_m": 42, "hook_load": "slack", "sling_loads_mt": null, "pitch_deg": 90.0, "roll_deg": 0.0, "clearance_m": 0.0,
+        "flood": { "BT-H0-C": 100, "BT-A2-1": 100, "BT-A5-1": 100, "BT-C2-1": 100, "BT-C5-1": 100, "L-B5-2": 100, "L-B2-2": 100, "L-B5-1": 100, "L-B2-1": 100, "L-C2-1": 100, "L-C5-1": 100 }, "highlight": ["tank-a2", "tank-a5", "tank-c2", "tank-c5"] }
+    ]
+  }
+}

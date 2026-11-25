@@ -105,7 +105,7 @@ const TREE: WorkspaceDef[] = [
     { key: 'fabrication', label: 'Fabrication Subcontracting', icon: 'people', group: 'Yard Execution', phase: 'P2', description: 'Subcontractor fabrication tracking', subs: ['Progress', 'Concerns & Highlights'] },
     { key: 'qaqc', label: 'QAQC', icon: 'shield', group: 'Yard Execution', phase: 'P2', description: 'Quality assurance and control' },
     { key: 'hse', label: 'HSE', icon: 'risk', group: 'Yard Execution', phase: 'P2', description: 'Health, safety and environment' },
-    { key: 'ti', label: 'T&I', icon: 'anchor', group: 'Installation', phase: 'P3', description: 'Transportation and installation', subs: ['Workpacks', 'Timeline & Schedule', 'Sequence', 'Progress'] },
+    { key: 'ti', label: 'T&I', icon: 'anchor', group: 'Installation', phase: 'P3', description: 'Transportation and installation', subs: ['Workpacks', 'Timeline & Schedule', { label: 'Jacket T&I sequence', key: 'ti.jacket.sequence', description: 'Offshore transportation and installation of the jacket: tow, launch, floatation and upending, step by step in 3D' }, 'Progress'] },
     { key: 'precom', label: 'Onshore Precom-Commissioning', icon: 'check', group: 'Commissioning', phase: 'P2', description: 'Onshore precommissioning and commissioning', subs: ['Systems & Subsystems', { label: 'Sequence', phase: 'P3' }, { label: 'Handover Schedule', phase: 'P3' }, 'Check Sheets', 'Punches'] },
     { key: 'huc', label: 'Offshore HUC', icon: 'flag', group: 'Commissioning', phase: 'P3', description: 'Offshore hook-up and commissioning', subs: ['Marine Spread', 'Timeline & Schedule', 'Progress'] },
   ] },

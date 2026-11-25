@@ -2,7 +2,7 @@
 
     python build_sequence.py <publicDir>          e.g. ... ../../../app/apps/web/public
 
-Reads the 22 steps transcribed from drawing 2021-4589-65-4015 ("Construction sequence/jacket-fabrication-steps.json") and the Jacket
+Reads the 22 steps transcribed from drawing 2021-4589-65-4015 ("Construction sequence/Jack Fab Sequence/jacket-fabrication-steps.json") and the Jacket
 model's geometry (out/m/jacket.raw + the groups of classify_models.py), splits the model into components (a row frame, a level of
 horizontal framing, a set of diagonals, the flooding lines of a row, a buoyancy tank, ...), decides in which step each one is built and
 how it arrives, and writes <publicDir>/sequence/jacket/<component>.glb and sequence.json (the steps with their ordered actions).
@@ -32,7 +32,7 @@ from rawio import leaf_tris, read_raw  # noqa: E402
 
 HERE = Path(__file__).parent
 M = HERE / "out" / "m"
-STEPS = HERE.parent / "Construction sequence" / "jacket-fabrication-steps.json"
+STEPS = HERE.parent / "Construction sequence" / "Jack Fab Sequence" / "jacket-fabrication-steps.json"
 CREASE = 40.0
 
 ROWS = {"2": 96.0, "2.1": 108.0, "5.1": 128.0, "5": 140.0}  # plan position (Y) of the four frames

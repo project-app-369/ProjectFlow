@@ -9,7 +9,14 @@ const VIEWER_CDN = 'https://developer.api.autodesk.com/modelderivative/v2/viewer
 
 export interface ViewerDeck { id: string; name: string; url: string }
 
-export interface ViewerControl { setTransform(id: string, m: readonly number[] | null): void; fit(): void }
+export interface ViewerControl {
+  setTransform(id: string, m: readonly number[] | null): void;
+  fit(): void;
+  /** Aims the camera at a point (viewer coordinates) from `dist` metres away, at an azimuth from +Z and an elevation, both in degrees. */
+  look?(target: readonly number[], dist: number, az: number, el: number): void;
+  /** Moves camera and target together so that the target follows a point, keeping whatever orbit and zoom the user has set. */
+  follow?(target: readonly number[]): void;
+}
 
 export interface FacilityViewerProps {
   decks: ViewerDeck[];
@@ -25,6 +32,8 @@ export interface FacilityViewerProps {
   /** A system that runs through every deck (LQM#2): its parts, the nodes named `<deck code>-<suffix>`, keep their colour and everything else turns grey. */
   systemHL?: { suffix: string; colour: string } | null;
   /** Receives handles to move a deck (a 16-number column-major matrix, null = back in place) and to frame everything shown. */
+  /** A translucent horizontal plane (the sea surface), drawn in an overlay so that what is below it shows through. Viewer coordinates: centre [x, z], size [width, depth]. */
+  sea?: { center: [number, number]; size: [number, number]; colour: number; opacity: number } | null;
   controlRef?: { current: ViewerControl | null };
   onPick: (tag: string | null) => void;
   onLoaded?: (loaded: number, total: number) => void;
@@ -81,7 +90,7 @@ const toVec4 = (hex: string) => {
   return new window.THREE.Vector4(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1);
 };
 
-export default function FacilityViewer({ decks, tags, visible, selected, colors, dark, highlight = null, systemHL = null, controlRef, onPick, onLoaded }: FacilityViewerProps) {
+export default function FacilityViewer({ decks, tags, visible, selected, colors, dark, highlight = null, systemHL = null, sea = null, controlRef, onPick, onLoaded }: FacilityViewerProps) {
   const host = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const entries = useRef(new Map<string, Entry>());
@@ -180,6 +189,22 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
         v.navigation.setView(new window.THREE.Vector3(c.x + r, c.y + Math.max(size.y * 0.7, r * 0.5), c.z + r), c);
         v.navigation.setCameraUpVector(new window.THREE.Vector3(0, 1, 0));
       },
+      look: (t, dist, az, el) => {
+        const v = viewerRef.current;
+        if (!v) return;
+        const a = (az * Math.PI) / 180, e = (el * Math.PI) / 180;
+        const target = new window.THREE.Vector3(t[0], t[1], t[2]);
+        v.navigation.setView(new window.THREE.Vector3(t[0] + dist * Math.cos(e) * Math.sin(a), t[1] + dist * Math.sin(e), t[2] + dist * Math.cos(e) * Math.cos(a)), target);
+        v.navigation.setCameraUpVector(new window.THREE.Vector3(0, 1, 0));
+      },
+      follow: t => {
+        const v = viewerRef.current;
+        if (!v) return;
+        const cur = v.navigation.getTarget();
+        const d = new window.THREE.Vector3(t[0] - cur.x, t[1] - cur.y, t[2] - cur.z);
+        if (d.lengthSq() < 1e-6) return;
+        v.navigation.setView(v.navigation.getPosition().clone().add(d), cur.clone().add(d));
+      },
     };
     return () => { controlRef.current = null; };
   }, [controlRef, state.phase]);
@@ -189,6 +214,31 @@ export default function FacilityViewer({ decks, tags, visible, selected, colors,
     if (state.phase !== 'ready' || !v) return;
     for (const [id, e] of entries.current) { if (visible.has(id)) v.showModel(e.model.id); else v.hideModel(e.model.id); }
   }, [visible, state.phase]);
+
+  useEffect(() => {
+    const v = viewerRef.current;
+    if (state.phase !== 'ready' || !v || !sea) return;
+    const T = window.THREE;
+    const name = 'sea-surface';
+    v.impl.createOverlayScene(name);
+    const mat = new T.MeshBasicMaterial({ color: sea.colour, transparent: true, opacity: sea.opacity, side: T.DoubleSide, depthWrite: false });
+    const mesh = new T.Mesh(new T.PlaneGeometry(sea.size[0], sea.size[1]), mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(sea.center[0], 0, sea.center[1]);
+    v.impl.addOverlay(name, mesh);
+    // a grid of lines on the surface, so the water level reads clearly from any angle
+    const gridStep = 50, gridPts: number[] = [];
+    const hw = sea.size[0] / 2, hd = sea.size[1] / 2;
+    for (let x = -hw; x <= hw; x += gridStep) gridPts.push(x, 0.05, -hd, x, 0.05, hd);
+    for (let z = -hd; z <= hd; z += gridStep) gridPts.push(-hw, 0.05, z, hw, 0.05, z);
+    const gg = new T.BufferGeometry();
+    gg.setAttribute('position', new T.Float32BufferAttribute(gridPts, 3));
+    const grid = new T.LineSegments(gg, new T.LineBasicMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0.55, depthWrite: false }));
+    grid.position.set(sea.center[0], 0, sea.center[1]);
+    v.impl.addOverlay(name, grid);
+    v.impl.invalidate(true, true, true);
+    return () => { try { v.impl.removeOverlay(name, mesh); v.impl.removeOverlay(name, grid); v.impl.removeOverlayScene(name); v.impl.invalidate(true, true, true); } catch { /* the viewer has gone */ } };
+  }, [sea, state.phase]);
 
   const isolated = useRef(new Set<string>());
   useEffect(() => {

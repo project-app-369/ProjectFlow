@@ -20,3 +20,4 @@ dist-static/
 app/apps/api-v2/.tmp-deploy/
 data/3d-model/*.nwd~
 data/3d-model/.supersede/
+data/3d-model/**/*.mp4

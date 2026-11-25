@@ -1919,3 +1919,17 @@ body.is-popout{overflow:hidden!important}
 /* the two panels of the second row share the width until the page is one column; the milestone card never gets narrower than its text needs */
 .grid-main{grid-template-columns:minmax(0,1fr) clamp(17rem,26vw,23rem)}
 @media (max-width:1279px){.grid-main{grid-template-columns:minmax(0,1fr)}}
+
+/* T&I -> Sequence */
+.ti-readout{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-5);padding:var(--sp-2) var(--card-px);font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--border)}
+.ti-readout b{color:var(--text);font-variant-numeric:tabular-nums}
+.ti-text{margin:0 0 var(--sp-3);padding-left:1.1rem;font-size:var(--fs-sm);display:grid;gap:var(--sp-1)}
+.ti-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);margin:var(--sp-2) 0}
+.ti-table caption{text-align:left;font-weight:600;padding-bottom:var(--sp-1)}
+.ti-table th,.ti-table td{text-align:left;padding:.2rem .4rem;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.ti-table th{color:var(--muted);font-weight:600;font-size:var(--fs-xs);text-transform:uppercase}
+.ti-flood{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1);font-size:var(--fs-sm)}
+.ti-flood li{display:grid;grid-template-columns:5.5rem 1fr 2.6rem;align-items:center;gap:var(--sp-2)}
+.ti-flood b{text-align:right;font-variant-numeric:tabular-nums}
+.ti-bar{display:block;height:.5rem;border-radius:999px;background:var(--border);overflow:hidden}
+.ti-bar i{display:block;height:100%;background:var(--t-info);border-radius:inherit}

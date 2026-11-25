@@ -9,6 +9,7 @@ export const WIRED_KEYS = [
   'procurement.procurement-plan',
   'procurement.expediting.vendor-overview',
   'construction.construction-sequence', // static files (the sequence and its model), no API
+  'ti.jacket.sequence', // static files (the T&I sequence and its models), no API
 ] as const;
 /** Screens that only the sheets backend serves so far (NestJS parity is on the implementation plan). */
 export const SHEETS_KEYS = ['planning.schedule', 'planning.progress', 'planning.cpn', 'management.issues', 'procurement.dashboard', 'procurement.concerns', 'procurement.logistics', 'procurement.materials', 'construction.budget', 'construction.facility-layout', 'knowledge.overview', 'knowledge.engineering', 'knowledge.procurement', 'knowledge.services', 'knowledge.quality', 'knowledge.hse', 'knowledge.construction', 'knowledge.precom', 'knowledge.ti', 'knowledge.huc', 'task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;

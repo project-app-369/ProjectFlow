@@ -17,6 +17,7 @@ const InterfaceRegister = lazyPage(() => import('./pages/Interfaces').then(m => 
 const ConstructionBudget = lazyPage(() => import('./pages/ConstructionBudget'));
 const FacilityLayout = lazyPage(() => import('./pages/FacilityLayout'));
 const ConstructionSequence = lazyPage(() => import('./pages/ConstructionSequence'));
+const TISequence = lazyPage(() => import('./pages/TISequence'));
 const Knowledge = lazyPage(() => import('./pages/Knowledge'));
 const Milestones = lazyPage(() => import('./pages/Milestones'));
 const Concerns = lazyPage(() => import('./pages/Concerns'));
@@ -60,6 +61,7 @@ const PAGES: Record<string, () => ReactNode> = {
   'construction.budget': () => <ConstructionBudget />,
   'construction.facility-layout': () => <FacilityLayout />,
   'construction.construction-sequence': () => <ConstructionSequence />,
+  'ti.jacket.sequence': () => <TISequence />,
   'knowledge.overview': () => <Knowledge />,
   'knowledge.engineering': () => <Knowledge domain="engineering" />,
   'knowledge.procurement': () => <Knowledge domain="procurement" />,

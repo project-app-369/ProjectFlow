@@ -22,7 +22,7 @@ describe('module catalog', () => {
     expect(MANIFEST_BY_KEY.get('procurement')!.availability).toBe('Available');
     expect(MANIFEST_BY_KEY.get('procurement.logistics')!.availability).toBe('Available');
     expect(MANIFEST_BY_KEY.get('procurement.concerns')!.availability).toBe('Available');
-    expect(MANIFEST_BY_KEY.get('ti.sequence')!.availability).toBe('Planned');
+    expect(MANIFEST_BY_KEY.get('ti.jacket.sequence')!.availability).toBe('Planned');
   });
 
   it('starts P1 modules enabled and later phases disabled', () => {
