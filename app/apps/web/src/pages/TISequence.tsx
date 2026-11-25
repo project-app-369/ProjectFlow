@@ -355,7 +355,7 @@ function warmUp(seq: Seq) {
 const kindName = (s: TiStep) => (s.phase === 'launch' ? 'Launch' : s.phase === 'upend' ? 'Upending' : s.phase === 'hookup' ? 'Hook-up' : s.phase === 'arrive' ? 'Vessel' : 'Tow');
 
 /** T&I → Sequence: the offshore transportation and installation of the ST-CGF jacket, from the barge arriving at the launch site to the jacket on the seabed. */
-export default function TISequence() {
+export default function TISequence({ standalone = false }: { standalone?: boolean } = {}) {
   const { dark } = usePrefs();
   const seqQ = useQuery({
     queryKey: ['ti-sequence', 1],
@@ -449,16 +449,23 @@ export default function TISequence() {
   const up = seq?.upending;
   const floodRows = readout ? Object.entries(readout.flood).filter(([, v]) => v > 0.5) : [];
 
-  return (
+  const body = (
     <>
+      {standalone ? (
+        <header className="ti-solo-head">
+          <h1>Jacket T&amp;I sequence</h1>
+          <p>Offshore transportation and installation of the ST-CGF jacket: tow, launch, crane vessel hook-up, floatation and upending.</p>
+        </header>
+      ) : (
       <PageHead title="Jacket T&I sequence" desc="Offshore transportation and installation of the ST-CGF jacket: the barge arriving at the launch site and the tugs connecting, the six stages of the launch, the tow of the floating jacket to the crane vessel, and the floatation and upending in nine stages. The motion up to the upending position follows the Blender scene; the upending is posed from the stage table of drawing 2021-4589-66-0009."
         actions={<Btn kind="small" icon="refresh" onClick={() => void seqQ.refetch()}>Refresh</Btn>} />
-      <div className="stats">
+      )}
+      {!standalone && <div className="stats">
         <Stat label="Steps" value={seq ? total : '—'} foot={seq ? `${steps.filter(s => s.phase === 'launch').length} launch stages, ${steps.filter(s => s.phase === 'upend').length} upending stages after the hook-up` : 'Offshore T&I of the jacket'} icon="layers" />
         <Stat label="Jacket weight" value={sum ? `${sum.jacket_weight_mt.toLocaleString('en-GB')} MT` : '—'} foot={up ? `${up.jacket.weight_mt.toLocaleString('en-GB')} MT factored for the upending` : ''} icon="box" />
         <Stat label="Min. seabed clearance" value={sum ? `${sum.min_seabed_clearance_m.toFixed(2)} m` : '—'} foot="During the launch, water depth 52.30 m (LAT)" icon="chart" />
         <Stat label="Max. pin reaction" value={sum ? `${sum.max_pin_reaction_mt.toLocaleString('en-GB')} MT` : '—'} foot={sum ? `Reserve buoyancy ${sum.min_reserve_buoyancy_pct}% after the launch` : ''} icon="edit" />
-      </div>
+      </div>}
 
       {seqQ.error ? <ErrorBox error={seqQ.error} /> : !seq ? <Loading label="Loading the T&I sequence…" /> : (
         <div className="fl-grid">
@@ -533,6 +540,7 @@ export default function TISequence() {
       )}
     </>
   );
+  return standalone ? <div className="lintel ti-solo">{body}</div> : body;
 }
 
 const NO_TAGS: ReadonlySet<string> = new Set();

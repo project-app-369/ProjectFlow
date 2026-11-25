@@ -1933,3 +1933,9 @@ body.is-popout{overflow:hidden!important}
 .ti-flood b{text-align:right;font-variant-numeric:tabular-nums}
 .ti-bar{display:block;height:.5rem;border-radius:999px;background:var(--border);overflow:hidden}
 .ti-bar i{display:block;height:100%;background:var(--t-info);border-radius:inherit}
+
+/* Jacket T&I sequence on its own page */
+.ti-solo{min-height:100vh;padding:var(--gap);box-sizing:border-box;max-width:1800px;margin:0 auto}
+.ti-solo-head{margin-bottom:var(--gap)}
+.ti-solo-head h1{margin:0 0 .25rem;font-size:var(--fs-xl,1.5rem)}
+.ti-solo-head p{margin:0;color:var(--muted);font-size:var(--fs-sm)}

@@ -1,9 +1,10 @@
 import react from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
-  build: { chunkSizeWarningLimit: 600 }, // the lazily loaded chart chunk carries ECharts
+  build: { chunkSizeWarningLimit: 600, rollupOptions: { input: { main: resolve(__dirname, 'index.html'), 'ti-standalone': resolve(__dirname, 'ti-standalone.html') } } }, // the lazily loaded chart chunk carries ECharts
   server: {
     port: 5173,
     proxy: {

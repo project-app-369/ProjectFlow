@@ -12,7 +12,7 @@
  * - Writes README.txt and <out>.zip (needs the `tar` that ships with Windows 10+, macOS and Linux).
  */
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
@@ -30,6 +30,16 @@ await build({ root, mode, base: './', logLevel: 'warn', build: { outDir: out, em
 // index.html: the icons, manifest and share image are written as "/x"; make them relative to the page like the bundles.
 const indexPath = join(out, 'index.html');
 writeFileSync(indexPath, readFileSync(indexPath, 'utf8').replace(/\b(href|content|src)="\/(?!\/)/g, '$1="./'));
+
+// The Jacket T&I sequence on its own page, at <site>/ti.jacket.sequence/: the same bundle with a <base> pointing at the site root, so the models and the
+// decoder are found at their usual relative paths.
+const solo = join(out, 'ti-standalone.html');
+if (existsSync(solo)) {
+  const html = readFileSync(solo, 'utf8').replace(/\b(href|content|src)="\/(?!\/)/g, '$1="./').replace('<head>', '<head>\n  <base href="../">');
+  mkdirSync(join(out, 'ti.jacket.sequence'), { recursive: true });
+  writeFileSync(join(out, 'ti.jacket.sequence', 'index.html'), html);
+  rmSync(solo);
+}
 
 // the service worker is never registered in this build; do not ship it
 rmSync(join(out, 'sw.js'), { force: true });
