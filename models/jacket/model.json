@@ -1,0 +1,240 @@
+{
+ "model": "jacket",
+ "name": "Jacket",
+ "origin": [
+  -127.81499862670898,
+  123.19500350952148,
+  -167.10000610351562
+ ],
+ "upAxis": "Y",
+ "bounds": {
+  "min": [
+   -151.3350067138672,
+   88.84000396728516,
+   -167.10000610351562
+  ],
+  "max": [
+   -104.29499053955078,
+   157.5500030517578,
+   33.45400619506836
+  ]
+ },
+ "groups": [
+  {
+   "id": "structure",
+   "name": "Jacket structure",
+   "file": "structure.glb",
+   "color": "#6f7f9c",
+   "bytes": 292024,
+   "triangles": 98468
+  },
+  {
+   "id": "anodes",
+   "name": "Anodes & supports",
+   "file": "anodes.glb",
+   "color": "#e5a93a",
+   "bytes": 3101200,
+   "triangles": 1014138
+  },
+  {
+   "id": "row_5_1",
+   "name": "Row 5.1",
+   "file": "row_5_1.glb",
+   "color": "#8fa3c4",
+   "bytes": 588148,
+   "triangles": 187119
+  },
+  {
+   "id": "row_2_1",
+   "name": "Row 2.1",
+   "file": "row_2_1.glb",
+   "color": "#7d93b8",
+   "bytes": 599540,
+   "triangles": 192983
+  },
+  {
+   "id": "row_5",
+   "name": "Row 5",
+   "file": "row_5.glb",
+   "color": "#9bb0cf",
+   "bytes": 889348,
+   "triangles": 287972
+  },
+  {
+   "id": "row_2",
+   "name": "Row 2",
+   "file": "row_2.glb",
+   "color": "#889fc3",
+   "bytes": 826756,
+   "triangles": 264104
+  },
+  {
+   "id": "grating_support",
+   "name": "Grating support",
+   "file": "grating_support.glb",
+   "color": "#c9a227",
+   "bytes": 989816,
+   "triangles": 291846
+  },
+  {
+   "id": "mudmat",
+   "name": "Mudmad",
+   "file": "mudmat.glb",
+   "color": "#a98467",
+   "bytes": 142584,
+   "triangles": 54105
+  },
+  {
+   "id": "conductor_guide",
+   "name": "Conductor Guide",
+   "file": "conductor_guide.glb",
+   "color": "#d98f4e",
+   "bytes": 1142044,
+   "triangles": 367250
+  },
+  {
+   "id": "conductor_guard",
+   "name": "Conductor Guard",
+   "file": "conductor_guard.glb",
+   "color": "#c4672b",
+   "bytes": 39828,
+   "triangles": 14160
+  },
+  {
+   "id": "caisson_guard",
+   "name": "Caisson Guard",
+   "file": "caisson_guard.glb",
+   "color": "#b5651d",
+   "bytes": 31088,
+   "triangles": 9756
+  },
+  {
+   "id": "piles",
+   "name": "Piles",
+   "file": "piles.glb",
+   "color": "#d4543b",
+   "bytes": 348136,
+   "triangles": 109091
+  },
+  {
+   "id": "conductors",
+   "name": "Conductors",
+   "file": "conductors.glb",
+   "color": "#e07b39",
+   "bytes": 119312,
+   "triangles": 63668
+  },
+  {
+   "id": "fenders",
+   "name": "Surge Fenders",
+   "file": "fenders.glb",
+   "color": "#2f9d83",
+   "bytes": 66716,
+   "triangles": 23009
+  },
+  {
+   "id": "riser",
+   "name": "Riser",
+   "file": "riser.glb",
+   "color": "#5b8def",
+   "bytes": 197992,
+   "triangles": 54051
+  },
+  {
+   "id": "jtubes",
+   "name": "J Tubes",
+   "file": "jtubes.glb",
+   "color": "#8e5ac8",
+   "bytes": 62712,
+   "triangles": 19352
+  },
+  {
+   "id": "seawater_caisson",
+   "name": "Seawater Pump caisson",
+   "file": "seawater_caisson.glb",
+   "color": "#14b8a6",
+   "bytes": 33988,
+   "triangles": 11472
+  },
+  {
+   "id": "open_drain",
+   "name": "Open Drain Caisson",
+   "file": "open_drain.glb",
+   "color": "#0e9f8e",
+   "bytes": 51108,
+   "triangles": 16365
+  },
+  {
+   "id": "overboard",
+   "name": "Overboard Frame",
+   "file": "overboard.glb",
+   "color": "#9a7b4f",
+   "bytes": 60448,
+   "triangles": 19862
+  },
+  {
+   "id": "bridge_support",
+   "name": "Bridge landing support",
+   "file": "bridge_support.glb",
+   "color": "#2f7d9d",
+   "bytes": 62400,
+   "triangles": 18240
+  },
+  {
+   "id": "bridge_tower",
+   "name": "Bridge landing tower",
+   "file": "bridge_tower.glb",
+   "color": "#3aa0c8",
+   "bytes": 89844,
+   "triangles": 26249
+  },
+  {
+   "id": "flooding",
+   "name": "Flooding",
+   "file": "flooding.glb",
+   "color": "#7c5cc4",
+   "bytes": 2842068,
+   "triangles": 1027487
+  },
+  {
+   "id": "valve_panel",
+   "name": "Valve panel",
+   "file": "valve_panel.glb",
+   "color": "#c05cc4",
+   "bytes": 45528,
+   "triangles": 12023
+  },
+  {
+   "id": "ti_platform",
+   "name": "T&I platform 2",
+   "file": "ti_platform.glb",
+   "color": "#e5a93a",
+   "bytes": 37876,
+   "triangles": 17536
+  },
+  {
+   "id": "launch_cradle",
+   "name": "Launch cradle",
+   "file": "launch_cradle.glb",
+   "color": "#b07a4a",
+   "bytes": 144048,
+   "triangles": 43196
+  },
+  {
+   "id": "grating",
+   "name": "Grating",
+   "file": "grating.glb",
+   "color": "#d8c04a",
+   "bytes": 10136,
+   "triangles": 2284
+  },
+  {
+   "id": "buoyancy_tanks",
+   "name": "Buoyancy Tank",
+   "file": "buoyancy_tanks.glb",
+   "color": "#3b82f6",
+   "bytes": 962592,
+   "triangles": 300001
+  }
+ ]
+}

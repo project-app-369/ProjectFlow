@@ -1,0 +1,2 @@
+var e=[[`DE`,`Detail Engineering`],[`CE`,`Construction Engineering`],[`PRO`,`Procurement`],[`CON`,`Construction & Fabrication`],[`T&I`,`Transportation & Installation`],[`COM`,`Onshore Pre-Com & Commissioning`],[`HUC`,`Offshore Hook-up & Commissioning`],[`CTR`,`Contracting`],[`PLN`,`Planning & Schedule`],[`QC`,`Quality Control`],[`HSE`,`Health, Safety & Environment`],[`COOR`,`Coordination`]],t=Object.fromEntries(e),n=e=>e?e.split(/\s*,\s*/).filter(Boolean):[],r=e=>n(e).map(e=>`${e} · ${t[e]??e}`).join(`
+`);export{r as i,t as n,n as r,e as t};

@@ -1,0 +1,1661 @@
+{
+ "model": "jacket",
+ "name": "ST-CGF Jacket",
+ "origin": [
+  -127.81499862670898,
+  123.19500350952148,
+  -167.10000610351562
+ ],
+ "upAxis": "Y",
+ "source": "2021-4589-65-4015 Rev 1, ST-CGF Jacket - Jacket Fabrication Sequences (22 sheets, approved for construction 20 Jul 2026)",
+ "groups": [
+  {
+   "id": "structure",
+   "name": "Jacket structure",
+   "color": "#6f7f9c"
+  },
+  {
+   "id": "anodes",
+   "name": "Anodes & supports",
+   "color": "#e5a93a"
+  },
+  {
+   "id": "row_5_1",
+   "name": "Row 5.1",
+   "color": "#8fa3c4"
+  },
+  {
+   "id": "row_2_1",
+   "name": "Row 2.1",
+   "color": "#7d93b8"
+  },
+  {
+   "id": "row_5",
+   "name": "Row 5",
+   "color": "#9bb0cf"
+  },
+  {
+   "id": "row_2",
+   "name": "Row 2",
+   "color": "#889fc3"
+  },
+  {
+   "id": "grating_support",
+   "name": "Grating support",
+   "color": "#c9a227"
+  },
+  {
+   "id": "mudmat",
+   "name": "Mudmad",
+   "color": "#a98467"
+  },
+  {
+   "id": "conductor_guide",
+   "name": "Conductor Guide",
+   "color": "#d98f4e"
+  },
+  {
+   "id": "conductor_guard",
+   "name": "Conductor Guard",
+   "color": "#c4672b"
+  },
+  {
+   "id": "caisson_guard",
+   "name": "Caisson Guard",
+   "color": "#b5651d"
+  },
+  {
+   "id": "piles",
+   "name": "Piles",
+   "color": "#d4543b"
+  },
+  {
+   "id": "conductors",
+   "name": "Conductors",
+   "color": "#e07b39"
+  },
+  {
+   "id": "fenders",
+   "name": "Surge Fenders",
+   "color": "#2f9d83"
+  },
+  {
+   "id": "riser",
+   "name": "Riser",
+   "color": "#5b8def"
+  },
+  {
+   "id": "jtubes",
+   "name": "J Tubes",
+   "color": "#8e5ac8"
+  },
+  {
+   "id": "seawater_caisson",
+   "name": "Seawater Pump caisson",
+   "color": "#14b8a6"
+  },
+  {
+   "id": "open_drain",
+   "name": "Open Drain Caisson",
+   "color": "#0e9f8e"
+  },
+  {
+   "id": "overboard",
+   "name": "Overboard Frame",
+   "color": "#9a7b4f"
+  },
+  {
+   "id": "bridge_support",
+   "name": "Bridge landing support",
+   "color": "#2f7d9d"
+  },
+  {
+   "id": "bridge_tower",
+   "name": "Bridge landing tower",
+   "color": "#3aa0c8"
+  },
+  {
+   "id": "flooding",
+   "name": "Flooding",
+   "color": "#7c5cc4"
+  },
+  {
+   "id": "valve_panel",
+   "name": "Valve panel",
+   "color": "#c05cc4"
+  },
+  {
+   "id": "ti_platform",
+   "name": "T&I platform 2",
+   "color": "#e5a93a"
+  },
+  {
+   "id": "launch_cradle",
+   "name": "Launch cradle",
+   "color": "#b07a4a"
+  },
+  {
+   "id": "grating",
+   "name": "Grating",
+   "color": "#d8c04a"
+  },
+  {
+   "id": "buoyancy_tanks",
+   "name": "Buoyancy Tank",
+   "color": "#3b82f6"
+  }
+ ],
+ "decks": [
+  {
+   "id": "bridge-support",
+   "name": "Bridge landing support",
+   "step": 19,
+   "kind": "lift",
+   "follow": null,
+   "file": "bridge-support.glb",
+   "bytes": 62392,
+   "triangles": 18240,
+   "parts": {
+    "bridge_support": 68
+   }
+  },
+  {
+   "id": "caisson-guard",
+   "name": "Caisson guard",
+   "step": 15,
+   "kind": "lift",
+   "follow": null,
+   "file": "caisson-guard.glb",
+   "bytes": 31088,
+   "triangles": 9756,
+   "parts": {
+    "caisson_guard": 31
+   }
+  },
+  {
+   "id": "caissons",
+   "name": "Seawater lift pump caissons",
+   "step": 14,
+   "kind": "lift",
+   "follow": null,
+   "file": "caissons.glb",
+   "bytes": 33984,
+   "triangles": 11472,
+   "parts": {
+    "seawater_caisson": 50
+   }
+  },
+  {
+   "id": "cf-n14",
+   "name": "Conductor frame \u00b7 EL -14.00",
+   "step": 14,
+   "kind": "lift",
+   "follow": null,
+   "file": "cf-n14.glb",
+   "bytes": 644196,
+   "triangles": 203688,
+   "parts": {
+    "conductor_guide": 848
+   }
+  },
+  {
+   "id": "cf-n35",
+   "name": "Conductor frame \u00b7 EL -35.00",
+   "step": 14,
+   "kind": "lift",
+   "follow": null,
+   "file": "cf-n35.glb",
+   "bytes": 385316,
+   "triangles": 120802,
+   "parts": {
+    "conductor_guide": 478
+   }
+  },
+  {
+   "id": "cf-p5",
+   "name": "Conductor frame \u00b7 EL +5.00",
+   "step": 14,
+   "kind": "lift",
+   "follow": null,
+   "file": "cf-p5.glb",
+   "bytes": 144600,
+   "triangles": 42760,
+   "parts": {
+    "conductor_guide": 158
+   }
+  },
+  {
+   "id": "conductor-guard",
+   "name": "Conductor guard",
+   "step": 17,
+   "kind": "lift",
+   "follow": null,
+   "file": "conductor-guard.glb",
+   "bytes": 39828,
+   "triangles": 14160,
+   "parts": {
+    "conductor_guard": 43
+   }
+  },
+  {
+   "id": "cradle-2.1",
+   "name": "Steel launch cradle with timber \u00b7 Row 2.1",
+   "step": 3,
+   "kind": "lift",
+   "follow": null,
+   "file": "cradle-2.1.glb",
+   "bytes": 74080,
+   "triangles": 21606,
+   "parts": {
+    "launch_cradle": 140
+   }
+  },
+  {
+   "id": "cradle-5.1",
+   "name": "Steel launch cradle with timber \u00b7 Row 5.1",
+   "step": 3,
+   "kind": "lift",
+   "follow": null,
+   "file": "cradle-5.1.glb",
+   "bytes": 71024,
+   "triangles": 21590,
+   "parts": {
+    "launch_cradle": 140
+   }
+  },
+  {
+   "id": "dg-inner-A",
+   "name": "Diagonal braces Row A \u00b7 Row 5.1 to 2.1",
+   "step": 7,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-inner-A.glb",
+   "bytes": 216328,
+   "triangles": 65089,
+   "parts": {
+    "anodes": 228,
+    "structure": 6
+   }
+  },
+  {
+   "id": "dg-inner-B",
+   "name": "Diagonal braces Row B \u00b7 Row 5.1 to 2.1",
+   "step": 7,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-inner-B.glb",
+   "bytes": 270028,
+   "triangles": 90040,
+   "parts": {
+    "anodes": 374,
+    "structure": 2
+   }
+  },
+  {
+   "id": "dg-inner-C",
+   "name": "Diagonal braces Row C \u00b7 Row 5.1 to 2.1",
+   "step": 6,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-inner-C.glb",
+   "bytes": 153684,
+   "triangles": 54569,
+   "parts": {
+    "anodes": 189,
+    "structure": 6
+   }
+  },
+  {
+   "id": "dg-north-A",
+   "name": "Diagonal braces Row A \u00b7 Row 5 to 5.1",
+   "step": 13,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-north-A.glb",
+   "bytes": 237236,
+   "triangles": 71660,
+   "parts": {
+    "anodes": 280,
+    "structure": 4
+   }
+  },
+  {
+   "id": "dg-north-B",
+   "name": "Diagonal braces Row B \u00b7 Row 5 to 5.1",
+   "step": 12,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-north-B.glb",
+   "bytes": 199352,
+   "triangles": 58839,
+   "parts": {
+    "anodes": 238,
+    "structure": 4
+   }
+  },
+  {
+   "id": "dg-north-C",
+   "name": "Diagonal braces Row C \u00b7 Row 5 to 5.1",
+   "step": 11,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-north-C.glb",
+   "bytes": 149208,
+   "triangles": 43644,
+   "parts": {
+    "anodes": 161,
+    "structure": 4
+   }
+  },
+  {
+   "id": "dg-south-A",
+   "name": "Diagonal braces Row A \u00b7 Row 2 to 2.1",
+   "step": 13,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-south-A.glb",
+   "bytes": 212004,
+   "triangles": 60586,
+   "parts": {
+    "anodes": 231,
+    "structure": 4
+   }
+  },
+  {
+   "id": "dg-south-B",
+   "name": "Diagonal braces Row B \u00b7 Row 2 to 2.1",
+   "step": 13,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-south-B.glb",
+   "bytes": 219064,
+   "triangles": 64129,
+   "parts": {
+    "anodes": 252,
+    "structure": 4
+   }
+  },
+  {
+   "id": "dg-south-C",
+   "name": "Diagonal braces Row C \u00b7 Row 2 to 2.1",
+   "step": 12,
+   "kind": "lift",
+   "follow": null,
+   "file": "dg-south-C.glb",
+   "bytes": 150428,
+   "triangles": 43893,
+   "parts": {
+    "anodes": 161,
+    "structure": 4
+   }
+  },
+  {
+   "id": "fenders-2",
+   "name": "Surge fender supports \u00b7 Row 2",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-2",
+   "file": "fenders-2.glb",
+   "bytes": 33060,
+   "triangles": 11102,
+   "parts": {
+    "fenders": 281
+   }
+  },
+  {
+   "id": "fenders-5",
+   "name": "Surge fender supports \u00b7 Row 5",
+   "step": 9,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "fenders-5.glb",
+   "bytes": 34864,
+   "triangles": 11907,
+   "parts": {
+    "fenders": 277
+   }
+  },
+  {
+   "id": "flood-2",
+   "name": "Flooding lines \u00b7 Row 2",
+   "step": 12,
+   "kind": "lift",
+   "follow": null,
+   "file": "flood-2.glb",
+   "bytes": 2147984,
+   "triangles": 771702,
+   "parts": {
+    "flooding": 3916
+   }
+  },
+  {
+   "id": "flood-5",
+   "name": "Flooding lines \u00b7 Row 5",
+   "step": 11,
+   "kind": "lift",
+   "follow": null,
+   "file": "flood-5.glb",
+   "bytes": 711548,
+   "triangles": 255785,
+   "parts": {
+    "flooding": 1493
+   }
+  },
+  {
+   "id": "fr1-n14",
+   "name": "Horizontal framing Part 1 \u00b7 EL -14.00",
+   "step": 5,
+   "kind": "lift",
+   "follow": null,
+   "file": "fr1-n14.glb",
+   "bytes": 126584,
+   "triangles": 44875,
+   "parts": {
+    "anodes": 240,
+    "structure": 12
+   }
+  },
+  {
+   "id": "fr1-n35",
+   "name": "Horizontal framing Part 1 \u00b7 EL -35.00",
+   "step": 5,
+   "kind": "lift",
+   "follow": null,
+   "file": "fr1-n35.glb",
+   "bytes": 203648,
+   "triangles": 63383,
+   "parts": {
+    "anodes": 252,
+    "structure": 9
+   }
+  },
+  {
+   "id": "fr1-n54",
+   "name": "Horizontal framing Part 1 \u00b7 EL -54.39",
+   "step": 5,
+   "kind": "lift",
+   "follow": null,
+   "file": "fr1-n54.glb",
+   "bytes": 251268,
+   "triangles": 77711,
+   "parts": {
+    "anodes": 297,
+    "structure": 10
+   }
+  },
+  {
+   "id": "fr3-n14",
+   "name": "Horizontal framing Part 3 \u00b7 EL -14.00",
+   "step": 9,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "fr3-n14.glb",
+   "bytes": 101496,
+   "triangles": 36504,
+   "parts": {
+    "anodes": 184,
+    "structure": 8
+   }
+  },
+  {
+   "id": "fr3-n35",
+   "name": "Horizontal framing Part 3 \u00b7 EL -35.00",
+   "step": 9,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "fr3-n35.glb",
+   "bytes": 111332,
+   "triangles": 34908,
+   "parts": {
+    "anodes": 128,
+    "structure": 7
+   }
+  },
+  {
+   "id": "fr3-n54",
+   "name": "Horizontal framing Part 3 \u00b7 EL -54.39",
+   "step": 9,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "fr3-n54.glb",
+   "bytes": 86804,
+   "triangles": 29151,
+   "parts": {
+    "anodes": 118,
+    "structure": 15
+   }
+  },
+  {
+   "id": "fr4-n14",
+   "name": "Horizontal framing Part 4 \u00b7 EL -14.00",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-2",
+   "file": "fr4-n14.glb",
+   "bytes": 102720,
+   "triangles": 35615,
+   "parts": {
+    "anodes": 198,
+    "structure": 7
+   }
+  },
+  {
+   "id": "fr4-n35",
+   "name": "Horizontal framing Part 4 \u00b7 EL -35.00",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-2",
+   "file": "fr4-n35.glb",
+   "bytes": 110348,
+   "triangles": 34637,
+   "parts": {
+    "anodes": 128,
+    "structure": 7
+   }
+  },
+  {
+   "id": "fr4-n54",
+   "name": "Horizontal framing Part 4 \u00b7 EL -54.39",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-2",
+   "file": "fr4-n54.glb",
+   "bytes": 133724,
+   "triangles": 41811,
+   "parts": {
+    "anodes": 145,
+    "structure": 14
+   }
+  },
+  {
+   "id": "ground",
+   "name": "Ground",
+   "step": 1,
+   "kind": "static",
+   "follow": null,
+   "file": "ground.glb",
+   "bytes": 1232,
+   "triangles": 12,
+   "parts": {}
+  },
+  {
+   "id": "jtubes-5",
+   "name": "J-tubes \u00b7 Row 5",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "jtubes-5.glb",
+   "bytes": 62712,
+   "triangles": 19352,
+   "parts": {
+    "jtubes": 39
+   }
+  },
+  {
+   "id": "mud-north",
+   "name": "Mudmat \u00b7 Row 5 to 5.1",
+   "step": 9,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "mud-north.glb",
+   "bytes": 93512,
+   "triangles": 34653,
+   "parts": {
+    "anodes": 35,
+    "mudmat": 204
+   }
+  },
+  {
+   "id": "mud-south",
+   "name": "Mudmat \u00b7 Row 2 to 2.1",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-2",
+   "file": "mud-south.glb",
+   "bytes": 100740,
+   "triangles": 35309,
+   "parts": {
+    "anodes": 25,
+    "mudmat": 215
+   }
+  },
+  {
+   "id": "offshore",
+   "name": "Piles & conductors (offshore)",
+   "step": null,
+   "kind": "static",
+   "follow": null,
+   "file": "offshore.glb",
+   "bytes": 467096,
+   "triangles": 172759,
+   "parts": {
+    "conductors": 286,
+    "piles": 437
+   }
+  },
+  {
+   "id": "open-drain",
+   "name": "Open drain caisson",
+   "step": 18,
+   "kind": "lift",
+   "follow": null,
+   "file": "open-drain.glb",
+   "bytes": 51100,
+   "triangles": 16365,
+   "parts": {
+    "open_drain": 72
+   }
+  },
+  {
+   "id": "overboard",
+   "name": "Overboard frame and pipe",
+   "step": 15,
+   "kind": "lift",
+   "follow": null,
+   "file": "overboard.glb",
+   "bytes": 60444,
+   "triangles": 19862,
+   "parts": {
+    "overboard": 59
+   }
+  },
+  {
+   "id": "riser",
+   "name": "Riser lines and clamps \u00b7 Row 5",
+   "step": 10,
+   "kind": "lift",
+   "follow": "row-5",
+   "file": "riser.glb",
+   "bytes": 197992,
+   "triangles": 54051,
+   "parts": {
+    "riser": 155
+   }
+  },
+  {
+   "id": "row-2",
+   "name": "Row 2 frame",
+   "step": 9,
+   "kind": "fab",
+   "follow": null,
+   "file": "row-2.glb",
+   "bytes": 930812,
+   "triangles": 297226,
+   "parts": {
+    "anodes": 54,
+    "row_2": 907,
+    "structure": 58
+   },
+   "pivot": {
+    "p": [
+     -20.185001373291016,
+     0.0,
+     27.195003509521484
+    ],
+    "dir": -1
+   },
+   "rollStep": 12
+  },
+  {
+   "id": "row-2.1",
+   "name": "Row 2.1 frame",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "row-2.1.glb",
+   "bytes": 722560,
+   "triangles": 240586,
+   "parts": {
+    "anodes": 158,
+    "row_2_1": 704,
+    "structure": 17
+   },
+   "pivot": {
+    "p": [
+     -20.185001373291016,
+     0.0,
+     15.195003509521484
+    ],
+    "dir": -1
+   },
+   "rollStep": 6,
+   "fabOffset": -37.0
+  },
+  {
+   "id": "row-5",
+   "name": "Row 5 frame",
+   "step": 8,
+   "kind": "fab",
+   "follow": null,
+   "file": "row-5.glb",
+   "bytes": 913264,
+   "triangles": 295560,
+   "parts": {
+    "anodes": 28,
+    "row_5": 1003,
+    "structure": 9
+   },
+   "pivot": {
+    "p": [
+     -20.185001373291016,
+     0.0,
+     -16.804996490478516
+    ],
+    "dir": 1
+   },
+   "rollStep": 11
+  },
+  {
+   "id": "row-5.1",
+   "name": "Row 5.1 frame",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "row-5.1.glb",
+   "bytes": 722180,
+   "triangles": 236591,
+   "parts": {
+    "anodes": 152,
+    "row_5_1": 679,
+    "structure": 17
+   },
+   "pivot": {
+    "p": [
+     -20.185001373291016,
+     0.0,
+     -4.804996490478516
+    ],
+    "dir": 1
+   },
+   "rollStep": 4,
+   "fabOffset": 37.0
+  },
+  {
+   "id": "skid",
+   "name": "Skid ways and sleepers",
+   "step": 1,
+   "kind": "fab",
+   "follow": null,
+   "file": "skid.glb",
+   "bytes": 2580,
+   "triangles": 312,
+   "parts": {}
+  },
+  {
+   "id": "tank-A2",
+   "name": "Buoyancy tank A2",
+   "step": 17,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-A2.glb",
+   "bytes": 117816,
+   "triangles": 35385,
+   "parts": {
+    "buoyancy_tanks": 356
+   }
+  },
+  {
+   "id": "tank-A5",
+   "name": "Buoyancy tank A5",
+   "step": 19,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-A5.glb",
+   "bytes": 135216,
+   "triangles": 41802,
+   "parts": {
+    "buoyancy_tanks": 387
+   }
+  },
+  {
+   "id": "tank-C2",
+   "name": "Buoyancy tank C2",
+   "step": 14,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-C2.glb",
+   "bytes": 98108,
+   "triangles": 30810,
+   "parts": {
+    "buoyancy_tanks": 163
+   }
+  },
+  {
+   "id": "tank-C5",
+   "name": "Buoyancy tank C5",
+   "step": 20,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-C5.glb",
+   "bytes": 106064,
+   "triangles": 33959,
+   "parts": {
+    "buoyancy_tanks": 233
+   }
+  },
+  {
+   "id": "tank-F0-1",
+   "name": "Buoyancy tank F0-1",
+   "step": 19,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-F0-1.glb",
+   "bytes": 194908,
+   "triangles": 55974,
+   "parts": {
+    "buoyancy_tanks": 247
+   }
+  },
+  {
+   "id": "tank-F0-2",
+   "name": "Buoyancy tank F0-2",
+   "step": 19,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-F0-2.glb",
+   "bytes": 177204,
+   "triangles": 49731,
+   "parts": {
+    "buoyancy_tanks": 215
+   }
+  },
+  {
+   "id": "tank-F0-3",
+   "name": "Buoyancy tank F0-3",
+   "step": 19,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-F0-3.glb",
+   "bytes": 28072,
+   "triangles": 8960,
+   "parts": {
+    "buoyancy_tanks": 11
+   }
+  },
+  {
+   "id": "tank-T2",
+   "name": "Buoyancy tank T2",
+   "step": 16,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-T2.glb",
+   "bytes": 84196,
+   "triangles": 24900,
+   "parts": {
+    "buoyancy_tanks": 198
+   }
+  },
+  {
+   "id": "tank-T5",
+   "name": "Buoyancy tank T5",
+   "step": 20,
+   "kind": "lift",
+   "follow": null,
+   "file": "tank-T5.glb",
+   "bytes": 62504,
+   "triangles": 18480,
+   "parts": {
+    "buoyancy_tanks": 174
+   }
+  },
+  {
+   "id": "ti-platform",
+   "name": "Working platform (T&I platform 2)",
+   "step": 21,
+   "kind": "lift",
+   "follow": null,
+   "file": "ti-platform.glb",
+   "bytes": 37872,
+   "triangles": 17536,
+   "parts": {
+    "ti_platform": 93
+   }
+  },
+  {
+   "id": "tower",
+   "name": "Bridge landing tower",
+   "step": 21,
+   "kind": "lift",
+   "follow": null,
+   "file": "tower.glb",
+   "bytes": 89836,
+   "triangles": 26249,
+   "parts": {
+    "bridge_tower": 151
+   }
+  },
+  {
+   "id": "valve-panel",
+   "name": "Valve panel",
+   "step": 20,
+   "kind": "lift",
+   "follow": null,
+   "file": "valve-panel.glb",
+   "bytes": 45528,
+   "triangles": 12023,
+   "parts": {
+    "valve_panel": 127
+   }
+  },
+  {
+   "id": "walk-2",
+   "name": "Grating support and grating \u00b7 Row 2",
+   "step": 12,
+   "kind": "lift",
+   "follow": null,
+   "file": "walk-2.glb",
+   "bytes": 282000,
+   "triangles": 84899,
+   "parts": {
+    "grating": 1,
+    "grating_support": 308
+   }
+  },
+  {
+   "id": "walk-5",
+   "name": "Grating support and grating \u00b7 Row 5",
+   "step": 11,
+   "kind": "lift",
+   "follow": null,
+   "file": "walk-5.glb",
+   "bytes": 764456,
+   "triangles": 217151,
+   "parts": {
+    "anodes": 12,
+    "grating": 4,
+    "grating_support": 1311
+   }
+  }
+ ],
+ "steps": [
+  {
+   "no": 1,
+   "sheet": 1,
+   "title": "Preparation work",
+   "items": [
+    "Clear all the obstruction at the ST-CGF jacket fabrication area",
+    "Prepare and fabricate/modify temporary supports",
+    "Pre-fabricate steel launch cradle for Row 5.1 and Row 2.1",
+    "Pre-fabricate internal rings, member braces, member legs for Row 5.1 and Row 2.1",
+    "Fabricate and assemble steel cradle section for Row 5.1 and 2.1 in workshop",
+    "Fabricate and assemble leg segments for Row 5.1 and 2.1",
+    "Pre-fabricate timber for launch cradle",
+    "Preparation of construction area for installation of concrete skid way",
+    "Setup concrete block Type 1 & Type 2 onto the skid way No.1 at axis 5.1 (Line B & C)",
+    "Setup concrete block Type 1 & Type 2 onto the skid way No.1 at axis 2.1 (Line A & D) (height of Type 1 is 800 mm, Type 2 is 1200 mm)",
+    "Dimension and levelling check for skid way",
+    "Install cover plates on skid ways"
+   ],
+   "actions": [
+    {
+     "deck": "skid",
+     "kind": "fab",
+     "label": "Lay the skid ways and sleepers, tall enough for the buoyancy tanks to clear the ground by 2.5 m"
+    }
+   ]
+  },
+  {
+   "no": 2,
+   "sheet": 2,
+   "title": "Fabricate Row 5.1 and Row 2.1 flat",
+   "items": [
+    "Lifting and moving steel launch cradle for Row 5.1 & Row 2.1 from workshop to site and combination full length",
+    "Fabricate and assemble Row 5.1",
+    "- Set up temporary supports and levelling check",
+    "- Assemble full Leg B & C from the leg segments",
+    "- Lifting, moving and place Leg C onto temporary supports; dimension and levelling check",
+    "- Lifting, moving and place Leg B (include anodes) onto temporary supports; dimension and levelling check",
+    "- Lifting, moving and install horizontal braces (include anodes) onto temporary supports; dimension and levelling check",
+    "- Fit up and weld out horizontal braces to Leg A & Leg B",
+    "- Lifting, moving and install diagonal braces (include anodes) onto temporary supports; dimension and levelling check",
+    "- Fit up and weld out diagonal braces",
+    "- Install closure plates to Leg B & Leg C (rev1)",
+    "- NDT check",
+    "Fabricate and assemble Row 2.1 (same sub-steps as Row 5.1, closure plates to Leg B & Leg C in rev1)",
+    "Fabricate and assemble timber sections of cradle for Row 5.1 and Row 2.1",
+    "Install wax 6 mm - base coat onto cover plate",
+    "Install grease - slip coat onto base coat",
+    "Install wax 3 mm - base coat to timber",
+    "Install timber sections to final position on skid way"
+   ],
+   "actions": [
+    {
+     "deck": "row-2.1",
+     "kind": "fab",
+     "label": "Fabricate lying on the launch cradle Row 2.1 frame"
+    },
+    {
+     "deck": "row-5.1",
+     "kind": "fab",
+     "label": "Fabricate lying on the launch cradle Row 5.1 frame"
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "sheet": 3,
+   "title": "Place the launch cradles on the skid way",
+   "items": [
+    "Lifting, moving and install steel launch cradle for Row 5.1 to final position on skid way",
+    "Lifting, moving and install steel launch cradle for Row 2.1 to final position on skid way",
+    "Pre-install scaffolding at Row 5.1 & Row 2.1, except roll/lifting sling and crane positions"
+   ],
+   "actions": [
+    {
+     "deck": "cradle-2.1",
+     "kind": "lift",
+     "label": "Lift in Steel launch cradle with timber \u00b7 Row 2.1"
+    },
+    {
+     "deck": "cradle-5.1",
+     "kind": "lift",
+     "label": "Lift in Steel launch cradle with timber \u00b7 Row 5.1"
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "sheet": 4,
+   "title": "Roll up Row 5.1",
+   "items": [
+    "Roll up panel Row 5.1 to vertical position",
+    "Lifting and moving panel Row 5.1 to final position on skid way",
+    "Fastening panel Row 5.1",
+    "Weld out Leg C of Row 5.1 to launch cradle",
+    "Install staircase for working on top of frame"
+   ],
+   "actions": [
+    {
+     "deck": "row-5.1",
+     "kind": "rollup",
+     "label": "Roll up Row 5.1 frame to the vertical position"
+    },
+    {
+     "deck": "row-5.1",
+     "kind": "move",
+     "label": "Lift and move Row 5.1 frame onto its launch cradle"
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "sheet": 5,
+   "title": "Horizontal framing Part 1 inside Row 5.1 and 2.1",
+   "items": [
+    "Lifting, upending, moving and install horizontal framing Part 1 (inside Row 5.1 & 2.1) at EL(-)35.000 to panel Row 5.1",
+    "Lifting, upending, moving and install horizontal framing Part 1 (inside Row 5.1 & 2.1) at EL(-)14.000 to panel Row 5.1",
+    "Lifting, upending, moving and install horizontal framing Part 1 (inside Row 5.1 & 2.1) at EL(-)54.390 to panel Row 5.1"
+   ],
+   "actions": [
+    {
+     "deck": "fr1-n14",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 1 \u00b7 EL -14.00"
+    },
+    {
+     "deck": "fr1-n35",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 1 \u00b7 EL -35.00"
+    },
+    {
+     "deck": "fr1-n54",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 1 \u00b7 EL -54.39"
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "sheet": 6,
+   "title": "Roll up Row 2.1 and diagonal braces at Row C",
+   "items": [
+    "Roll up panel Row 2.1 to vertical position",
+    "Lifting and moving panel Row 2.1 to final position on skid way",
+    "Install member tubular remaining of horizontal framing plan at EL(-)14.000, EL(-)35.000 & EL(-)54.390",
+    "Weld out Leg C of Row 2.1 to launch cradle",
+    "Removal fastening for panel Row 5.1",
+    "Install diagonal member at Row C between Row 5.1 & Row 2.1",
+    "- Lift, move and position the diagonal braces, including the additional stubs with stiffeners, onto the temporary supports; perform dimensional and level checks",
+    "- Fit up and reinforce diagonal braces to Legs 5.1C & 2.1C",
+    "- Weld the outside stub pipes to Legs 5.1C & 2.1C",
+    "- Cut and remove the stiffeners connecting diagonal braces to the stub pipes",
+    "- Removal diagonal braces",
+    "- Weld the inside stub pipes to Legs 5.1C & 2.1C",
+    "- NDT check",
+    "- Re-install diagonal braces",
+    "Removal temporary braces for install horizontal framing plan Part 1 at EL(-)14.000, EL(-)35.000 & EL(-)54.390",
+    "Fabricate and assemble leg segments for Row 5"
+   ],
+   "actions": [
+    {
+     "deck": "row-2.1",
+     "kind": "rollup",
+     "label": "Roll up Row 2.1 frame to the vertical position"
+    },
+    {
+     "deck": "row-2.1",
+     "kind": "move",
+     "label": "Lift and move Row 2.1 frame onto its launch cradle"
+    },
+    {
+     "deck": "dg-inner-C",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row C \u00b7 Row 5.1 to 2.1"
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "sheet": 7,
+   "title": "Diagonal braces at Row B and framing Part 2",
+   "items": [
+    "Install diagonal member at Row B between Row 5.1 & Row 2.1; for diagonal brace with additional stub pipe, follow the same installation sequence as in Step 6 for the diagonal braces at Row C",
+    "Lifting, upending, moving and install horizontal framing Part 2 (above Row 5.1 & 2.1) at EL(-)35.000 to final position on jacket",
+    "Lifting, upending, moving and install horizontal framing Part 2 (above Row 5.1 & 2.1) at EL(-)14.000 to final position on jacket",
+    "Lifting, upending, moving and install horizontal framing Part 2 (above Row 5.1 & 2.1) at EL(-)54.390 to final position on jacket",
+    "Assemble full leg for Row 5 by leg segments",
+    "Fabricate and assemble leg segments for Row 2"
+   ],
+   "actions": [
+    {
+     "deck": "dg-inner-A",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row A \u00b7 Row 5.1 to 2.1"
+    },
+    {
+     "deck": "dg-inner-B",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row B \u00b7 Row 5.1 to 2.1"
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "sheet": 8,
+   "title": "Fabricate Row 5",
+   "items": [
+    "Assemble full leg for Row 2 by leg segments",
+    "Fabricate and assemble Row 5",
+    "- Set up temporary supports and levelling check",
+    "- Lifting, moving and place Leg C, then Leg B, then Leg A onto temporary supports; dimension and levelling check",
+    "- Lifting, moving and install the horizontal braces onto the temporary supports; perform dimensional and level checks",
+    "- For horizontal braces with double side weld, node break-out is required to facilitate double side welding, in this sequence:",
+    "+ Lift, move and position the horizontal braces, including the additional stubs with stiffeners, onto the temporary supports",
+    "+ Fit up and reinforce diagonal braces to Legs A/B/C",
+    "+ Weld the outside stub pipes to Legs A/B/C",
+    "+ Cut and remove the stiffeners connecting horizontal braces to the stub pipes",
+    "+ Removal horizontal braces",
+    "+ Weld the inside stub pipes to Legs A/B/C",
+    "+ NDT check",
+    "+ Re-install horizontal braces",
+    "- Lifting, moving and position diagonal braces including the additional stubs with stiffeners onto the temporary supports; perform dimensional and level checks",
+    "- Fit up and reinforce diagonal braces to Legs A/B/C",
+    "- Weld the outside stub pipes to Legs A/B/C",
+    "- Cut and remove the stiffeners connecting diagonal braces to the stub pipes",
+    "- Removal diagonal braces",
+    "- Weld the inside stub pipes to Legs A/B/C",
+    "- NDT check",
+    "- Re-install diagonal braces to Row 5"
+   ],
+   "actions": [
+    {
+     "deck": "row-5",
+     "kind": "fab",
+     "label": "Fabricate lying on the launch cradle Row 5 frame"
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "sheet": 9,
+   "title": "Fabricate Row 2 and framing Part 3 (Row 5 to 5.1)",
+   "items": [
+    "Fabricate and assemble Row 2 (set up temporary supports, place Legs C, B, A, install horizontal and diagonal braces with node break-out as for Row 5, NDT check, re-install braces to Row 2)",
+    "Lifting, upending, moving and install horizontal framing Part 3 (between Row 5 & 5.1) at EL(-)14.000 to panel Row 5 (rev1)",
+    "Lifting, upending, moving and install horizontal framing Part 3 (between Row 5 & 5.1) at EL(-)35.000 to panel Row 5",
+    "Lifting, upending, moving and install horizontal framing Part 3 (included mudmat) between Row 5 & 5.1 at EL(-)54.390 to panel Row 5",
+    "Install sway fender support to Row 5, except saddle of temporary support and stopper for roll up positions (rev1)",
+    "Install surge fender support to Row 5, except saddle of temporary support and stopper for roll up positions (rev1)"
+   ],
+   "actions": [
+    {
+     "deck": "row-2",
+     "kind": "fab",
+     "label": "Fabricate lying on the launch cradle Row 2 frame"
+    },
+    {
+     "deck": "fenders-5",
+     "kind": "lift",
+     "label": "Lift in Surge fender supports \u00b7 Row 5"
+    },
+    {
+     "deck": "fr3-n14",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 3 \u00b7 EL -14.00"
+    },
+    {
+     "deck": "fr3-n35",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 3 \u00b7 EL -35.00"
+    },
+    {
+     "deck": "fr3-n54",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 3 \u00b7 EL -54.39"
+    },
+    {
+     "deck": "mud-north",
+     "kind": "lift",
+     "label": "Lift in Mudmat \u00b7 Row 5 to 5.1"
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "sheet": 10,
+   "title": "Framing Part 4, flooding lines and J-tubes on Row 5",
+   "items": [
+    "Lifting, upending, moving and install horizontal framing Part 4 (between Row 2 & 2.1) at EL(-)14.000 to panel Row 2",
+    "Lifting, upending, moving and install horizontal framing Part 4 (between Row 2 & 2.1) at EL(-)35.000 to panel Row 2",
+    "Lifting, upending, moving and install horizontal framing Part 4 (included mud-mat) between Row 2 & 2.1 at EL(-)54.390 to panel Row 2",
+    "Removal temporary brace for install horizontal framing Part 3 EL(-)35.000 & EL(-)54.390 on Row 5",
+    "Drift test Leg 5A, 5B & 5C for Row 5",
+    "Maximum installation flooding line (pipes & supports) to Row 5, except roll-up sling points and stoppers for roll up positions",
+    "Maximum install walkway frame to Row 5",
+    "Fabricate, assemble and install four (04) J-tube lines and their supports on Row 5, excluding the connections at the roll-up sling locations and the J-tube bend sections due to ground level interference (rev1)",
+    "Fabricate, assemble & install 03 riser lines & riser/hanger clamps on Row 5, excluding the riser bend sections due to ground level & temporary support interference (rev1)",
+    "Install a portion of the ring plate for upending pad-eye on Row 5 (rev1)",
+    "Set up diagonal braces for Row C between Row 5 & Row 5.1 to near final position",
+    "Blasting, painting and marking for the splash zone at top of jacket to Row 5",
+    "Pre-install scaffolding at Row 5, except roll/lifting sling and crane positions",
+    "Install sway fender support to Row 2, except stopper for roll up positions (rev1)",
+    "Install surge fender support to Row 2, except saddle of temporary support and stopper for roll up positions (rev1)"
+   ],
+   "actions": [
+    {
+     "deck": "fenders-2",
+     "kind": "lift",
+     "label": "Lift in Surge fender supports \u00b7 Row 2"
+    },
+    {
+     "deck": "fr4-n14",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 4 \u00b7 EL -14.00"
+    },
+    {
+     "deck": "fr4-n35",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 4 \u00b7 EL -35.00"
+    },
+    {
+     "deck": "fr4-n54",
+     "kind": "lift",
+     "label": "Lift in Horizontal framing Part 4 \u00b7 EL -54.39"
+    },
+    {
+     "deck": "jtubes-5",
+     "kind": "lift",
+     "label": "Lift in J-tubes \u00b7 Row 5"
+    },
+    {
+     "deck": "mud-south",
+     "kind": "lift",
+     "label": "Lift in Mudmat \u00b7 Row 2 to 2.1"
+    },
+    {
+     "deck": "riser",
+     "kind": "lift",
+     "label": "Lift in Riser lines and clamps \u00b7 Row 5"
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "sheet": 11,
+   "title": "Roll up Row 5, then flooding lines and J-tube on Row 2",
+   "items": [
+    "Roll up Row 5 to final position",
+    "Fastening Row 5 to control dimension",
+    "Weld out horizontal framing Part 3 at EL(-)14.000, EL(-)35.000 & EL(-)54.390 on Row 5 to horizontal framing Part 2 at EL(-)14.000, EL(-)35.000 & EL(-)54.390 and panel Row 5.1",
+    "Removal stopper for roll up Row 5",
+    "Weld out diagonal braces for Row C between Row 5 & Row 5.1",
+    "Install the remaining horizontal braces for Row C at EL(-)14.000, EL(-)35.000 & EL(-)54.390 between Row 5 & Row 5.1",
+    "Removal temporary brace for installation horizontal framing Part 4 at EL(-)14.000, EL(-)35.000 & EL(-)54.390 on Row 2",
+    "Drift test Leg 2A, 2B & 2C for Row 2",
+    "Install a portion of the ring plate for upending pad-eye on Row 2 (rev1)",
+    "Maximum installation flooding line (pipes & supports) to Row 2, except roll-up sling points and stoppers for roll up positions (rev1)",
+    "Fabricate, assemble & install 01 J-tube line and supports to Row 2, excluding the bend section due to ground level interference (rev1)",
+    "Set up diagonal braces for Row C between Row 2 & Row 2.1 to near final position",
+    "Blasting, painting and marking for the splash zone at top of jacket to Row 2",
+    "Pre-install scaffolding at Row 2, except roll/lifting sling and crane positions"
+   ],
+   "actions": [
+    {
+     "deck": "row-5",
+     "kind": "rollup",
+     "label": "Roll up Row 5 frame to the vertical position"
+    },
+    {
+     "deck": "dg-north-C",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row C \u00b7 Row 5 to 5.1"
+    },
+    {
+     "deck": "flood-5",
+     "kind": "lift",
+     "label": "Lift in Flooding lines \u00b7 Row 5"
+    },
+    {
+     "deck": "walk-5",
+     "kind": "lift",
+     "label": "Lift in Grating support and grating \u00b7 Row 5"
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "sheet": 12,
+   "title": "Roll up Row 2 and install the J-tube and riser bends",
+   "items": [
+    "Roll up Row 2 to final position",
+    "Fastening Row 2 to control dimension",
+    "Weld out horizontal framing Part 4 at EL(-)14.000, EL(-)35.000 & EL(-)54.390 on Row 2 to horizontal framing Part 2 at EL(-)14.000, EL(-)35.000 & EL(-)54.390 and panel Row 2.1",
+    "Removal stopper for roll up Row 2",
+    "Install horizontal braces remaining for Row C at EL(-)14.000, EL(-)35.000 & EL(-)54.390 between Row 2 & Row 2.1",
+    "Weld out diagonal braces for Row C between Row 2 & Row 2.1 (rev1)",
+    "Install the remaining sway fender support to Leg 5C of Row 5 (rev1)",
+    "Install 04 J-tube bend sections to final positions (rev1)",
+    "Install 03 riser bend sections to final positions (rev1)",
+    "Drift test for 04 J-tubes; hydro test & leak test 03 risers (rev1)",
+    "Field joint coating for 03 risers (rev1)",
+    "Install diagonal braces for Row B between Row 5 & Row 5.1, with node break-out for double side weld (lift and position with stubs, fit up, weld outside stubs to Legs 5B/5.1B, cut stiffeners, removal, weld inside stubs, NDT, re-install to final position)"
+   ],
+   "actions": [
+    {
+     "deck": "row-2",
+     "kind": "rollup",
+     "label": "Roll up Row 2 frame to the vertical position"
+    },
+    {
+     "deck": "dg-north-B",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row B \u00b7 Row 5 to 5.1"
+    },
+    {
+     "deck": "dg-south-C",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row C \u00b7 Row 2 to 2.1"
+    },
+    {
+     "deck": "flood-2",
+     "kind": "lift",
+     "label": "Lift in Flooding lines \u00b7 Row 2"
+    },
+    {
+     "deck": "walk-2",
+     "kind": "lift",
+     "label": "Lift in Grating support and grating \u00b7 Row 2"
+    }
+   ]
+  },
+  {
+   "no": 13,
+   "sheet": 13,
+   "title": "Diagonal braces at Rows B and A",
+   "items": [
+    "Install diagonal braces for Row B between Row 2 & Row 2.1 to final position on jacket, with node break-out for double side weld (Legs 2B/2.1B)",
+    "Install diagonal braces for Row A between Row 2 & Row 5 to final position on jacket, with node break-out for double side weld (Legs 2A/5A/horizontal braces)",
+    "Install diagonal braces remaining to ST-CGF jacket"
+   ],
+   "actions": [
+    {
+     "deck": "dg-north-A",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row A \u00b7 Row 5 to 5.1"
+    },
+    {
+     "deck": "dg-south-A",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row A \u00b7 Row 2 to 2.1"
+    },
+    {
+     "deck": "dg-south-B",
+     "kind": "lift",
+     "label": "Lift in Diagonal braces Row B \u00b7 Row 2 to 2.1"
+    }
+   ]
+  },
+  {
+   "no": 14,
+   "sheet": 14,
+   "title": "Buoyancy tank C2, conductor frames and caissons",
+   "items": [
+    "Fabricate & assemble buoyancy tank C2 (include support) at final position",
+    "Install stub members at conductor frame EL(-)35.000 to Row 5",
+    "Install conductor frame at EL(-)35.000 to Row 5",
+    "Install conductor frame at EL(-)14.000 to Row 5",
+    "Install conductor frame at EL(+)5.000 (include install maximum walkway) to Row 5 (conductor frame at EL(+)5.000 is blasted and painted before lifting and install to final position)",
+    "Install seawater lift pump caisson A, B to Row 2"
+   ],
+   "actions": [
+    {
+     "deck": "caissons",
+     "kind": "lift",
+     "label": "Lift in Seawater lift pump caissons"
+    },
+    {
+     "deck": "cf-n14",
+     "kind": "lift",
+     "label": "Lift in Conductor frame \u00b7 EL -14.00"
+    },
+    {
+     "deck": "cf-n35",
+     "kind": "lift",
+     "label": "Lift in Conductor frame \u00b7 EL -35.00"
+    },
+    {
+     "deck": "cf-p5",
+     "kind": "lift",
+     "label": "Lift in Conductor frame \u00b7 EL +5.00"
+    },
+    {
+     "deck": "tank-C2",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank C2"
+    }
+   ]
+  },
+  {
+   "no": 15,
+   "sheet": 15,
+   "title": "Conductor frame braces, caisson guard and overboard pipe",
+   "items": [
+    "Install bottom braces connect conductor frame at EL(-)35.000 and conductor frame at EL(-)14.000",
+    "Install bottom diagonal frame connect conductor frame at EL(-)14.000 and conductor frame at EL(+)5.000 to final position on jacket",
+    "Install caisson guard to Row 2",
+    "Install frame to Row 2 as marked in this drawing",
+    "Install overboard pipe"
+   ],
+   "actions": [
+    {
+     "deck": "caisson-guard",
+     "kind": "lift",
+     "label": "Lift in Caisson guard"
+    },
+    {
+     "deck": "overboard",
+     "kind": "lift",
+     "label": "Lift in Overboard frame and pipe"
+    }
+   ]
+  },
+  {
+   "no": 16,
+   "sheet": 16,
+   "title": "Top braces and buoyancy tank T2",
+   "items": [
+    "Install top brace connect conductor frame at EL(-)35.000 and conductor frame at EL(-)14.000",
+    "Install diagonal brace connect top & bottom braces between EL(-)35.000 and EL(-)14.000 as marked in drawing",
+    "Install top braces frame connect conductor frame at EL(-)14.000 and conductor frame at EL(+)5.000 as marked in drawing",
+    "Install buoyancy tank T2 to final position on ST-CGF jacket (rev1: temporary supports, if required for dimensional control of the top of the jacket, are detailed in the buoyancy tank T2 installation drawing)"
+   ],
+   "actions": [
+    {
+     "deck": "tank-T2",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank T2"
+    }
+   ]
+  },
+  {
+   "no": 17,
+   "sheet": 17,
+   "title": "Conductor guard, walkway and buoyancy tank A2",
+   "items": [
+    "Install conductor guard (blasted and painted before lifting and install to final position)",
+    "Install walkway remaining to ST-CGF jacket at Row 2",
+    "Install buoyancy tank A2 to final position on Leg A2"
+   ],
+   "actions": [
+    {
+     "deck": "conductor-guard",
+     "kind": "lift",
+     "label": "Lift in Conductor guard"
+    },
+    {
+     "deck": "tank-A2",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank A2"
+    }
+   ]
+  },
+  {
+   "no": 18,
+   "sheet": 18,
+   "title": "Open drain caisson and removal of fastening",
+   "items": [
+    "Install open drain caisson to ST-CGF jacket",
+    "Install top diagonal brace connect conductor frame at EL(-)35.000 and conductor frame at EL(-)14.000 (rev1)",
+    "Removal fastening for Row 2 & Row 5"
+   ],
+   "actions": [
+    {
+     "deck": "open-drain",
+     "kind": "lift",
+     "label": "Lift in Open drain caisson"
+    }
+   ]
+  },
+  {
+   "no": 19,
+   "sheet": 19,
+   "title": "Buoyancy tanks A5 and F0, bridge landing tower support",
+   "items": [
+    "Install buoyancy tank A5 to final position on Leg A5",
+    "Install bridge landing tower support to ST-CGF jacket final position",
+    "Install buoyancy tank F0 to final position at EL(-)14.000 (rev1: temporary supports, if any, are detailed in the buoyancy tank F0 installation drawing)"
+   ],
+   "actions": [
+    {
+     "deck": "bridge-support",
+     "kind": "lift",
+     "label": "Lift in Bridge landing support"
+    },
+    {
+     "deck": "tank-A5",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank A5"
+    },
+    {
+     "deck": "tank-F0-1",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank F0-1"
+    },
+    {
+     "deck": "tank-F0-2",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank F0-2"
+    },
+    {
+     "deck": "tank-F0-3",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank F0-3"
+    }
+   ]
+  },
+  {
+   "no": 20,
+   "sheet": 20,
+   "title": "Buoyancy tank T5, flooding lines and offshore installation aids",
+   "items": [
+    "Install walkway remaining to ST-CGF jacket at Row 5",
+    "Install buoyancy tank T5 to final position on ST-CGF jacket",
+    "Install flooding lines and supports remaining work",
+    "Install offshore installation aids (pad-eyes, pulling lug, ...)",
+    "Install sway fenders",
+    "Install internal rubber diaphragms to jacket Leg Row 2 & Row 5"
+   ],
+   "actions": [
+    {
+     "deck": "tank-C5",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank C5"
+    },
+    {
+     "deck": "tank-T5",
+     "kind": "lift",
+     "label": "Lift in Buoyancy tank T5"
+    },
+    {
+     "deck": "valve-panel",
+     "kind": "lift",
+     "label": "Lift in Valve panel"
+    }
+   ]
+  },
+  {
+   "no": 21,
+   "sheet": 21,
+   "title": "Closure plates, working platform and bridge landing tower fit",
+   "items": [
+    "Install closure plates at top of jacket Leg Row 2 & Row 5",
+    "Install external rubber diaphragms at bottom jacket Leg Row 2 & Row 5",
+    "Install working platform",
+    "Trial fit bridge landing tower"
+   ],
+   "actions": [
+    {
+     "deck": "ti-platform",
+     "kind": "lift",
+     "label": "Lift in Working platform (T&I platform 2)"
+    },
+    {
+     "deck": "tower",
+     "kind": "lift",
+     "label": "Lift in Bridge landing tower"
+    }
+   ]
+  },
+  {
+   "no": 22,
+   "sheet": 22,
+   "title": "Completion and load-out readiness",
+   "items": [
+    "Removal construction supports (K3, K7) for conductor frames and horizontal/diagonal braces",
+    "Install remaining misc. items",
+    "Install the remaining skid-way components, including concrete blocks (Type 1 & Type 2), land skid beams, cover plates, wax, grease (rev1)",
+    "Install load-out aids",
+    "Install offshore installation aids remaining",
+    "Leak test Legs Row 5 & Row 2, buoyancy tanks",
+    "Hydro test & leak test flooding/venting system",
+    "Touch up painting",
+    "Removal construction support K5 at remaining surge fender location, construction aids and scaffolding (rev1)",
+    "Install remaining surge fenders (rev1)",
+    "Touch up painting at install remaining surge fender positions (rev1)",
+    "Removal construction support K5 remaining",
+    "Jacket completion and ready for load out"
+   ],
+   "actions": []
+  }
+ ]
+}

@@ -1,0 +1,429 @@
+{
+ "model": "lqm",
+ "name": "LQM#2",
+ "origin": [
+  -29.34258270263672,
+  -27.30078411102295,
+  25.08480453491211
+ ],
+ "upAxis": "Y",
+ "bounds": {
+  "min": [
+   -42.189002990722656,
+   -33.73942947387695,
+   25.08480453491211
+  ],
+  "max": [
+   -16.49616241455078,
+   -20.862138748168945,
+   52.273983001708984
+  ]
+ },
+ "groups": [],
+ "decks": [
+  {
+   "id": "deck",
+   "name": "First Floor",
+   "elevation": 27.95,
+   "file": "deck.glb",
+   "bytes": 3403220,
+   "triangles": 707838,
+   "equipment": 18
+  },
+  {
+   "id": "floor1",
+   "name": "Second Floor",
+   "elevation": 31.55,
+   "file": "floor1.glb",
+   "bytes": 2700024,
+   "triangles": 550871,
+   "equipment": 11
+  },
+  {
+   "id": "floor2",
+   "name": "Third Floor",
+   "elevation": 35.15,
+   "file": "floor2.glb",
+   "bytes": 1887576,
+   "triangles": 374421,
+   "equipment": 12
+  },
+  {
+   "id": "roof",
+   "name": "Roof Floor",
+   "elevation": 38.75,
+   "file": "roof.glb",
+   "bytes": 975552,
+   "triangles": 198203,
+   "equipment": 12
+  },
+  {
+   "id": "lifting",
+   "name": "Lifting rigging & sling",
+   "elevation": 52.0,
+   "file": "lifting.glb",
+   "bytes": 183156,
+   "triangles": 47346,
+   "equipment": 1
+  }
+ ],
+ "units": [
+  {
+   "tag": "LQ-D-structural",
+   "deck": "deck",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 55906
+  },
+  {
+   "tag": "LQ-D-piping",
+   "deck": "deck",
+   "system": "piping",
+   "name": "Steel piping",
+   "triangles": 174680
+  },
+  {
+   "tag": "LQ-D-e_i",
+   "deck": "deck",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 16694
+  },
+  {
+   "tag": "LQ-D-telecom",
+   "deck": "deck",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 18907
+  },
+  {
+   "tag": "LQ-D-hvac",
+   "deck": "deck",
+   "system": "hvac",
+   "name": "HVAC",
+   "triangles": 118688
+  },
+  {
+   "tag": "LQ-D-architectural",
+   "deck": "deck",
+   "system": "architectural",
+   "name": "Architectural",
+   "triangles": 259336
+  },
+  {
+   "tag": "LQ-D-equipment",
+   "deck": "deck",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 9188
+  },
+  {
+   "tag": "LQ-D-piping_frp",
+   "deck": "deck",
+   "system": "piping_frp",
+   "name": "FRP piping",
+   "triangles": 30911
+  },
+  {
+   "tag": "LQ-D-lighting",
+   "deck": "deck",
+   "system": "lighting",
+   "name": "Lighting",
+   "triangles": 6899
+  },
+  {
+   "tag": "LQ-D-fg",
+   "deck": "deck",
+   "system": "fg",
+   "name": "Fire & gas",
+   "triangles": 12260
+  },
+  {
+   "tag": "LQ-D-safety",
+   "deck": "deck",
+   "system": "safety",
+   "name": "Safety (fire-fighting, life-saving)",
+   "triangles": 10196
+  },
+  {
+   "tag": "ZCU-6810A",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 577
+  },
+  {
+   "tag": "ZEL-7306",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 20
+  },
+  {
+   "tag": "ZEC-8546",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 647
+  },
+  {
+   "tag": "ZEL-7311",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 236
+  },
+  {
+   "tag": "ZEC-8556",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 209
+  },
+  {
+   "tag": "ZET-7311",
+   "deck": "deck",
+   "system": "equipment",
+   "name": null,
+   "triangles": 148
+  },
+  {
+   "tag": "LQ-1F-structural",
+   "deck": "floor1",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 52894
+  },
+  {
+   "tag": "LQ-1F-piping",
+   "deck": "floor1",
+   "system": "piping",
+   "name": "Steel piping",
+   "triangles": 72902
+  },
+  {
+   "tag": "LQ-1F-e_i",
+   "deck": "floor1",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 17575
+  },
+  {
+   "tag": "LQ-1F-telecom",
+   "deck": "floor1",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 26718
+  },
+  {
+   "tag": "LQ-1F-hvac",
+   "deck": "floor1",
+   "system": "hvac",
+   "name": "HVAC",
+   "triangles": 103670
+  },
+  {
+   "tag": "LQ-1F-architectural",
+   "deck": "floor1",
+   "system": "architectural",
+   "name": "Architectural",
+   "triangles": 229130
+  },
+  {
+   "tag": "LQ-1F-equipment",
+   "deck": "floor1",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 1388
+  },
+  {
+   "tag": "LQ-1F-piping_frp",
+   "deck": "floor1",
+   "system": "piping_frp",
+   "name": "FRP piping",
+   "triangles": 21635
+  },
+  {
+   "tag": "LQ-1F-lighting",
+   "deck": "floor1",
+   "system": "lighting",
+   "name": "Lighting",
+   "triangles": 7830
+  },
+  {
+   "tag": "LQ-1F-fg",
+   "deck": "floor1",
+   "system": "fg",
+   "name": "Fire & gas",
+   "triangles": 7541
+  },
+  {
+   "tag": "LQ-1F-safety",
+   "deck": "floor1",
+   "system": "safety",
+   "name": "Safety (fire-fighting, life-saving)",
+   "triangles": 9693
+  },
+  {
+   "tag": "LQ-2F-structural",
+   "deck": "floor2",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 45314
+  },
+  {
+   "tag": "LQ-2F-piping",
+   "deck": "floor2",
+   "system": "piping",
+   "name": "Steel piping",
+   "triangles": 38029
+  },
+  {
+   "tag": "LQ-2F-e_i",
+   "deck": "floor2",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 15684
+  },
+  {
+   "tag": "LQ-2F-telecom",
+   "deck": "floor2",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 18082
+  },
+  {
+   "tag": "LQ-2F-hvac",
+   "deck": "floor2",
+   "system": "hvac",
+   "name": "HVAC",
+   "triangles": 82651
+  },
+  {
+   "tag": "LQ-2F-architectural",
+   "deck": "floor2",
+   "system": "architectural",
+   "name": "Architectural",
+   "triangles": 129264
+  },
+  {
+   "tag": "LQ-2F-equipment",
+   "deck": "floor2",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 3652
+  },
+  {
+   "tag": "LQ-2F-piping_frp",
+   "deck": "floor2",
+   "system": "piping_frp",
+   "name": "FRP piping",
+   "triangles": 21381
+  },
+  {
+   "tag": "LQ-2F-lighting",
+   "deck": "floor2",
+   "system": "lighting",
+   "name": "Lighting",
+   "triangles": 5083
+  },
+  {
+   "tag": "LQ-2F-fg",
+   "deck": "floor2",
+   "system": "fg",
+   "name": "Fire & gas",
+   "triangles": 7355
+  },
+  {
+   "tag": "LQ-2F-safety",
+   "deck": "floor2",
+   "system": "safety",
+   "name": "Safety (fire-fighting, life-saving)",
+   "triangles": 6821
+  },
+  {
+   "tag": "LQ-RF-structural",
+   "deck": "roof",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 31725
+  },
+  {
+   "tag": "LQ-RF-piping",
+   "deck": "roof",
+   "system": "piping",
+   "name": "Steel piping",
+   "triangles": 17330
+  },
+  {
+   "tag": "LQ-RF-e_i",
+   "deck": "roof",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 5411
+  },
+  {
+   "tag": "LQ-RF-telecom",
+   "deck": "roof",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 3347
+  },
+  {
+   "tag": "LQ-RF-hvac",
+   "deck": "roof",
+   "system": "hvac",
+   "name": "HVAC",
+   "triangles": 127347
+  },
+  {
+   "tag": "LQ-RF-architectural",
+   "deck": "roof",
+   "system": "architectural",
+   "name": "Architectural",
+   "triangles": 1853
+  },
+  {
+   "tag": "LQ-RF-equipment",
+   "deck": "roof",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 3467
+  },
+  {
+   "tag": "LQ-RF-piping_frp",
+   "deck": "roof",
+   "system": "piping_frp",
+   "name": "FRP piping",
+   "triangles": 1365
+  },
+  {
+   "tag": "LQ-RF-lighting",
+   "deck": "roof",
+   "system": "lighting",
+   "name": "Lighting",
+   "triangles": 3268
+  },
+  {
+   "tag": "LQ-RF-fg",
+   "deck": "roof",
+   "system": "fg",
+   "name": "Fire & gas",
+   "triangles": 694
+  },
+  {
+   "tag": "LQ-RF-safety",
+   "deck": "roof",
+   "system": "safety",
+   "name": "Safety (fire-fighting, life-saving)",
+   "triangles": 1935
+  },
+  {
+   "tag": "LQ-LIFT-lifting",
+   "deck": "lifting",
+   "system": "lifting",
+   "name": "Lifting & laydown",
+   "triangles": 47346
+  }
+ ]
+}
