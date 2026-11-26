@@ -118,7 +118,6 @@ export default function Milestones() {
   const isOn = (f: Record<string, string>) => filter.isOn('sub' in f ? { discipline: f.sub } : f);
 
   const columns = useMemo<ColumnDef<Milestone>[]>(() => [
-    { id: 'id', header: 'ID', meta: { sortKey: 'id' }, cell: ({ row: { original: m } }) => <span className="mono">{m.id}</span> },
     {
       id: 'description', header: 'KEY DATE', meta: { sortKey: 'description' },
       cell: ({ row: { original: m } }) => (
