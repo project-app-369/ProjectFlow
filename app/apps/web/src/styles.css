@@ -1972,3 +1972,9 @@ body.is-popout{overflow:hidden!important}
 .tl-tip strong{font-size:var(--fs-sm);margin-bottom:2px}
 .tl-tip span{display:flex;gap:.75rem;justify-content:space-between}
 .tl-tip em{font-style:normal;color:#aab6c9}
+
+/* milestone detail inside the roadmap card */
+.tl-detail{margin-top:var(--gap);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-subtle);padding:var(--card-py) var(--card-px)}
+.tl-detail-head{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.tl-detail-head>div:first-child{flex:1;min-width:0}
+.tl-detail-head h3{margin:0;font-size:var(--fs-lg)}

@@ -9,6 +9,10 @@ export interface FieldDef {
   label: string;
   kind?: 'text' | 'textarea' | 'number' | 'date' | 'select';
   options?: readonly string[];
+  /** Text shown for an option whose stored value is a code. */
+  /** A select that starts on its blank entry for a new record instead of the first option. */
+  startBlank?: boolean;
+  optionLabels?: Readonly<Record<string, string>>;
   /** Suggestions for a text field. */
   suggestions?: readonly string[];
   full?: boolean;
@@ -36,7 +40,7 @@ export function RecordDrawer({ title, fields, record, defaults, base, id, canDel
 }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.key, asText(record?.[f.key] ?? defaults?.[f.key] ?? (f.kind === 'select' && !record ? f.options?.[0] : ''))])));
+  const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(fields.map(f => [f.key, asText(record?.[f.key] ?? defaults?.[f.key] ?? (f.kind === 'select' && !record && !f.startBlank ? f.options?.[0] : ''))])));
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const editing = !!record && !!id;
@@ -78,7 +82,7 @@ export function RecordDrawer({ title, fields, record, defaults, base, id, canDel
                   : f.kind === 'select' ? (
                     <select value={v[f.key]} onChange={e => set(f.key, e.target.value)}>
                       {!f.required && <option value="">—</option>}
-                      {[...(f.options ?? []), ...(v[f.key] && !(f.options ?? []).includes(v[f.key]) ? [v[f.key]] : [])].map(o => <option key={o}>{o}</option>)}
+                      {[...(f.options ?? []), ...(v[f.key] && !(f.options ?? []).includes(v[f.key]) ? [v[f.key]] : [])].map(o => <option key={o} value={o}>{f.optionLabels?.[o] ?? o}</option>)}
                     </select>
                   ) : (
                     <>

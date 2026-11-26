@@ -21,6 +21,18 @@ export interface TimelineRow {
 const TONE: Record<MilestoneStatus, string> = { Done: 'done', Overdue: 'overdue', 'Due soon': 'soon', Planned: 'planned' };
 const monthShort = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { month: 'short', year: '2-digit', timeZone: 'UTC' });
 
+const pct1 = (n: number) => n.toFixed(1);
+
+/** The lines under a facility's name, the same on Schedule and on the Milestones roadmap. */
+export function laneSub(f: { start: string | null; finish: string | null; actual: number | null; plan: number | null; basis: string | null } | undefined, ms: TimelineMilestone[]): string[] {
+  const todo = ms.filter(m => m.status !== 'Done').map(m => milestoneAt(m)).filter(Boolean).sort()[0];
+  const finished = ms.filter(m => m.status === 'Done').length;
+  const schedule = f?.start && f.finish ? `Schedule ${fmtDate(f.start)} → ${fmtDate(f.finish)}` : null;
+  const progress = f && f.actual != null ? `${f.basis ?? 'Progress'} ${pct1(f.actual)}%${f.plan != null ? ` of ${pct1(f.plan)}% plan` : ''}` : null;
+  const count = ms.length ? `Milestones ${finished}/${ms.length}${todo ? ` · next ${fmtDate(todo)}` : ' · all achieved'}` : null;
+  return [schedule, progress, count].filter(Boolean) as string[];
+}
+
 /** The date a milestone is drawn at: achieved, else forecast, else the working-schedule date, else the baseline. */
 export const milestoneAt = (m: TimelineMilestone) => m.actual ?? m.forecast ?? m.working ?? m.baseline;
 

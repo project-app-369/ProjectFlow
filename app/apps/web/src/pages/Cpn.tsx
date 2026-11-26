@@ -3,17 +3,14 @@ import { request, type CpnData } from '../api';
 import { fmtDate, signed } from '../format';
 import { SCurvePanel } from '../SCurvePanel';
 import { useApp } from '../state';
-import { Timeline, milestoneAt, type TimelineRow } from '../Timeline';
-import { Badge, ErrorBox, PageHead, Stat, PageSkeleton } from '../ui';
+import { milestoneAt } from '../Timeline';
+import { ErrorBox, PageHead, Stat, PageSkeleton } from '../ui';
 
 const pct = (n: number | null | undefined, digits = 1) => (n == null ? '—' : n.toFixed(digits));
 const tone = (v: number | null) => (v == null ? '' : v < -0.05 ? 'negative' : v > 0.05 ? 'positive' : '');
-const FACILITIES = ['CGF Topsides', 'CGF Jacket', 'Pile', 'Conductor', 'Bridge', 'LQ Module #2', 'Pipeline', 'Project'];
 
 /**
- * Critical path network: the progress of the CPN plan (work-package weights re-based on the critical path) beside the baseline plan,
- * the activities of the working schedule that have no float left against the baseline finish, and the key milestones as a chain
- * per facility, each with the float between its working-schedule date and its baseline date.
+ * Critical path network: the progress of the CPN plan (work-package weights re-based on the critical path) beside the baseline plan.
  */
 export function CriticalPathNetwork() {
   const { project } = useApp();
@@ -22,22 +19,16 @@ export function CriticalPathNetwork() {
   if (q.error) return <ErrorBox error={q.error} />;
   const d = q.data;
   const o = d.overall;
-  const rows: TimelineRow[] = FACILITIES.map(f => {
-    const ms = d.milestones.filter(m => m.facility === f || (f === 'Project' && !FACILITIES.slice(0, -1).includes(m.facility)));
-    const dated = ms.map(milestoneAt).filter(Boolean).sort() as string[];
-    return { id: f, label: f, sub: dated.length ? `${ms.length} key dates · ${fmtDate(dated[0])} → ${fmtDate(dated[dated.length - 1])}` : undefined, milestones: ms };
-  }).filter(r => r.milestones.length);
   const next = d.milestones.filter(m => m.status !== 'Done').sort((a, b) => String(milestoneAt(a)).localeCompare(String(milestoneAt(b))))[0];
 
   return (
     <>
-      <PageHead title="Critical path network" desc="Progress of the CPN plan by work package, the activities with no float left, and the chain of key milestones." />
+      <PageHead title="Critical path network" desc="Progress of the CPN plan by work package." />
       <div className="stats">
         <Stat label="CPN actual" value={o?.actual ?? '—'} unit="%" foot={o ? `${pct(o.baseActual)}% on the baseline weights` : '—'} icon="chart" tone="overall" />
         <Stat label="CPN plan" value={o?.plan ?? '—'} unit="%" foot={d.asOf ? `At the week of ${fmtDate(d.asOf)}` : '—'} icon="calendar" tone="overall" />
         <Stat label="CPN variance" value={o?.variance != null ? signed(o.variance) : '—'} unit="%" foot={<span className={tone(o?.variance ?? null)}>{o?.variance == null ? '—' : o.variance < 0 ? 'Behind the CPN plan' : 'On or ahead of the CPN plan'}</span>} icon="risk" tone="overall" />
         <Stat label="In-week actual" value={o?.actual != null && o.lastActual != null ? signed(o.actual - o.lastActual) : '—'} unit="%" foot={o?.plan != null && o.lastPlan != null ? `Plan ${signed(o.plan - o.lastPlan)}%` : '—'} icon="clock" tone="week" />
-        <Stat label="Critical activities" value={d.critical.count} foot={`Float of ${d.critical.threshold} days or less, of ${d.critical.total} scheduled`} icon="risk" />
         <Stat label="Next key date" value={next ? fmtDate(milestoneAt(next)) : '—'} foot={next ? next.description : 'All achieved'} icon="flag" />
       </div>
 
@@ -84,34 +75,6 @@ export function CriticalPathNetwork() {
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head"><div><h2>Key-milestone network</h2><p>Each facility's key dates in order, drawn at their achieved, forecast or working-schedule date · hover a diamond for its baseline, working, forecast and achieved dates</p></div></div>
-        <div className="panel-content"><Timeline rows={rows} cutoff={d.cutoff} chain label="Key milestone network by facility" /></div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head"><div><h2>Critical activities</h2><p>CGF Topsides activities not yet finished whose working-schedule finish (or re-schedule, where there is one) leaves {d.critical.threshold} days or less before the baseline finish{d.critical.count > d.critical.items.length ? ` · the ${d.critical.items.length} with the least float of ${d.critical.count}` : ` · ${d.critical.count} in all`}</p></div></div>
-        {d.critical.items.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>ACTIVITY</th><th>NAME</th><th>SECTION</th><th>WORKING FINISH</th><th>BASELINE FINISH</th><th className="num">FLOAT (DAYS)</th></tr></thead>
-              <tbody>
-                {d.critical.items.map(a => (
-                  <tr key={a.id + a.name}>
-                    <td className="mono" data-label="Activity">{a.id}</td>
-                    <td data-label="Name"><strong>{a.name}</strong></td>
-                    <td data-label="Section">{a.top}</td>
-                    <td data-label="Working finish">{fmtDate(a.finish)}{a.reFinish ? <small className="muted"> · re-scheduled</small> : null}</td>
-                    <td data-label="Baseline finish">{fmtDate(a.baseFinish)}</td>
-                    <td className="num" data-label="Float (days)"><Badge tone={a.float < 0 ? 'red' : a.float === 0 ? 'amber' : 'indigo'}>{a.float}</Badge></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <div className="empty">No unfinished activity is within {d.critical.threshold} days of its baseline finish.</div>}
       </section>
     </>
   );

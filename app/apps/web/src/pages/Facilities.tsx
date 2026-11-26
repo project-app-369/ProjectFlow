@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { request, type FacilityHead, type FacilityList, type FacilityProgress, type FacilityTimeline, type Milestone } from '../api';
 import { fmtDate, signed } from '../format';
 import { SCurvePanel } from '../SCurvePanel';
-import { Timeline, milestoneAt, type TimelineRow } from '../Timeline';
+import { Timeline, laneSub, type TimelineRow } from '../Timeline';
 import { useApp } from '../state';
 import { ActualPlanBar, Badge, ErrorBox, Loading, PageHead, Stat, PageSkeleton } from '../ui';
 
@@ -158,18 +158,10 @@ export function FacilitySchedulePage() {
   if (timeline.isPending) return <PageSkeleton />;
   if (timeline.error) return <ErrorBox error={timeline.error} />;
   const data = timeline.data;
-  const dated = (m: { actual: string | null; forecast: string | null; working: string | null; baseline: string | null }) => String(milestoneAt(m as never));
-  const rows: TimelineRow[] = data.facilities.map(f => {
-    const todo = f.milestones.filter(m => m.status !== 'Done').sort((x, y) => dated(x).localeCompare(dated(y)))[0];
-    const finished = f.milestones.filter(m => m.status === 'Done').length;
-    const schedule = f.start && f.finish ? `Schedule ${fmtDate(f.start)} → ${fmtDate(f.finish)}` : null;
-    const progress = f.actual != null ? `${f.basis ?? 'Progress'} ${pct(f.actual)}%${f.plan != null ? ` of ${pct(f.plan)}% plan` : ''}` : null;
-    const ms = f.milestones.length ? `Milestones ${finished}/${f.milestones.length}${todo ? ` · next ${fmtDate(milestoneAt(todo))}` : ' · all achieved'}` : null;
-    return {
-      id: f.id, label: f.label, later: f.later && !f.milestones.length, start: f.start, finish: f.finish, workStart: f.workStart, workFinish: f.workFinish, actual: f.actual, milestones: f.milestones,
-      sub: [schedule, progress, ms].filter(Boolean) as string[],
-    };
-  });
+  const rows: TimelineRow[] = data.facilities.map(f => ({
+    id: f.id, label: f.label, later: f.later && !f.milestones.length, start: f.start, finish: f.finish, workStart: f.workStart, workFinish: f.workFinish, actual: f.actual, milestones: f.milestones,
+    sub: laneSub(f, f.milestones),
+  }));
   return (
     <>
       <PageHead title="Schedule" desc="Every facility on one timeline: its planned span (the Primavera schedule; for CGF Jacket the fabrication subcontractor's schedule), its overall progress, and its key milestones." />
