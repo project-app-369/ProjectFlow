@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiMode, downloadCsv, request, type Insights, type ExpeditingPackage, type Milestone, type MilestoneStatus, type Page } from '../api';
+import { apiMode, downloadCsv, request, type Insights, type ExpeditingPackage, type Milestone, type Shipment, type MilestoneStatus, type Page } from '../api';
 import { RecordDrawer, suggest, type FieldDef } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
@@ -88,6 +88,21 @@ export default function Milestones() {
   const expediting = useQuery({ queryKey: ['expediting-ros', project.id], retry: false, queryFn: () => request<Page<ExpeditingPackage>>(`/projects/${project.id}/expediting/packages?pageSize=200`) });
   const byCode = useMemo(() => new Map((expediting.data?.items ?? []).filter(p => p.discipline === 'Equipment').map(p => [p.code, p])), [expediting.data]);
 
+  // arrival at site from the Logistics report: the last shipment of the package (actual date once received, else forecast)
+  const shipments = useQuery({ queryKey: ['logistics-arrival', project.id], retry: false, queryFn: () => request<Page<Shipment>>(`/projects/${project.id}/logistics/shipments?pageSize=200`) });
+  const arrivals = useMemo(() => {
+    const by = new Map<string, { s: Shipment; date: string; n: number; done: boolean }>();
+    for (const s of shipments.data?.items ?? []) {
+      const date = s.actualOnSite ?? s.forecastOnSite ?? s.etaPod;
+      if (!date) continue;
+      const cur = by.get(s.packageNo);
+      const n = (cur?.n ?? 0) + 1;
+      if (!cur || date > cur.date) by.set(s.packageNo, { s, date, n, done: !!s.actualOnSite });
+      else cur.n = n;
+    }
+    return by;
+  }, [shipments.data]);
+
   const insights = useQuery({ queryKey: ['insights', 'milestones', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const grouped = group !== 'none';
   const extra = { within: filter.extra.within, facility: filter.extra.facility };
@@ -125,11 +140,19 @@ export default function Milestones() {
         return <Link className="link-button" to={`/m/procurement.expediting.vendor-overview?id=${encodeURIComponent(p.id)}`} title={`${p.code} in the Expediting report`}>{/^\d{4}-\d{2}-\d{2}$/.test(eta) ? fmtDate(eta) : eta || '—'}</Link>;
       },
     },
+    {
+      id: 'arrival', header: 'ARRIVAL (LOGISTICS)',
+      cell: ({ row: { original: m } }) => {
+        const a = m.package ? arrivals.get(m.package) : undefined;
+        if (!a) return '—';
+        return <Link className="link-button" to={`/m/procurement.logistics?id=${encodeURIComponent(a.s.id)}`} title={`${a.n} shipment${a.n === 1 ? '' : 's'} of ${m.package}; ${a.done ? 'received' : 'forecast on site'}`}>{fmtDate(a.date)}{a.n > 1 ? ` (${a.n})` : ''}{a.done ? '' : ' fcst'}</Link>;
+      },
+    },
     { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
     { id: 'actual', header: 'ACTUAL', meta: { sortKey: 'actual' }, cell: ({ row: { original: m } }) => fmtDate(m.actual) },
     { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: m } }) => <span className={m.variance && m.variance > 0 ? 'warning' : ''}>{slip(m.variance)}</span> },
     { id: 'status', header: 'STATUS', cell: ({ row: { original: m } }) => <Badge tone={TONE[m.status]}>{m.status}</Badge> },
-  ], [byCode]);
+  ], [byCode, arrivals]);
 
   /** Groups keep the server's order; the groups themselves are ordered by name, with "Unassigned" last. */
   const groups = useMemo(() => {
