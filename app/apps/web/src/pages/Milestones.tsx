@@ -1,7 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
-import { apiMode, downloadCsv, request, type Insights, type Milestone, type MilestoneStatus, type Page } from '../api';
+import { Link } from 'react-router-dom';
+import { apiMode, downloadCsv, request, type Insights, type ExpeditingPackage, type Milestone, type MilestoneStatus, type Page } from '../api';
 import { RecordDrawer, suggest, type FieldDef } from '../crud';
 import { DataTable } from '../DataTable';
 import { fmtDate, type Tone } from '../format';
@@ -76,11 +77,15 @@ export default function Milestones() {
   const toast = useToast();
   const canEdit = apiMode === 'sheets' && access.canWrite;
   const list = useListState();
-  const [group, setGroup] = useState<Group>('none');
+  const [group, setGroup] = useState<Group>('facility');
   const [editingId, setEditingId] = useDeepLink();
   const setEditing = (v: Milestone | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
   const filter = usePick(list, { within: '', facility: '' });
   const base = `/projects/${project.id}/milestones`;
+
+  // ROS (required on site) of an equipment milestone comes from its expediting package, which the date links to
+  const expediting = useQuery({ queryKey: ['expediting-ros', project.id], retry: false, queryFn: () => request<Page<ExpeditingPackage>>(`/projects/${project.id}/expediting/packages?pageSize=200`) });
+  const byCode = useMemo(() => new Map((expediting.data?.items ?? []).filter(p => p.discipline === 'Equipment').map(p => [p.code, p])), [expediting.data]);
 
   const insights = useQuery({ queryKey: ['insights', 'milestones', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const grouped = group !== 'none';
@@ -109,11 +114,19 @@ export default function Milestones() {
     { id: 'facility', header: 'FACILITY', cell: ({ row: { original: m } }) => <span className="tiny">{m.facility ?? '—'}</span> },
     { id: 'sub', header: 'SUB', meta: { sortKey: 'subName' }, cell: ({ row: { original: m } }) => m.subName ?? '—' },
     { id: 'baseline', header: 'BASELINE', meta: { sortKey: 'planBaseline' }, cell: ({ row: { original: m } }) => fmtDate(m.planBaseline) },
+    { id: 'planSub', header: 'WORKING / SUBCTR SCHEDULE', cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
+    {
+      id: 'ros', header: 'ROS',
+      cell: ({ row: { original: m } }) => {
+        const p = m.package ? byCode.get(m.package) : undefined;
+        return p ? <Link className="link-button" to={`/m/procurement.expediting.vendor-overview?id=${encodeURIComponent(p.id)}`} title={`Open ${p.code} in the Expediting report`}>{fmtDate(p.rosDate)}</Link> : '—';
+      },
+    },
     { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
     { id: 'actual', header: 'ACTUAL', meta: { sortKey: 'actual' }, cell: ({ row: { original: m } }) => fmtDate(m.actual) },
     { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: m } }) => <span className={m.variance && m.variance > 0 ? 'warning' : ''}>{slip(m.variance)}</span> },
     { id: 'status', header: 'STATUS', cell: ({ row: { original: m } }) => <Badge tone={TONE[m.status]}>{m.status}</Badge> },
-  ], []);
+  ], [byCode]);
 
   /** Groups keep the server's order; the groups themselves are ordered by name, with "Unassigned" last. */
   const groups = useMemo(() => {
@@ -131,7 +144,6 @@ export default function Milestones() {
       <PageHead title="Milestones" desc={`Key contract dates · status is derived against the cut-off (${fmtDate(project.cutoff)}). Edits are written to the sheet.`}
         actions={<>
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${csvQuery}`, 'milestones.csv').catch(e => toast(e.message))}>Export CSV</Btn>
-          {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New milestone</Btn>}
         </>} />
       <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair chartsInRow />
       <Deferred height="24rem"><ProjectRoadmap base={base} projectId={project.id} cutoff={project.cutoff} /></Deferred>
@@ -143,6 +155,7 @@ export default function Milestones() {
               {GROUPS.map(g => <button key={g.key} type="button" aria-pressed={group === g.key} onClick={() => setGroup(g.key)}>{g.label}</button>)}
             </div>
             <span className="tiny muted">{page.data?.total ?? '…'} milestones</span>
+            {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>Add milestone</Btn>}
           </div>
         </div>
         <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" defaultSort="id" sorts={[['id', 'ID'], ['planBaseline', 'Baseline date'], ['forecast', 'Forecast date'], ['actual', 'Actual date'], ['variance', 'Variance'], ['subName', 'Sub-contractor'], ['description', 'Key date']]} />
