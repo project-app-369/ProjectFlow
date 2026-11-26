@@ -130,7 +130,8 @@ export default function Milestones() {
     { id: 'facility', header: 'FACILITY', cell: ({ row: { original: m } }) => <span className="tiny">{m.facility ?? '—'}</span> },
     { id: 'sub', header: 'SUB', meta: { sortKey: 'subName' }, cell: ({ row: { original: m } }) => m.subName ?? '—' },
     { id: 'baseline', header: 'BASELINE', meta: { sortKey: 'planBaseline' }, cell: ({ row: { original: m } }) => fmtDate(m.planBaseline) },
-    { id: 'planSub', header: 'WORKING / SUBCTR SCHEDULE', cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
+    { id: 'planSub', header: 'WORKING SCH.', cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
+    { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
     {
       id: 'eta', header: 'ETA',
       cell: ({ row: { original: m } }) => {
@@ -141,14 +142,13 @@ export default function Milestones() {
       },
     },
     {
-      id: 'arrival', header: 'ARRIVAL (LOGISTICS)',
+      id: 'arrival', header: 'ARRIVAL',
       cell: ({ row: { original: m } }) => {
         const a = m.package ? arrivals.get(m.package) : undefined;
         if (!a) return '—';
         return <Link className="link-button" to={`/m/procurement.logistics?id=${encodeURIComponent(a.s.id)}`} title={`${a.n} shipment${a.n === 1 ? '' : 's'} of ${m.package}; ${a.done ? 'received' : 'forecast on site'}`}>{fmtDate(a.date)}{a.n > 1 ? ` (${a.n})` : ''}{a.done ? '' : ' fcst'}</Link>;
       },
     },
-    { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
     { id: 'actual', header: 'ACTUAL', meta: { sortKey: 'actual' }, cell: ({ row: { original: m } }) => fmtDate(m.actual) },
     { id: 'variance', header: 'VARIANCE', meta: { sortKey: 'variance' }, cell: ({ row: { original: m } }) => <span className={m.variance && m.variance > 0 ? 'warning' : ''}>{slip(m.variance)}</span> },
     { id: 'status', header: 'STATUS', cell: ({ row: { original: m } }) => <Badge tone={TONE[m.status]}>{m.status}</Badge> },
