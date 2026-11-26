@@ -8,7 +8,7 @@ declare module '@tanstack/react-table' {
 }
 
 /** Server-driven table: sorting, filtering and paging happen in the API; TanStack Table owns column/row modelling. */
-export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName, loading }: {
+export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName, loading, tableClass }: {
   columns: ColumnDef<T, any>[];
   data: T[];
   state: SortState;
@@ -17,11 +17,13 @@ export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName
   rowClassName?: (row: T) => string;
   /** The first page is still loading: rows of placeholders stand in, instead of the "nothing matches" message. */
   loading?: boolean;
+  /** Class on the table element. */
+  tableClass?: string;
 }) {
   const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel(), manualSorting: true, manualPagination: true, manualFiltering: true });
   return (
     <div className="table-wrap">
-      <table>
+      <table className={tableClass}>
         <thead>
           {table.getHeaderGroups().map(hg => (
             <tr key={hg.id}>

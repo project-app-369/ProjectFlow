@@ -1952,3 +1952,17 @@ body.is-popout{overflow:hidden!important}
 .ins-boxes .ins-box{height:5.25rem;min-height:0;justify-content:center}
 @media (min-width:1101px){.ins-boxes,.ins-panel.compact .ins-boxes{grid-auto-flow:row;grid-template-columns:repeat(max(5,var(--n,5)),minmax(0,1fr))}.ins-boxes>.ins-box:last-child{grid-column:auto!important}}
 @media (max-width:1100px){.ins-boxes>.ins-box.ins-box:last-child{grid-column:auto!important}}
+
+/* milestone register: the same columns in every group, key date on up to two lines, status colour at the start of each row */
+@media (min-width:721px){
+  .ms-table{table-layout:fixed;min-width:1100px}
+  .ms-table th:nth-child(1){width:8%}.ms-table th:nth-child(2){width:17%}.ms-table th:nth-child(3){width:8%}.ms-table th:nth-child(4){width:5%}
+  .ms-table th:nth-child(n+5):nth-child(-n+10){width:8%}.ms-table th:nth-child(11){width:6%}.ms-table th:nth-child(12){width:8%}
+  .ms-table td{white-space:normal;overflow-wrap:anywhere}
+  .ms-table td .link-button strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+}
+.ms-table tbody tr td:first-child{box-shadow:inset 4px 0 0 var(--ms-tone,transparent)}
+.ms-table tr.ms-done{--ms-tone:var(--green)}
+.ms-table tr.ms-overdue{--ms-tone:var(--red)}
+.ms-table tr.ms-due-soon{--ms-tone:var(--amber)}
+.ms-table tr.ms-planned{--ms-tone:var(--brand)}

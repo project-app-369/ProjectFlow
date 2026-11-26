@@ -19,6 +19,7 @@ const STATUS_ORDER: MilestoneStatus[] = ['Done', 'Overdue', 'Due soon', 'Planned
 type Group = 'none' | 'facility' | 'sub';
 const GROUPS: { key: Group; label: string }[] = [{ key: 'none', label: 'No grouping' }, { key: 'facility', label: 'By facility' }, { key: 'sub', label: 'By subcontractor' }];
 
+const rowTone = (m: Milestone) => `ms-${m.status.toLowerCase().replace(' ', '-')}`;
 const slip = (days: number | null) => (days == null ? '—' : days === 0 ? 'On plan' : `${days > 0 ? '+' : ''}${days} d`);
 
 const milestoneFields = (sug: { facility: string[]; sub: string[]; pkg: string[] }, creating: boolean): FieldDef[] => [
@@ -123,7 +124,7 @@ export default function Milestones() {
       cell: ({ row: { original: m } }) => (
         <button className="link-button" onClick={() => setEditing(m)}>
           <strong>{m.description}</strong>
-          {m.comment && <small className="muted" style={{ display: 'block', whiteSpace: 'normal', maxWidth: 360 }}>{m.comment}</small>}
+          {m.comment && <small className="muted" style={{ display: 'block', whiteSpace: 'normal' }}>{m.comment}</small>}
         </button>
       ),
     },
@@ -197,13 +198,13 @@ export default function Milestones() {
                   <span className="tiny muted">{rows.length} milestone{rows.length === 1 ? '' : 's'} · {Math.round((done / rows.length) * 100)}% achieved</span>
                   <span className="ms-badges">{STATUS_ORDER.filter(s => count(s)).map(s => <Badge key={s} tone={TONE[s]}>{count(s)} {s}</Badge>)}</span>
                 </summary>
-                <DataTable columns={columns} data={rows} state={list.state} onSort={list.toggleSort} empty="No milestones match." />
+                <DataTable tableClass="ms-table" rowClassName={rowTone} columns={columns} data={rows} state={list.state} onSort={list.toggleSort} empty="No milestones match." />
               </details>
             );
           }) : <div className="empty">No milestones match.</div>
         ) : (
           <>
-            <DataTable columns={columns} data={items} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No milestones match." />
+            <DataTable tableClass="ms-table" rowClassName={rowTone} columns={columns} data={items} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No milestones match." />
             <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
           </>
         )}
