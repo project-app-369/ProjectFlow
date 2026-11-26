@@ -65,7 +65,7 @@ export default function Procurement() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'procurement-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
         </>} />
-      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} /> : <div className="stats">
+      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} pair twoCol /> : <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot={`Across ${s ? Object.keys(s.byDiscipline).length : '—'} disciplines`} icon="box" />
         <Stat label="PO placed" value={poPlaced} foot={s ? `${Math.round((poPlaced / s.total) * 100)}% of register` : ''} icon="check" />
         <Stat label="LOA issued" value={s?.byStatus['LOA issued'] ?? 0} foot="Letter of award, PO pending" icon="clock" />

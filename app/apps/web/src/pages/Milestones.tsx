@@ -171,7 +171,7 @@ export default function Milestones() {
         actions={<>
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${csvQuery}`, 'milestones.csv').catch(e => toast(e.message))}>Export CSV</Btn>
         </>} />
-      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair chartsInRow />
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
       <Deferred height="24rem"><ProjectRoadmap base={base} projectId={project.id} cutoff={project.cutoff} /></Deferred>
       <div className="panel">
         <div className="panel-head">

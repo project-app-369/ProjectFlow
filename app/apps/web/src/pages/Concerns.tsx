@@ -81,7 +81,7 @@ export default function Concerns() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${list.query({ type: filters.type, severity: filters.severity, area: filters.area, packageCode: pkg })}`, 'procurement-concerns.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New concern</Btn>}
         </>} />
-      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} />
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
       <div className="panel">
         <div className="panel-head"><div><h2>Register</h2><p>Select a row to review or update it</p></div><span className="tiny muted">{page.data?.total ?? '…'} records</span></div>
         {pkg && <div className="banner" style={{ margin: '0 22px 14px' }}>Showing concerns for <strong>{pkg}</strong>. <button className="btn text" onClick={() => setParams({})}>Show all</button></div>}

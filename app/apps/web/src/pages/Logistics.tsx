@@ -71,7 +71,7 @@ export default function Logistics() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${list.query(filterQuery)}`, 'logistics-shipments.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New shipment</Btn>}
         </>} />
-      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} />
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
       <div className="panel">
         <div className="panel-head"><div><h2>Shipments</h2><p>Select a shipment to update its dates and status</p></div><span className="tiny muted">{page.data?.total ?? '…'} shipments</span></div>
         <div className="toolbar">

@@ -68,7 +68,7 @@ export default function Materials() {
     <>
       <PageHead title="Materials" desc="Weight of material arrived against the weight needed for purchase, and the stock still on hand in the yards."
         actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}/balance.csv${list.query(filters)}`, 'material-balance.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
-      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} />
+      <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
 
       <div className="panel" style={{ marginBottom: 22 }}>
         <div className="panel-head">

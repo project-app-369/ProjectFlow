@@ -1942,10 +1942,13 @@ body.is-popout{overflow:hidden!important}
 
 .ins-charts.two-col{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ins-charts.two-col>.ins-panel.ins-panel.ins-panel{grid-column:auto!important;order:0}
-.ins-charts.two-col>.ins-panel.ins-panel.ins-panel:first-child{grid-column:1/-1!important}
+.ins-charts.two-col>.ins-panel.ins-panel.ins-panel.wide:first-child{grid-column:1/-1!important}
+.ins-charts.two-col:has(>.wide:first-child)>.ins-panel.ins-panel.ins-panel:last-child:nth-child(even),
+.ins-charts.two-col:not(:has(>.wide:first-child))>.ins-panel.ins-panel.ins-panel:last-child:nth-child(odd){grid-column:1/-1!important}
 @media (max-width:1023px){.ins-charts.two-col{grid-template-columns:minmax(0,1fr)}.ins-charts.two-col>.ins-panel.ins-panel.ins-panel{grid-column:1/-1!important}}
 
 /* summary boxes: one title each, all the same size */
 .ins-boxes{align-content:start}
 .ins-boxes .ins-box{height:5.25rem;min-height:0;justify-content:center}
-@media (min-width:1101px){.ins-boxes,.ins-panel.compact .ins-boxes{grid-auto-flow:row;grid-template-columns:repeat(var(--n,5),minmax(0,1fr))}.ins-boxes>.ins-box:last-child{grid-column:auto!important}}
+@media (min-width:1101px){.ins-boxes,.ins-panel.compact .ins-boxes{grid-auto-flow:row;grid-template-columns:repeat(max(5,var(--n,5)),minmax(0,1fr))}.ins-boxes>.ins-box:last-child{grid-column:auto!important}}
+@media (max-width:1100px){.ins-boxes>.ins-box.ins-box:last-child{grid-column:auto!important}}
