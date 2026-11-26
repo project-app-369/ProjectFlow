@@ -50,13 +50,14 @@ function Boxes({ title, sub, boxes, onFilter, active, compact }: { title: string
   return (
     <section className={`panel ins-panel ${compact ? 'compact' : ''}`}>
       <div className="panel-head"><div><h2 title={compact ? sub : undefined}>{title}</h2>{!compact && <p>{sub}</p>}</div></div>
-      <div className="ins-boxes">
+      <div className="ins-boxes" style={{ ['--n' as string]: boxes.length }}>
         {boxes.map(b => {
-          const body = <><strong className="mono">{b.value.toLocaleString('en-GB')}</strong><span className="ins-label">{b.label}</span><span className="ins-sub">{b.sub}</span></>;
+          const body = <><strong className="mono">{b.value.toLocaleString('en-GB')}</strong><span className="ins-label">{b.label}</span></>;
+          const tip = b.sub || undefined;
           const cls = `ins-box ${b.tone ?? ''} ${b.filter && active?.(b.filter) ? 'on' : ''}`;
           return b.filter && onFilter
-            ? <button key={b.label} type="button" className={cls} aria-pressed={!!active?.(b.filter)} onClick={() => onFilter(b.filter!)}>{body}</button>
-            : <div key={b.label} className={cls}>{body}</div>;
+            ? <button key={b.label} type="button" className={cls} title={tip} aria-pressed={!!active?.(b.filter)} onClick={() => onFilter(b.filter!)}>{body}</button>
+            : <div key={b.label} className={cls} title={tip}>{body}</div>;
         })}
       </div>
     </section>
