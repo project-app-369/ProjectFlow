@@ -23,4 +23,4 @@ is the API's (sign-in is required once SESSION_SECRET is set on the Edge Functio
 The 3D page needs the Edge Function with the Facility Layout routes (apps/api-v2: pnpm deploy:edge-v3); an older function answers
 "No route" and the page shows an error in place of the equipment list.
 
-Built 2026-11-25 with: pnpm --filter @projectflow/web build:static
+Built 2026-11-26 with: pnpm --filter @projectflow/web build:static
