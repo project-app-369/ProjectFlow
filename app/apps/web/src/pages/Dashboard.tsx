@@ -73,7 +73,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <div className="panel-foot"><Link className="btn text" to="/m/planning.work-packages">Open work packages →</Link></div>
+            <div className="panel-foot"><Link className="btn text" to="/m/planning.overall-progress">Open work packages →</Link></div>
           </div>
         ) : <Unavailable label="Work Packages" />}
 

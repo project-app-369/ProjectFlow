@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { MilestoneStatus, TimelineMilestone } from './api';
 import { addDays, addMonths, diffDays, fmtDate, monthStart } from './format';
 
@@ -24,6 +24,18 @@ const monthShort = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateStr
 /** The date a milestone is drawn at: achieved, else forecast, else the working-schedule date, else the baseline. */
 export const milestoneAt = (m: TimelineMilestone) => m.actual ?? m.forecast ?? m.working ?? m.baseline;
 
+/** The four lines shown when a milestone is hovered. */
+function TipCard({ m, x, y }: { m: TimelineMilestone; x: number; y: number }) {
+  const rows: [string, string][] = [['Baseline', fmtDate(m.baseline)], ['Working', fmtDate(m.working)], ['Actual', fmtDate(m.actual)]];
+  const left = Math.min(x + 14, window.innerWidth - 300);
+  return (
+    <div className="tl-tip" role="tooltip" style={{ left: Math.max(8, left), top: y + 16 }}>
+      <strong>{m.description}</strong>
+      {rows.map(([k, v]) => <span key={k}><em>{k}</em>{v}</span>)}
+    </div>
+  );
+}
+
 function describe(m: TimelineMilestone) {
   const parts = [`Baseline ${fmtDate(m.baseline)}`, m.working ? `Working schedule ${fmtDate(m.working)}` : null, m.forecast ? `Forecast ${fmtDate(m.forecast)}` : null, m.actual ? `Achieved ${fmtDate(m.actual)}` : null];
   return `${m.description} · ${m.status}\n${parts.filter(Boolean).join(' · ')}`;
@@ -34,7 +46,8 @@ function describe(m: TimelineMilestone) {
  * With `chain` the milestones of a row are joined in date order, and each one shows the float between its working-schedule date
  * and its baseline date, which reads as a network of the key dates.
  */
-export function Timeline({ rows, cutoff, chain = false, label }: { rows: TimelineRow[]; cutoff: string; chain?: boolean; label: string }) {
+export function Timeline({ rows, cutoff, chain = false, label, onPick }: { rows: TimelineRow[]; cutoff: string; chain?: boolean; label: string; onPick?: (id: string) => void }) {
+  const [tip, setTip] = useState<{ m: TimelineMilestone; x: number; y: number } | null>(null);
   const axis = useMemo(() => {
     const dates = rows.flatMap(r => [r.start, r.finish, r.workStart, r.workFinish, ...r.milestones.flatMap(m => [m.baseline, m.working, m.forecast, m.actual])]).filter(Boolean) as string[];
     dates.push(cutoff);
@@ -78,7 +91,10 @@ export function Timeline({ rows, cutoff, chain = false, label }: { rows: Timelin
                 {r.workStart && r.workFinish && <span className="tl-work" style={{ left: `${pos(r.workStart)}%`, width: `${Math.max(0.4, pos(r.workFinish) - pos(r.workStart))}%` }} title={`Working schedule ${fmtDate(r.workStart)} – ${fmtDate(r.workFinish)}`} />}
                 {chain && ms.length > 1 && <i className="tl-chain" style={{ left: `${first}%`, width: `${Math.max(0, last - first)}%` }} />}
                 {ms.map(({ m, at }) => (
-                  <span key={m.id} className={`tl-ms ${TONE[m.status]} ${m.major ? 'major' : ''}`} style={{ left: `${pos(at)}%` }} tabIndex={0} role="img" aria-label={describe(m).replace('\n', ' · ')} title={describe(m)} />
+                  <span key={m.id} className={`tl-ms ${TONE[m.status]} ${m.major ? 'major' : ''}`} style={{ left: `${pos(at)}%` }} tabIndex={0} role={onPick ? 'button' : 'img'} aria-label={describe(m).replace('\n', ' · ')}
+                    onMouseEnter={e => setTip({ m, x: e.clientX, y: e.clientY })} onMouseMove={e => setTip({ m, x: e.clientX, y: e.clientY })} onMouseLeave={() => setTip(null)}
+                    onFocus={e => { const b = e.currentTarget.getBoundingClientRect(); setTip({ m, x: b.left, y: b.top }); }} onBlur={() => setTip(null)}
+                    onClick={onPick ? () => { setTip(null); onPick(m.id); } : undefined} onKeyDown={onPick ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTip(null); onPick(m.id); } } : undefined} />
                 ))}
                 {r.later && <span className="tl-later">No schedule yet</span>}
               </div>
@@ -86,6 +102,8 @@ export function Timeline({ rows, cutoff, chain = false, label }: { rows: Timelin
           );
         })}
       </div>
+      {tip && <TipCard {...tip} />}
+      {tip && <TipCard {...tip} />}
       <ul className="tl-legend" aria-label="Legend">
         <li><i className="k bar" />Planned span, filled by progress</li>
         <li><i className="k work" />Working schedule</li>

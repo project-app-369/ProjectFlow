@@ -46,13 +46,17 @@ export function ProgressOverall() {
         </div>
       ) : null}
       <div style={{ marginTop: 'var(--gap)' }}>
+        <Deferred height="14rem"><WorkPackagesPanel /></Deferred>
+      </div>
+      <div style={{ marginTop: 'var(--gap)' }}>
         <Deferred height="20rem"><SectionRisks section="planning" /></Deferred>
       </div>
     </>
   );
 }
 
-export function WorkPackages() {
+/** The work package register (weight and weekly progress per work package), shown under Progress by phase on Overall Progress. */
+export function WorkPackagesPanel() {
   const { project } = useApp();
   const { data, error, isPending } = useQuery({ queryKey: ['work-packages', project.id], queryFn: () => request<WorkPackagesResponse>(`/projects/${project.id}/schedule/work-packages`) });
   if (isPending) return <PageSkeleton />;
@@ -60,38 +64,38 @@ export function WorkPackages() {
   const { items, overall } = data;
   const wk = overall.thisWeekActual - overall.thisWeekPlan;
   return (
+    <div className="panel">
+      <div className="panel-head">
+        <div><h2>Work packages</h2><p>Weekly progress by work package · this week {overall.thisWeekActual}% against {overall.thisWeekPlan}% plan (<span className={wk < 0 ? 'negative' : 'positive'}>{signed(wk)}%</span>)</p></div>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>WORK PACKAGE</th><th>WEIGHT</th><th>LAST WEEK</th><th>THIS WEEK</th><th>VARIANCE</th></tr></thead>
+          <tbody>
+            {items.map(w => {
+              const v = (w.thisWeekActual ?? 0) - (w.thisWeekPlan ?? 0);
+              return (
+                <tr key={w.code}>
+                  <td><strong>{w.code}</strong><div className="tiny muted">{w.name}</div></td>
+                  <td>{(w.weight ?? 0).toFixed(1)}%</td>
+                  <td>{w.lastWeekActual ?? 0}% <span className="tiny muted">/ {w.lastWeekPlan ?? 0}% plan</span></td>
+                  <td>{w.thisWeekActual ?? 0}% <span className="tiny muted">/ {w.thisWeekPlan ?? 0}% plan</span></td>
+                  <td className={v < 0 ? 'negative' : 'positive'}>{signed(v)}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function WorkPackages() {
+  return (
     <>
       <PageHead title="Work Packages" desc="Weekly progress by work package (WP2 – WP6)." />
-      <div className="stats">
-        <Stat label="Achieved this week" value={overall.thisWeekActual} unit="%" foot={<><span className={wk < 0 ? 'warning' : 'positive'}>{signed(wk)}%</span> vs. {overall.thisWeekPlan}% plan</>} icon="calendar" />
-        <Stat label="Last week" value={overall.lastWeekActual} unit="%" foot={`vs ${overall.lastWeekPlan}% planned`} icon="clock" />
-        <Stat label="Work packages" value={items.length} foot="Weighted into overall progress" icon="layers" />
-        <Stat label="This-week plan" value={overall.thisWeekPlan} unit="%" foot="Cumulative plan, all work packages" icon="chart" />
-        <Stat label="Variance" value={signed(wk)} unit="%" foot="Actual less plan this week" icon="risk" />
-        <Stat label="Behind plan" value={items.filter(w => w.thisWeekActual != null && w.thisWeekPlan != null && w.thisWeekActual < w.thisWeekPlan).length} foot="Work packages needing recovery" icon="flag" />
-      </div>
-      <div className="panel">
-        <div className="panel-head"><h2>Work package register</h2></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>WORK PACKAGE</th><th>WEIGHT</th><th>LAST WEEK</th><th>THIS WEEK</th><th>VARIANCE</th></tr></thead>
-            <tbody>
-              {items.map(w => {
-                const v = (w.thisWeekActual ?? 0) - (w.thisWeekPlan ?? 0);
-                return (
-                  <tr key={w.code}>
-                    <td><strong>{w.code}</strong><div className="tiny muted">{w.name}</div></td>
-                    <td>{(w.weight ?? 0).toFixed(1)}%</td>
-                    <td>{w.lastWeekActual ?? 0}% <span className="tiny muted">/ {w.lastWeekPlan ?? 0}% plan</span></td>
-                    <td>{w.thisWeekActual ?? 0}% <span className="tiny muted">/ {w.thisWeekPlan ?? 0}% plan</span></td>
-                    <td className={v < 0 ? 'negative' : 'positive'}>{signed(v)}%</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <WorkPackagesPanel />
     </>
   );
 }

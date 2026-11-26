@@ -10,7 +10,7 @@ import { Timeline, type TimelineRow } from '../Timeline';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { Toolbar, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, PageHead, Pager, Deferred } from '../ui';
+import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Deferred } from '../ui';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -36,7 +36,7 @@ const milestoneFields = (sug: { facility: string[]; sub: string[]; pkg: string[]
 ];
 
 /** Every milestone of the project on one time axis, a lane per facility; the facility filter narrows it to one lane. */
-function ProjectRoadmap({ base, projectId, cutoff }: { base: string; projectId: string; cutoff: string }) {
+function ProjectRoadmap({ base, projectId, cutoff, onOpen }: { base: string; projectId: string; cutoff: string; onOpen: (m: Milestone) => void }) {
   const [facility, setFacility] = useState('');
   const [equipment, setEquipment] = useState(false);
   const all = useQuery({ queryKey: ['milestones-roadmap', projectId], queryFn: () => request<Page<Milestone>>(`${base}?pageSize=200&sort=planBaseline&order=asc`) });
@@ -66,7 +66,7 @@ function ProjectRoadmap({ base, projectId, cutoff }: { base: string; projectId: 
         </div>
       </div>
       <div className="panel-content">
-        {all.error ? <ErrorBox error={all.error} /> : all.isPending ? <div className="empty">Loading…</div> : rows.length ? <Timeline rows={rows} cutoff={cutoff} label="Project roadmap of milestones by facility" /> : <div className="empty">No milestone for this selection.</div>}
+        {all.error ? <ErrorBox error={all.error} /> : all.isPending ? <div className="empty">Loading…</div> : rows.length ? <Timeline rows={rows} cutoff={cutoff} label="Project roadmap of milestones by facility" onPick={id => { const m = items.find(x => x.id === id); if (m) onOpen(m); }} /> : <div className="empty">No milestone for this selection.</div>}
       </div>
     </section>
   );
@@ -82,6 +82,7 @@ export default function Milestones() {
   const [group, setGroup] = useState<Group>('facility');
   const [editingId, setEditingId] = useDeepLink();
   const setEditing = (v: Milestone | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
+  const [card, setCard] = useState<Milestone | null>(null);
   const filter = usePick(list, { within: '', facility: '' });
   const base = `/projects/${project.id}/milestones`;
 
@@ -130,7 +131,7 @@ export default function Milestones() {
     { id: 'facility', header: 'FACILITY', cell: ({ row: { original: m } }) => <span className="tiny">{m.facility ?? '—'}</span> },
     { id: 'sub', header: 'SUB', meta: { sortKey: 'subName' }, cell: ({ row: { original: m } }) => m.subName ?? '—' },
     { id: 'baseline', header: 'BASELINE', meta: { sortKey: 'planBaseline' }, cell: ({ row: { original: m } }) => fmtDate(m.planBaseline) },
-    { id: 'planSub', header: 'WORKING SCH.', cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
+    { id: 'planSub', header: 'WORKING SCH.', meta: { sortKey: 'planSub' }, cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
     { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
     {
       id: 'eta', header: 'ETA',
@@ -172,7 +173,7 @@ export default function Milestones() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${csvQuery}`, 'milestones.csv').catch(e => toast(e.message))}>Export CSV</Btn>
         </>} />
       <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
-      <Deferred height="24rem"><ProjectRoadmap base={base} projectId={project.id} cutoff={project.cutoff} /></Deferred>
+      <Deferred height="24rem"><ProjectRoadmap base={base} projectId={project.id} cutoff={project.cutoff} onOpen={setCard} /></Deferred>
       <div className="panel">
         <div className="panel-head">
           <div><h2>Milestone register</h2><p>{canEdit ? 'Select a milestone to update its dates, or add one' : 'Select a milestone to see its dates'}</p></div>
@@ -184,7 +185,7 @@ export default function Milestones() {
             {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>Add milestone</Btn>}
           </div>
         </div>
-        <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" defaultSort="id" sorts={[['id', 'ID'], ['planBaseline', 'Baseline date'], ['forecast', 'Forecast date'], ['actual', 'Actual date'], ['variance', 'Variance'], ['subName', 'Sub-contractor'], ['description', 'Key date']]} />
+        <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" defaultSort="planSub" sorts={[['planSub', 'Working schedule'], ['id', 'ID'], ['planBaseline', 'Baseline date'], ['forecast', 'Forecast date'], ['actual', 'Actual date'], ['variance', 'Variance'], ['subName', 'Sub-contractor'], ['description', 'Key date']]} />
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : grouped ? (
           groups.length ? groups.map(([name, rows]) => {
@@ -208,6 +209,38 @@ export default function Milestones() {
           </>
         )}
       </div>
+      {card && (() => {
+        const p = card.package ? byCode.get(card.package) : undefined;
+        const a = card.package ? arrivals.get(card.package) : undefined;
+        const eta = p && typeof p.etaSite === 'string' ? p.etaSite : '';
+        const row = (k: string, v: React.ReactNode) => <div><small>{k}</small><strong>{v ?? '—'}</strong></div>;
+        return (
+          <Modal title={`${card.id} · Milestone`} onClose={() => setCard(null)} actions={<>{canEdit && <Btn onClick={() => { setEditing(card); setCard(null); }}>Edit</Btn>}<Btn onClick={() => setCard(null)}>Close</Btn></>}>
+            <div className="dialog-body">
+              <div className="drawer-intro">
+                <div className="eyebrow">{card.facility ?? 'Project'}{card.subName ? ` · ${card.subName}` : ''}</div>
+                <h1>{card.description}</h1>
+                <Badge tone={TONE[card.status]}>{card.status}</Badge>
+              </div>
+              <div className="detail-grid">
+                {row('Baseline', fmtDate(card.planBaseline))}
+                {row('Working / subctr schedule', fmtDate(card.planSub))}
+                {row('Forecast', fmtDate(card.forecast))}
+                {row('Actual', fmtDate(card.actual))}
+                {row('Variance', slip(card.variance))}
+                {row('Days to go', card.daysToGo == null ? '—' : `${card.daysToGo} d`)}
+                {card.package && row('Expediting package', p ? <Link className="link-button" to={`/m/procurement.expediting.vendor-overview?id=${encodeURIComponent(p.id)}`}>{card.package}</Link> : card.package)}
+                {card.package && row('Package ETA', /^\d{4}-\d{2}-\d{2}$/.test(eta) ? fmtDate(eta) : eta || '—')}
+                {card.package && row('Arrival (Logistics)', a ? <Link className="link-button" to={`/m/procurement.logistics?id=${encodeURIComponent(a.s.id)}`}>{fmtDate(a.date)}{a.n > 1 ? ` (${a.n} shipments)` : ''}{a.done ? '' : ' forecast'}</Link> : '—')}
+                {card.tagNo && row('Tag', card.tagNo)}
+                {card.location && row('Location', card.location)}
+                {card.deck && row('Deck', card.deck)}
+              </div>
+              {card.comment && <><h3>Comment</h3><p className="tiny muted" style={{ whiteSpace: 'pre-line' }}>{card.comment}</p></>}
+            </div>
+          </Modal>
+        );
+      })()}
       {editing && (
         <RecordDrawer title={editing === 'new' ? 'New milestone' : `${editing.id} · Milestone`} size="md" base={base} id={editing === 'new' ? undefined : editing.id}
           record={editing === 'new' ? null : editing as never} fields={milestoneFields(drawerSuggestions, editing === 'new')} canDelete={access.canManage && apiMode === 'sheets'}

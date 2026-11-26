@@ -17,7 +17,7 @@ type Any = Record<string, any>;
 const strip = ({ projectId: _p, ...rest }: Row): Any => rest;
 
 /* ---------------- milestones (reference data) ---------------- */
-const milestoneQuery = listQuery(['id', 'description', 'planBaseline', 'forecast', 'actual', 'subName', 'variance'] as const).extend({ sub: z.string().max(40).optional(), facility: z.string().max(60).optional(), within: z.string().max(10).optional() });
+const milestoneQuery = listQuery(['id', 'description', 'planBaseline', 'planSub', 'forecast', 'actual', 'subName', 'variance'] as const).extend({ sub: z.string().max(40).optional(), facility: z.string().max(60).optional(), within: z.string().max(10).optional() });
 
 /** The facility a milestone belongs to, read from the workbook's ID: the digits before the first dash are the work package. */
 export function milestoneFacility(id: string): string {
@@ -109,7 +109,7 @@ export class RegistersService {
     const { sub, facility, within, ...f } = parse(milestoneQuery, raw);
     const every = this.milestones(projectId).map(m => ({ ...this.milestoneView(m, cutoff), discipline: m.subName })) as unknown as Row[];
     const all = this.withinWindow(every, within, cutoff).filter(m => !facility || m.facility === facility);
-    const rows = filterAndSort(all, { ...f, discipline: sub ?? f.discipline } as ListParams, ['id', 'description', 'subName', 'facility', 'comment'], 'planBaseline');
+    const rows = filterAndSort(all, { ...f, discipline: sub ?? f.discipline } as ListParams, ['id', 'description', 'subName', 'facility', 'comment'], 'planSub');
     return {
       items: paginate(rows, f).map(({ discipline: _d, ...r }) => r), total: rows.length, page: f.page, pageSize: f.pageSize,
       facets: { disciplines: unique(every.map(r => r.discipline)), facilities: unique(every.map(r => r.facility as string | null)), statuses: MILESTONE_STATUSES },

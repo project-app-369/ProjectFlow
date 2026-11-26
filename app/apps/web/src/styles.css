@@ -1956,8 +1956,8 @@ body.is-popout{overflow:hidden!important}
 /* milestone register: the same columns in every group, key date on up to two lines, status colour at the start of each row */
 @media (min-width:721px){
   .ms-table{table-layout:fixed;min-width:1100px}
-  .ms-table th:nth-child(1){width:19%}.ms-table th:nth-child(2){width:8%}.ms-table th:nth-child(3){width:5%}
-  .ms-table th:nth-child(n+4):nth-child(-n+9){width:9%}.ms-table th:nth-child(10){width:6%}.ms-table th:nth-child(11){width:8%}
+  .ms-table th:nth-child(1){width:17%}.ms-table th:nth-child(2){width:10%}.ms-table th:nth-child(3){width:5%}
+  .ms-table th:nth-child(n+4):nth-child(-n+9){width:8%}.ms-table th:nth-child(8){width:10%}.ms-table th:nth-child(10){width:6%}.ms-table th:nth-child(11){width:8%}
   .ms-table td{white-space:normal;overflow-wrap:anywhere}
   .ms-table td .link-button strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 }
@@ -1965,3 +1965,10 @@ body.is-popout{overflow:hidden!important}
 .ms-table tr.ms-done{--ms-tone:var(--green)}
 .ms-table tr.ms-overdue{--ms-tone:var(--red)}
 .ms-table tr.ms-due-soon{--ms-tone:var(--amber)}
+
+/* milestone hover card on the timeline */
+.tl-ms[role=button]{cursor:pointer}
+.tl-tip{position:fixed;z-index:60;max-width:18rem;pointer-events:none;background:#172033;color:#f3f6fb;border-radius:var(--r);padding:.5rem .75rem;box-shadow:0 6px 18px #0004;font-size:var(--fs-xs);display:grid;gap:2px}
+.tl-tip strong{font-size:var(--fs-sm);margin-bottom:2px}
+.tl-tip span{display:flex;gap:.75rem;justify-content:space-between}
+.tl-tip em{font-style:normal;color:#aab6c9}

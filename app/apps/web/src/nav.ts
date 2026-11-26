@@ -15,7 +15,9 @@ export const WIRED_KEYS = [
 export const SHEETS_KEYS = ['planning.schedule', 'planning.progress', 'planning.cpn', 'management.issues', 'procurement.dashboard', 'procurement.concerns', 'procurement.logistics', 'procurement.materials', 'construction.budget', 'construction.facility-layout', 'knowledge.overview', 'knowledge.engineering', 'knowledge.procurement', 'knowledge.services', 'knowledge.quality', 'knowledge.hse', 'knowledge.construction', 'knowledge.precom', 'knowledge.ti', 'knowledge.huc', 'task-management.calendar', 'task-management.workload', 'planning.milestones', 'management.risks', 'interface.register', 'interface.matrix', 'interface.points'] as const;
 const wired = new Set<string>(apiMode === 'sheets' ? [...WIRED_KEYS, ...SHEETS_KEYS] : WIRED_KEYS);
 
-export const kidsOf = (mods: ModuleInfo[], key: string) => mods.filter(m => m.parent === key && m.effective);
+/** Modules whose content now lives inside another page: still served and routable, but with no nav link. */
+const HIDDEN_FROM_NAV = new Set(['planning.work-packages']);
+export const kidsOf = (mods: ModuleInfo[], key: string) => mods.filter(m => m.parent === key && m.effective && !HIDDEN_FROM_NAV.has(m.key));
 
 export function isWired(mods: ModuleInfo[], m: ModuleInfo): boolean {
   return wired.has(m.key) || kidsOf(mods, m.key).some(k => isWired(mods, k));
