@@ -116,7 +116,7 @@ export default function Expediting() {
           <Btn kind="small" icon="down" onClick={() => downloadCsv(csv, 'expediting-packages.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New package</Btn>}
         </>} />
-      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} /> : <div className="stats">
+      {sheets ? <InsightsView data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn} pair twoCol /> : <div className="stats">
         <Stat label="Total packages" value={s?.total ?? '—'} foot="Across 5 disciplines" icon="chart" />
         <Stat label="Delayed" value={s?.delayed ?? '—'} foot="ETA at site slipping past ROS" icon="clock" />
         <Stat label="At risk" value={s?.atRisk ?? '—'} foot="Watching forecast vs. plan" icon="risk" />

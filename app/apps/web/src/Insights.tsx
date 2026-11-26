@@ -67,7 +67,7 @@ function Boxes({ title, sub, boxes, onFilter, active, compact }: { title: string
  * The summary at the top of a procurement page: six cards in one row, a pipeline or status strip, a look-ahead,
  * and charts. A box or a bar can set a filter on the register below it when the page passes `onFilter`.
  */
-export function InsightsView({ data, error, onFilter, active, compact, extra, pair, chartsInRow }: {
+export function InsightsView({ data, error, onFilter, active, compact, extra, pair, chartsInRow, twoCol }: {
   data?: Insights; error?: unknown; onFilter?: (f: Record<string, string>) => void; active?: (f: Record<string, string>) => boolean;
   /** Saves space: the strip and the look-ahead sit side by side, the boxes are smaller and the charts shorter. */
   compact?: boolean;
@@ -77,6 +77,8 @@ export function InsightsView({ data, error, onFilter, active, compact, extra, pa
   pair?: boolean;
   /** The charts share one row, even a chart with many categories. */
   chartsInRow?: boolean;
+  /** Two charts per row; a chart with many categories takes a row of its own. */
+  twoCol?: boolean;
 }): ReactNode {
   if (error) return <section className="panel ins-panel"><div className="panel-head"><div><h2>Summary unavailable</h2><p>The register remains available below.</p></div></div><ErrorBox error={error} /></section>;
   if (!data) return <><div className="stats" role="status" aria-busy="true" aria-label="Loading summary">{Array.from({ length: 6 }, (_, i) => <span key={i} className="sk sk-card" />)}</div><span className="sk sk-panel" /></>;
@@ -90,7 +92,7 @@ export function InsightsView({ data, error, onFilter, active, compact, extra, pa
         {data.lookAhead && <Boxes {...data.lookAhead} onFilter={onFilter} active={active} compact={compact} />}
       </div>
       {(data.charts.length > 0 || extra) && (
-        <div className={`ins-charts ${compact ? 'compact' : ''} ${chartsInRow ? 'in-row' : ''}`}>
+        <div className={`ins-charts ${compact ? 'compact' : ''} ${chartsInRow ? 'in-row' : ''} ${twoCol ? 'two-col' : ''}`}>
           {data.charts.map(c => (
             <section key={c.title} className={`panel ins-panel ${compact ? 'compact' : ''} ${c.layout === 'column' && c.categories.length > 8 && !chartsInRow ? 'wide' : ''}`}>
               <div className="panel-head"><div><h2 title={compact ? c.sub : undefined}>{c.title}</h2>{!compact && <p>{c.sub}</p>}</div></div>
