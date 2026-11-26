@@ -32,7 +32,7 @@ export function milestoneFacility(id: string): string {
 const milestoneFields = {
   description: z.string().trim().min(1).max(200),
   planBaseline: iso.nullish().transform(v => v ?? null), planSub: iso.nullish().transform(v => v ?? null),
-  subName: txt(40), facility: txt(60), forecast: iso.nullish().transform(v => v ?? null), actual: iso.nullish().transform(v => v ?? null), comment: txt(500),
+  subName: txt(40), facility: txt(60), package: txt(60), forecast: iso.nullish().transform(v => v ?? null), actual: iso.nullish().transform(v => v ?? null), comment: txt(500),
 };
 const milestoneCreate = z.object({ id: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{1,39}$/, 'Use letters, digits, dots, dashes or underscores (2 to 40 characters).').optional(), ...milestoneFields });
 const milestonePatch = z.object(milestoneFields).partial();

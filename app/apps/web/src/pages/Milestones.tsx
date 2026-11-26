@@ -21,11 +21,12 @@ const GROUPS: { key: Group; label: string }[] = [{ key: 'none', label: 'No group
 
 const slip = (days: number | null) => (days == null ? '—' : days === 0 ? 'On plan' : `${days > 0 ? '+' : ''}${days} d`);
 
-const milestoneFields = (sug: { facility: string[]; sub: string[] }, creating: boolean): FieldDef[] => [
+const milestoneFields = (sug: { facility: string[]; sub: string[]; pkg: string[] }, creating: boolean): FieldDef[] => [
   ...(creating ? [{ key: 'id', label: 'Milestone ID', max: 40, hint: 'Optional. Leave blank to number it automatically (KM-001).' } as FieldDef] : []),
   { key: 'description', label: 'Key date', required: true, max: 200, full: true },
   { key: 'facility', label: 'Facility', suggestions: sug.facility, max: 60, hint: 'Groups the milestone, e.g. CGF Topsides' },
   { key: 'subName', label: 'Subcontractor / area', suggestions: sug.sub, max: 40 },
+  { key: 'package', label: 'Expediting package', suggestions: sug.pkg, max: 60, hint: 'Code of the package in the Expediting report; the ETA column follows it' },
   { key: 'planBaseline', label: 'Baseline date', kind: 'date' },
   { key: 'planSub', label: 'Subcontractor plan date', kind: 'date' },
   { key: 'forecast', label: 'Forecast date', kind: 'date' },
@@ -83,7 +84,7 @@ export default function Milestones() {
   const filter = usePick(list, { within: '', facility: '' });
   const base = `/projects/${project.id}/milestones`;
 
-  // ROS (required on site) of an equipment milestone comes from its expediting package, which the date links to
+  // ETA at site of an equipment milestone comes from its expediting package (named in the milestone's Package field), which the date links to
   const expediting = useQuery({ queryKey: ['expediting-ros', project.id], retry: false, queryFn: () => request<Page<ExpeditingPackage>>(`/projects/${project.id}/expediting/packages?pageSize=200`) });
   const byCode = useMemo(() => new Map((expediting.data?.items ?? []).filter(p => p.discipline === 'Equipment').map(p => [p.code, p])), [expediting.data]);
 
@@ -116,10 +117,12 @@ export default function Milestones() {
     { id: 'baseline', header: 'BASELINE', meta: { sortKey: 'planBaseline' }, cell: ({ row: { original: m } }) => fmtDate(m.planBaseline) },
     { id: 'planSub', header: 'WORKING / SUBCTR SCHEDULE', cell: ({ row: { original: m } }) => fmtDate((m as { planSub?: string | null }).planSub ?? null) },
     {
-      id: 'ros', header: 'ROS',
+      id: 'eta', header: 'ETA',
       cell: ({ row: { original: m } }) => {
         const p = m.package ? byCode.get(m.package) : undefined;
-        return p ? <Link className="link-button" to={`/m/procurement.expediting.vendor-overview?id=${encodeURIComponent(p.id)}`} title={`Open ${p.code} in the Expediting report`}>{fmtDate(p.rosDate)}</Link> : '—';
+        if (!p) return '—';
+        const eta = typeof p.etaSite === 'string' ? p.etaSite : '';
+        return <Link className="link-button" to={`/m/procurement.expediting.vendor-overview?id=${encodeURIComponent(p.id)}`} title={`${p.code} in the Expediting report`}>{/^\d{4}-\d{2}-\d{2}$/.test(eta) ? fmtDate(eta) : eta || '—'}</Link>;
       },
     },
     { id: 'forecast', header: 'FORECAST', meta: { sortKey: 'forecast' }, cell: ({ row: { original: m } }) => fmtDate(m.forecast) },
@@ -136,7 +139,7 @@ export default function Milestones() {
     return [...by.entries()].sort(([a], [b]) => (a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b)));
   }, [items, group, grouped]);
 
-  const drawerSuggestions = { facility: page.data?.facets.facilities ?? suggest(items as never, 'facility'), sub: page.data?.facets.disciplines ?? [] };
+  const drawerSuggestions = { facility: page.data?.facets.facilities ?? suggest(items as never, 'facility'), sub: page.data?.facets.disciplines ?? [], pkg: [...byCode.keys()].sort() };
   const csvQuery = list.query(extra);
 
   return (
