@@ -1,0 +1,370 @@
+{
+ "model": "ehouse",
+ "name": "E-House",
+ "origin": [
+  17.369837760925293,
+  -17.39364528656006,
+  -10.456799507141113
+ ],
+ "upAxis": "Y",
+ "source": "2021-4591-65-1022 Rev 0, ST-CGF Topside E-House Fabrication Sequence Drawing (2 sheets, issued for information 20 Nov 2025)",
+ "upright": true,
+ "groups": [
+  {
+   "id": "structural",
+   "name": "Structural",
+   "color": "#8fa3c4"
+  },
+  {
+   "id": "equipment",
+   "name": "Equipment",
+   "color": "#e8943a"
+  },
+  {
+   "id": "piping",
+   "name": "Piping and supports",
+   "color": "#2f9d83"
+  },
+  {
+   "id": "e_i",
+   "name": "Electrical & instrument",
+   "color": "#e5a93a"
+  },
+  {
+   "id": "telecom",
+   "name": "Telecom",
+   "color": "#d4543b"
+  },
+  {
+   "id": "hvac",
+   "name": "HVAC",
+   "color": "#3b82f6"
+  },
+  {
+   "id": "safety",
+   "name": "Safety",
+   "color": "#c4478a"
+  }
+ ],
+ "decks": [
+  {
+   "id": "stage2",
+   "name": "Deck level 1, Deck level 2, Deck level 3",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage2.glb",
+   "bytes": 219684,
+   "triangles": 44655,
+   "parts": {
+    "structural": 44747
+   },
+   "labels": [
+    "Deck level 1",
+    "Deck level 2",
+    "Deck level 3"
+   ]
+  },
+  {
+   "id": "stage3",
+   "name": "Columns and wall on level 1",
+   "step": 3,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage3.glb",
+   "bytes": 67428,
+   "triangles": 17077,
+   "parts": {
+    "structural": 17220
+   },
+   "labels": [
+    "Columns and wall on level 1"
+   ]
+  },
+  {
+   "id": "stage5",
+   "name": "Columns and wall on level 2",
+   "step": 5,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage5.glb",
+   "bytes": 75600,
+   "triangles": 15261,
+   "parts": {
+    "structural": 15349
+   },
+   "labels": [
+    "Columns and wall on level 2"
+   ]
+  },
+  {
+   "id": "stage7",
+   "name": "Cable tray and supports, level 1, HVAC and ducting",
+   "step": 7,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage7.glb",
+   "bytes": 249328,
+   "triangles": 56574,
+   "parts": {
+    "e_i": 44427,
+    "hvac": 11593,
+    "telecom": 557
+   },
+   "labels": [
+    "Cable tray and supports, level 1",
+    "HVAC and ducting"
+   ]
+  },
+  {
+   "id": "stage8",
+   "name": "Equipment on level 1",
+   "step": 8,
+   "kind": "lift",
+   "follow": null,
+   "file": "stage8.glb",
+   "bytes": 129636,
+   "triangles": 27235,
+   "parts": {
+    "equipment": 27277
+   },
+   "labels": [
+    "Equipment on level 1"
+   ]
+  },
+  {
+   "id": "stage9",
+   "name": "Cable tray and supports, level 2, HVAC and ducting",
+   "step": 9,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage9.glb",
+   "bytes": 224784,
+   "triangles": 45759,
+   "parts": {
+    "e_i": 33472,
+    "hvac": 11698,
+    "telecom": 592
+   },
+   "labels": [
+    "Cable tray and supports, level 2",
+    "HVAC and ducting"
+   ]
+  },
+  {
+   "id": "stage10",
+   "name": "Equipment on level 2",
+   "step": 10,
+   "kind": "lift",
+   "follow": null,
+   "file": "stage10.glb",
+   "bytes": 143188,
+   "triangles": 28418,
+   "parts": {
+    "equipment": 28421
+   },
+   "labels": [
+    "Equipment on level 2"
+   ]
+  },
+  {
+   "id": "stage11",
+   "name": "HVAC and ducting, Stairs and ladders",
+   "step": 11,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage11.glb",
+   "bytes": 100056,
+   "triangles": 21256,
+   "parts": {
+    "hvac": 20605,
+    "structural": 656
+   },
+   "labels": [
+    "HVAC and ducting",
+    "Stairs and ladders"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "no": 1,
+   "sheet": 1,
+   "title": "Preparation",
+   "items": [
+    "Preparation of materials for cutting, beveling",
+    "Fabricate temporary supports"
+   ],
+   "actions": []
+  },
+  {
+   "no": 2,
+   "sheet": 1,
+   "title": "Layout supports and assemble decks",
+   "items": [
+    "Layout temporary support and assembly intermediate deck part 3 (E-House deck level 1)",
+    "Layout temporary support and assembly E-House deck level 2 and level 3"
+   ],
+   "actions": [
+    {
+     "deck": "stage2",
+     "kind": "fab",
+     "label": "Fabricate and fit: Deck level 1, Deck level 2, Deck level 3"
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "sheet": 1,
+   "title": "Columns and wall on E-House level 1",
+   "items": [
+    "Install columns and wall on E-House level 1"
+   ],
+   "actions": [
+    {
+     "deck": "stage3",
+     "kind": "fab",
+     "label": "Fabricate and fit: Columns and wall on level 1"
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "sheet": 1,
+   "title": "Lift E-House deck level 2, supports for level 1",
+   "items": [
+    "Site moving and lifting E-House deck level 2",
+    "Install supports for architectural, piping, E&I, HVAC for E-House level 1"
+   ],
+   "actions": []
+  },
+  {
+   "no": 5,
+   "sheet": 1,
+   "title": "Columns and wall on deck level 2",
+   "items": [
+    "Install columns and wall on E-House deck level 2",
+    "Install remaining supports for architectural, piping, E&I, HVAC below deck level 1"
+   ],
+   "actions": [
+    {
+     "deck": "stage5",
+     "kind": "fab",
+     "label": "Fabricate and fit: Columns and wall on level 2"
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "sheet": 1,
+   "title": "Lift E-House deck level 3, supports for level 2",
+   "items": [
+    "Site moving and lifting E-House deck level 3",
+    "Install supports for architectural, piping, E&I, HVAC for E-House level 2",
+    "Install beam or double plate of holding part (stair, HVAC, ducting support) which connect directly to E-House for complete install the rest structure at final position"
+   ],
+   "actions": []
+  },
+  {
+   "no": 7,
+   "sheet": 1,
+   "title": "Level 1: hot work, painting, insulation, ducting",
+   "items": [
+    "Clear hot work for E-House level 1",
+    "Touch up painting and release for install insulation",
+    "Install insulation, install ducting, cable tray, ladder for E-House level 1",
+    "Install remaining supports for architectural, piping, E&I, HVAC for deck level 2"
+   ],
+   "actions": [
+    {
+     "deck": "stage7",
+     "kind": "fab",
+     "label": "Fabricate and fit: Cable tray and supports, level 1, HVAC and ducting"
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "sheet": 1,
+   "title": "Equipment on E-House deck level 1",
+   "items": [
+    "Install equipment on E-House deck level 1 (not include transformer)"
+   ],
+   "actions": [
+    {
+     "deck": "stage8",
+     "kind": "lift",
+     "label": "Lift in: Equipment on level 1"
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "sheet": 2,
+   "title": "Level 2: hot work, painting, insulation, ducting",
+   "items": [
+    "Clear hot work for E-House level 2",
+    "Touch up painting and release for install insulation",
+    "Install insulation, install ducting, cable tray, ladder for E-House level 2"
+   ],
+   "actions": [
+    {
+     "deck": "stage9",
+     "kind": "fab",
+     "label": "Fabricate and fit: Cable tray and supports, level 2, HVAC and ducting"
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "sheet": 2,
+   "title": "Equipment on E-House deck level 2",
+   "items": [
+    "Install equipment on E-House deck level 2"
+   ],
+   "actions": [
+    {
+     "deck": "stage10",
+     "kind": "lift",
+     "label": "Lift in: Equipment on level 2"
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "sheet": 2,
+   "title": "HVAC, stair, final painting",
+   "items": [
+    "Install HVAC and ducting system for E-House (hold any part clashing with rigging arrangement)",
+    "Install stair and stair case",
+    "Touch up and final painting & marking"
+   ],
+   "actions": [
+    {
+     "deck": "stage11",
+     "kind": "fab",
+     "label": "Fabricate and fit: HVAC and ducting, Stairs and ladders"
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "sheet": 2,
+   "title": "Hold clashing parts for trailers",
+   "items": [
+    "Hold pipe rack, cable tray, piping which is clashing with trailer and lashing arrangement",
+    "Keep main supports and release temporary supports for trailers arrangement and site moving"
+   ],
+   "actions": []
+  },
+  {
+   "no": 13,
+   "sheet": 2,
+   "title": "Ready for site moving and lifting",
+   "items": [
+    "Ready for site moving and lifting"
+   ],
+   "actions": []
+  }
+ ]
+}
