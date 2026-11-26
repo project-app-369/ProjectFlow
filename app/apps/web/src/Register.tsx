@@ -22,8 +22,8 @@ export function usePrefetchNext(page: number, total: number | undefined, pageSiz
 
 export interface ListState { q: string; discipline: string; status: string; sort?: string; order: 'asc' | 'desc'; page: number }
 
-export function useListState(start: Partial<Pick<ListState, 'status' | 'discipline'>> = {}) {
-  const [state, setState] = useState<ListState>({ q: '', discipline: start.discipline ?? '', status: start.status ?? '', order: 'asc', page: 1 });
+export function useListState(start: Partial<Pick<ListState, 'status' | 'discipline' | 'sort' | 'order'>> = {}) {
+  const [state, setState] = useState<ListState>({ q: '', discipline: start.discipline ?? '', status: start.status ?? '', sort: start.sort, order: start.order ?? 'asc', page: 1 });
   const debouncedQ = useDebounced(state.q);
   const set = (patch: Partial<ListState>) => setState(s => ({ ...s, ...patch, page: patch.page ?? 1 }));
   const toggleSort = (key: string) => setState(s => ({ ...s, sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc', page: 1 }));

@@ -78,7 +78,7 @@ export default function Milestones() {
   const access = useAccess();
   const toast = useToast();
   const canEdit = apiMode === 'sheets' && access.canWrite;
-  const list = useListState();
+  const list = useListState({ sort: 'planSub', order: 'asc' });
   const [group, setGroup] = useState<Group>('facility');
   const [editingId, setEditingId] = useDeepLink();
   const setEditing = (v: Milestone | 'new' | null) => setEditingId(v === null ? null : v === 'new' ? 'new' : v.id);
