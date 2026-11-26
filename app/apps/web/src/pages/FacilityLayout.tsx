@@ -18,9 +18,9 @@ interface Manifest { decks: DeckFile[]; units: { tag: string; deck: string }[] }
 const MODEL_BASE = `${import.meta.env.BASE_URL}models/facility/`;
 
 /** The models of the project: the topside is split by deck into equipment, the others by system; both are listed with Tag, name, ROS and ETA. */
-type ModelId = 'topside' | 'jacket' | 'lqm' | 'linkbridge';
+type ModelId = 'topside2' | 'topside' | 'jacket' | 'lqm' | 'linkbridge';
 /** `slug` is the facility in the address: ?facility=cgf-topside */
-const MODELS: { id: ModelId; label: string; slug: string }[] = [{ id: 'topside', label: 'ST-CGF Topside', slug: 'cgf-topside' }, { id: 'jacket', label: 'ST-CGF Jacket', slug: 'cgf-jacket' }, { id: 'lqm', label: 'LQM#2', slug: 'lqm2' }, { id: 'linkbridge', label: 'Link Bridge', slug: 'link-bridge' }];
+const MODELS: { id: ModelId; label: string; slug: string }[] = [{ id: 'topside2', label: 'ST-CGF Topside', slug: 'cgf-topside' }, { id: 'topside', label: 'ST-CGF Topside (old)', slug: 'cgf-topside-old' }, { id: 'jacket', label: 'ST-CGF Jacket', slug: 'cgf-jacket' }, { id: 'lqm', label: 'LQM#2', slug: 'lqm2' }, { id: 'linkbridge', label: 'Link Bridge', slug: 'link-bridge' }];
 /** A system row of the jacket, LQM or link bridge is tagged <prefix>-<group id>; the group id names the part of the 3D model. */
 /** The systems of the LQM#2 that run through every floor: a chip highlights one in all floors (nodes named LQ-<floor>-<id>). */
 const LQM_SYSTEMS = [
@@ -28,6 +28,13 @@ const LQM_SYSTEMS = [
   { id: 'telecom', label: 'Telecom', colour: '#d4543b' }, { id: 'lighting', label: 'Lighting', colour: '#ffe066' }, { id: 'fg', label: 'Fire & gas', colour: '#f06292' },
   { id: 'e_i', label: 'E&I', colour: '#e5a93a' }, { id: 'safety', label: 'Safety', colour: '#d62839' },
 ];
+/** The systems of the new topside model that run through every deck: a chip highlights one in all decks (nodes named TS-<deck>-<id>). */
+const TOPSIDE_SYSTEMS = [
+  { id: 'structural', label: 'Structural', colour: '#8fa3c4' }, { id: 'piping', label: 'Piping & supports', colour: '#2f9d83' }, { id: 'e_i', label: 'E&I', colour: '#e5a93a' },
+  { id: 'telecom', label: 'Telecom', colour: '#d4543b' }, { id: 'hvac', label: 'HVAC', colour: '#3b82f6' }, { id: 'safety', label: 'Safety', colour: '#c4478a' },
+];
+/** The equipment list is one for both topside models; the database knows it as the model "topside". */
+const dataModel = (m: ModelId): string => (m === 'topside2' ? 'topside' : m);
 const groupOf = (tag: string) => tag.replace(/^[A-Za-z]+-/, '');
 interface GroupFile { id: string; name: string; file: string; color: string; bytes: number; triangles: number }
 interface GroupManifest { name: string; groups: GroupFile[] }
@@ -72,7 +79,7 @@ export default function FacilityLayout() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [params, setParams] = useSearchParams();
   /** The facility shown lives in the address (`?facility=`), so each one has its own link; none given means the topside. */
-  const model: ModelId = MODELS.find(m => m.slug === params.get('facility'))?.id ?? 'topside';
+  const model: ModelId = MODELS.find(m => m.slug === params.get('facility'))?.id ?? 'topside2';
   const [highlight, setHighlight] = useState<string | null>(null);
   const [systemHL, setSystemHL] = useState<string | null>(null);
   const switchModel = (m: ModelId) => {
@@ -117,7 +124,7 @@ export default function FacilityLayout() {
     refetchInterval: 60_000,
   });
   /** The topside and the LQM#2 are split by deck / floor into equipment; the jacket and the link bridge by system. */
-  const decked = model === 'topside' || model === 'lqm';
+  const decked = model === 'topside' || model === 'topside2' || model === 'lqm';
   const manifest = useQuery({
     queryKey: ['facility-manifest', model],
     enabled: decked,
@@ -144,7 +151,7 @@ export default function FacilityLayout() {
     onError: (e: Error) => { setRemoving(null); toast(errorText(e)); },
   });
 
-  const items = useMemo(() => (equipment.data?.items ?? []).filter(i => i.model === model), [equipment.data, model]);
+  const items = useMemo(() => (equipment.data?.items ?? []).filter(i => i.model === dataModel(model)), [equipment.data, model]);
   // The address always names the facility; a link to an item (?id=) of another facility switches to that facility.
   useEffect(() => {
     const p = new URLSearchParams(params); // the router's query (window.location.search is empty with hash routes: the facility would be reset to the topside after every switch)
@@ -152,7 +159,7 @@ export default function FacilityLayout() {
     const hit = openTag && openTag !== 'new' ? equipment.data?.items.find(i => i.tag === openTag) : undefined;
     // a link to an item, with no facility yet: wait until the list holds the item to know where it is
     if (openTag && openTag !== 'new' && !hit) return;
-    p.set('facility', MODELS.find(m => m.id === (hit?.model ?? 'topside'))!.slug);
+    p.set('facility', MODELS.find(m => m.id === (hit?.model === 'topside' || !hit ? 'topside2' : hit.model))!.slug);
     setParams(p, { replace: true });
   }, [params, openTag, equipment.data, setParams]);
   const inModel = useMemo(() => new Set((manifest.data?.units ?? []).map(u => u.tag)), [manifest.data]);
@@ -167,7 +174,7 @@ export default function FacilityLayout() {
     const order = new Map(topDecks.map((d, i) => [d.name, i]));
     const ids = new Map(topDecks.map(d => [d.name, d.id]));
     return [...(equipment.data?.decks ?? [])]
-      .filter(name => (equipment.data?.items ?? []).some(i => i.model === model && i.deck === name))
+      .filter(name => (equipment.data?.items ?? []).some(i => i.model === dataModel(model) && i.deck === name))
       .sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99) || a.localeCompare(b))
       .map(name => ({ name, id: ids.get(name) ?? null }));
   }, [topDecks, equipment.data, decked, items]);
@@ -243,7 +250,7 @@ export default function FacilityLayout() {
 
   return (
     <>
-      <PageHead title="Facility layout" desc="The ST-CGF topside, ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
+      <PageHead title="Facility layout" desc="The ST-CGF topside (by deck and by system, with its equipment), the earlier topside model, ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
         actions={<>
           {decked && access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>Add equipment</Btn>}
           <Btn kind="small" icon="refresh" onClick={refresh}>Refresh</Btn>
@@ -278,13 +285,23 @@ export default function FacilityLayout() {
             {modelDecks.map(d => (
               <span key={d.id} className="chip-split">
                 <button type="button" className={`chip-filter ${visibleDecks.has(d.id) ? 'active' : ''}`} aria-pressed={visibleDecks.has(d.id)} onClick={() => toggleDeck(d.id)} onDoubleClick={() => onlyDeck(d.id)} title={`Click to show or hide, double-click to show this ${decked ? 'deck' : 'system'} alone`}>
-                  {!decked && <i className="fl-dot" style={{ background: groupColours[d.id] }} aria-hidden="true" />}{d.name}{decked ? <span>{model === 'topside' ? d.equipment : items.filter(i => i.deck === d.name).length}</span> : (() => { const it = systemRows.get(d.id); const st = it ? delivery(it).state : 'none'; return <span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>; })()}
+                  {!decked && <i className="fl-dot" style={{ background: groupColours[d.id] }} aria-hidden="true" />}{d.name}{decked ? <span>{model === 'topside' || model === 'topside2' ? d.equipment : items.filter(i => i.deck === d.name).length}</span> : (() => { const it = systemRows.get(d.id); const st = it ? delivery(it).state : 'none'; return <span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>; })()}
                 </button>
                 {!decked && <button type="button" className={`chip-filter chip-hl ${highlight === d.id ? 'active' : ''}`} aria-pressed={highlight === d.id} aria-label={`Highlight ${d.name}`} title={highlight === d.id ? 'Clear the highlight' : `Highlight ${d.name}: the rest turns grey`} onClick={() => setHighlight(h => (h === d.id ? null : d.id))}><Icon name="search" /></button>}
               </span>
             ))}
             <button type="button" className="chip-filter" onClick={() => { setHidden(new Set()); setHighlight(null); setSystemHL(null); }}>{decked ? `All ${deckWord}s` : 'All systems'}</button>
           </div>
+          {model === 'topside2' && (
+            <div className="chip-bar" role="group" aria-label="Systems, in all decks">
+              <span className="tiny muted">Systems in all decks</span>
+              {TOPSIDE_SYSTEMS.map(sy => (
+                <button key={sy.id} type="button" className={`chip-filter ${systemHL === sy.id ? 'active' : ''}`} aria-pressed={systemHL === sy.id} title={systemHL === sy.id ? 'Clear the highlight' : `Highlight ${sy.label} in all decks: the rest turns grey`} onClick={() => setSystemHL(h => (h === sy.id ? null : sy.id))}>
+                  <i className="fl-dot" style={{ background: sy.colour }} aria-hidden="true" />{sy.label}
+                </button>
+              ))}
+            </div>
+          )}
           {model === 'lqm' && (
             <div className="chip-bar" role="group" aria-label="Systems, in all floors">
               <span className="tiny muted">Systems in all floors</span>
@@ -303,7 +320,7 @@ export default function FacilityLayout() {
           <div className="fl-stage-wrap">
             {notBuilt ? <div className="panel empty">The {modelLabel} model has not been prepared yet. Its files are produced from the Navisworks model by the 3D pipeline (data/3d-model/pipeline).</div> : (decked ? manifest.error : other.error) ? <ErrorBox error={(decked ? manifest.error : other.error)!} /> : !modelDecks.length ? <Loading label="Loading the model list…" /> : (
               <Suspense fallback={<Loading label="Loading the 3D viewer…" />}>
-                <FacilityViewer key={model} decks={decks} tags={decked ? inModel : NO_TAGS} visible={visibleDecks} selected={decked ? active : null} colors={decked ? colours : NO_COLOURS} highlight={highlight} systemHL={model === 'lqm' && systemHL ? { suffix: systemHL, colour: LQM_SYSTEMS.find(x => x.id === systemHL)?.colour ?? '#3b82f6' } : null} dark={dark} onPick={pickInModel} />
+                <FacilityViewer key={model} decks={decks} tags={decked ? inModel : NO_TAGS} visible={visibleDecks} selected={decked ? active : null} colors={decked ? colours : NO_COLOURS} highlight={highlight} systemHL={(model === 'lqm' || model === 'topside2') && systemHL ? { suffix: systemHL, colour: [...LQM_SYSTEMS, ...TOPSIDE_SYSTEMS].find(x => x.id === systemHL)?.colour ?? '#3b82f6' } : null} dark={dark} onPick={pickInModel} />
               </Suspense>
             )}
             {hud && (
@@ -436,7 +453,7 @@ export default function FacilityLayout() {
         </Modal>
       )}
       {(creating || editing) && (
-        <FacilityEquipmentForm item={editing} model={model} decks={deckNames.map(d => d.name).concat(modelDecks.map(d => d.name).filter(n => !deckNames.some(x => x.name === n)))} base={base}
+        <FacilityEquipmentForm item={editing} model={dataModel(model) as FacilityEquipment['model']} decks={deckNames.map(d => d.name).concat(modelDecks.map(d => d.name).filter(n => !deckNames.some(x => x.name === n)))} base={base}
           onClose={() => { setEditing(null); if (creating) setOpenTag(null); }}
           onSaved={tag => { setEditing(null); refresh(); setOpenTag(tag); }} />
       )}

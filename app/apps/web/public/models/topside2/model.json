@@ -1,0 +1,912 @@
+{
+ "model": "topside2",
+ "name": "ST-CGF Topside",
+ "origin": [
+  17.369837760925293,
+  -17.39364528656006,
+  -10.456799507141113
+ ],
+ "upAxis": "Y",
+ "bounds": {
+  "min": [
+   -37.00999927520752,
+   -40.343472480773926,
+   0.0
+  ],
+  "max": [
+   37.00999927520752,
+   40.343472480773926,
+   56.12556552886963
+  ]
+ },
+ "groups": [],
+ "decks": [
+  {
+   "id": "dsf",
+   "name": "DSF",
+   "elevation": 10.0,
+   "file": "dsf.glb",
+   "bytes": 185508,
+   "triangles": 53675,
+   "equipment": 0
+  },
+  {
+   "id": "sd",
+   "name": "Sub-Cellar Deck",
+   "elevation": 13.5,
+   "file": "sd.glb",
+   "bytes": 559880,
+   "triangles": 111758,
+   "equipment": 2
+  },
+  {
+   "id": "cd",
+   "name": "Cellar Deck",
+   "elevation": 18.0,
+   "file": "cd.glb",
+   "bytes": 4378072,
+   "triangles": 923132,
+   "equipment": 37
+  },
+  {
+   "id": "id",
+   "name": "Intermediate Deck",
+   "elevation": 26.0,
+   "file": "id.glb",
+   "bytes": 3345764,
+   "triangles": 735178,
+   "equipment": 19
+  },
+  {
+   "id": "md",
+   "name": "Main Deck",
+   "elevation": 34.0,
+   "file": "md.glb",
+   "bytes": 5213292,
+   "triangles": 1055266,
+   "equipment": 37
+  }
+ ],
+ "units": [
+  {
+   "tag": "TS-dsf-structural",
+   "deck": "dsf",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 53677
+  },
+  {
+   "tag": "TS-sd-e_i",
+   "deck": "sd",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 20781
+  },
+  {
+   "tag": "TS-sd-equipment",
+   "deck": "sd",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 56694
+  },
+  {
+   "tag": "TS-sd-piping",
+   "deck": "sd",
+   "system": "piping",
+   "name": "Piping and supports",
+   "triangles": 15240
+  },
+  {
+   "tag": "TS-sd-structural",
+   "deck": "sd",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 15268
+  },
+  {
+   "tag": "TS-sd-telecom",
+   "deck": "sd",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 1010
+  },
+  {
+   "tag": "ABJ-6202",
+   "deck": "sd",
+   "system": "equipment",
+   "name": "ABJ-6202",
+   "triangles": 1097
+  },
+  {
+   "tag": "MBF-6101",
+   "deck": "sd",
+   "system": "equipment",
+   "name": "MBF-6101",
+   "triangles": 1785
+  },
+  {
+   "tag": "TS-cd-e_i",
+   "deck": "cd",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 45503
+  },
+  {
+   "tag": "TS-cd-equipment",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 168251
+  },
+  {
+   "tag": "TS-cd-piping",
+   "deck": "cd",
+   "system": "piping",
+   "name": "Piping and supports",
+   "triangles": 227289
+  },
+  {
+   "tag": "TS-cd-safety",
+   "deck": "cd",
+   "system": "safety",
+   "name": "Safety",
+   "triangles": 5864
+  },
+  {
+   "tag": "TS-cd-structural",
+   "deck": "cd",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 161078
+  },
+  {
+   "tag": "TS-cd-telecom",
+   "deck": "cd",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 906
+  },
+  {
+   "tag": "DV-8007",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "DV-8007",
+   "triangles": 741
+  },
+  {
+   "tag": "DV-8008",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "DV-8008",
+   "triangles": 782
+  },
+  {
+   "tag": "DV-8009",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "DV-8009",
+   "triangles": 818
+  },
+  {
+   "tag": "DV-8010",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "DV-8010",
+   "triangles": 628
+  },
+  {
+   "tag": "HAP-4302A",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "HAP-4302A",
+   "triangles": 1470
+  },
+  {
+   "tag": "HAP-4302B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "HAP-4302B",
+   "triangles": 1484
+  },
+  {
+   "tag": "HBA-4904A",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "HBA-4904A",
+   "triangles": 2660
+  },
+  {
+   "tag": "HBA-4904B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "HBA-4904B",
+   "triangles": 2658
+  },
+  {
+   "tag": "KAH-3004",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "KAH-3004",
+   "triangles": 3130
+  },
+  {
+   "tag": "MAJ-4903A",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MAJ-4903A",
+   "triangles": 1647
+  },
+  {
+   "tag": "MAJ-4903B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MAJ-4903B",
+   "triangles": 1647
+  },
+  {
+   "tag": "MAJ-4906",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MAJ-4906",
+   "triangles": 1354
+  },
+  {
+   "tag": "MBD-2501",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBD-2501",
+   "triangles": 7334
+  },
+  {
+   "tag": "MBD-2701",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBD-2701",
+   "triangles": 7061
+  },
+  {
+   "tag": "MBF-4302",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBF-4302",
+   "triangles": 8665
+  },
+  {
+   "tag": "MBL-5010",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBL-5010",
+   "triangles": 3814
+  },
+  {
+   "tag": "MBL-6410",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBL-6410",
+   "triangles": 4076
+  },
+  {
+   "tag": "MBL-6411",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "MBL-6411",
+   "triangles": 3459
+  },
+  {
+   "tag": "PBE-4304A",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "PBE-4304A",
+   "triangles": 2947
+  },
+  {
+   "tag": "PBE-4304B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "PBE-4304B",
+   "triangles": 2931
+  },
+  {
+   "tag": "PBE-4902B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "PBE-4902B",
+   "triangles": 648
+  },
+  {
+   "tag": "PBE-4907A",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "PBE-4907A",
+   "triangles": 1789
+  },
+  {
+   "tag": "PBE-4907B",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "PBE-4907B",
+   "triangles": 1831
+  },
+  {
+   "tag": "QAY-2874",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2874",
+   "triangles": 27191
+  },
+  {
+   "tag": "QAY-2875",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2875",
+   "triangles": 27161
+  },
+  {
+   "tag": "QAY-2878",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2878",
+   "triangles": 27217
+  },
+  {
+   "tag": "QAY-2879",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2879",
+   "triangles": 27155
+  },
+  {
+   "tag": "QAY-2882",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2882",
+   "triangles": 27194
+  },
+  {
+   "tag": "QAY-2883",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2883",
+   "triangles": 27133
+  },
+  {
+   "tag": "QAY-2884",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2884",
+   "triangles": 27050
+  },
+  {
+   "tag": "QAY-2885",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2885",
+   "triangles": 26927
+  },
+  {
+   "tag": "QAY-2886",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "QAY-2886",
+   "triangles": 27179
+  },
+  {
+   "tag": "WHCP-2870",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "WHCP-2870",
+   "triangles": 994
+  },
+  {
+   "tag": "ZZZ-4101",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "ZZZ-4101",
+   "triangles": 2863
+  },
+  {
+   "tag": "ZZZ-5000",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "ZZZ-5000",
+   "triangles": 2619
+  },
+  {
+   "tag": "ZZZ-6400",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "ZZZ-6400",
+   "triangles": 78
+  },
+  {
+   "tag": "ZZZ-6405",
+   "deck": "cd",
+   "system": "equipment",
+   "name": "ZZZ-6405",
+   "triangles": 228
+  },
+  {
+   "tag": "TS-id-e_i",
+   "deck": "id",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 92888
+  },
+  {
+   "tag": "TS-id-equipment",
+   "deck": "id",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 31244
+  },
+  {
+   "tag": "TS-id-hvac",
+   "deck": "id",
+   "system": "hvac",
+   "name": "HVAC",
+   "triangles": 33973
+  },
+  {
+   "tag": "TS-id-piping",
+   "deck": "id",
+   "system": "piping",
+   "name": "Piping and supports",
+   "triangles": 221276
+  },
+  {
+   "tag": "TS-id-safety",
+   "deck": "id",
+   "system": "safety",
+   "name": "Safety",
+   "triangles": 5286
+  },
+  {
+   "tag": "TS-id-structural",
+   "deck": "id",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 270910
+  },
+  {
+   "tag": "TS-id-telecom",
+   "deck": "id",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 862
+  },
+  {
+   "tag": "FM-200-XA",
+   "deck": "id",
+   "system": "equipment",
+   "name": "FM-200-XA",
+   "triangles": 176
+  },
+  {
+   "tag": "FM-200-XB",
+   "deck": "id",
+   "system": "equipment",
+   "name": "FM-200-XB",
+   "triangles": 268
+  },
+  {
+   "tag": "HAP-5703A",
+   "deck": "id",
+   "system": "equipment",
+   "name": "HAP-5703A",
+   "triangles": 1376
+  },
+  {
+   "tag": "HAP-5703B",
+   "deck": "id",
+   "system": "equipment",
+   "name": "HAP-5703B",
+   "triangles": 1386
+  },
+  {
+   "tag": "HBG-2502A",
+   "deck": "id",
+   "system": "equipment",
+   "name": "HBG-2502A",
+   "triangles": 10181
+  },
+  {
+   "tag": "HBG-2502B",
+   "deck": "id",
+   "system": "equipment",
+   "name": "HBG-2502B",
+   "triangles": 8151
+  },
+  {
+   "tag": "LAN-7100",
+   "deck": "id",
+   "system": "equipment",
+   "name": "LAN-7100",
+   "triangles": 4420
+  },
+  {
+   "tag": "MAD-2415",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MAD-2415",
+   "triangles": 6597
+  },
+  {
+   "tag": "MAF-2401",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MAF-2401",
+   "triangles": 1079
+  },
+  {
+   "tag": "MBD-2613A",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MBD-2613A",
+   "triangles": 11943
+  },
+  {
+   "tag": "MBD-2613B",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MBD-2613B",
+   "triangles": 18142
+  },
+  {
+   "tag": "MBF-5701",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MBF-5701",
+   "triangles": 8016
+  },
+  {
+   "tag": "MBF-5702A",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MBF-5702A",
+   "triangles": 2252
+  },
+  {
+   "tag": "MBF-5702B",
+   "deck": "id",
+   "system": "equipment",
+   "name": "MBF-5702B",
+   "triangles": 2328
+  },
+  {
+   "tag": "ZAU-3003",
+   "deck": "id",
+   "system": "equipment",
+   "name": "ZAU-3003",
+   "triangles": 868
+  },
+  {
+   "tag": "ZZZ-4201",
+   "deck": "id",
+   "system": "equipment",
+   "name": "ZZZ-4201",
+   "triangles": 824
+  },
+  {
+   "tag": "ZZZ-4202",
+   "deck": "id",
+   "system": "equipment",
+   "name": "ZZZ-4202",
+   "triangles": 493
+  },
+  {
+   "tag": "ZZZ-4710",
+   "deck": "id",
+   "system": "equipment",
+   "name": "ZZZ-4710",
+   "triangles": 887
+  },
+  {
+   "tag": "ZZZ-7102",
+   "deck": "id",
+   "system": "equipment",
+   "name": "ZZZ-7102",
+   "triangles": 224
+  },
+  {
+   "tag": "TS-md-e_i",
+   "deck": "md",
+   "system": "e_i",
+   "name": "Electrical & instrument",
+   "triangles": 16168
+  },
+  {
+   "tag": "TS-md-equipment",
+   "deck": "md",
+   "system": "equipment",
+   "name": "Equipment",
+   "triangles": 382205
+  },
+  {
+   "tag": "TS-md-piping",
+   "deck": "md",
+   "system": "piping",
+   "name": "Piping and supports",
+   "triangles": 143359
+  },
+  {
+   "tag": "TS-md-safety",
+   "deck": "md",
+   "system": "safety",
+   "name": "Safety",
+   "triangles": 1266
+  },
+  {
+   "tag": "TS-md-structural",
+   "deck": "md",
+   "system": "structural",
+   "name": "Structural",
+   "triangles": 277516
+  },
+  {
+   "tag": "TS-md-telecom",
+   "deck": "md",
+   "system": "telecom",
+   "name": "Telecom",
+   "triangles": 546
+  },
+  {
+   "tag": "AAK-2601",
+   "deck": "md",
+   "system": "equipment",
+   "name": "AAK-2601",
+   "triangles": 1571
+  },
+  {
+   "tag": "AAK-2611",
+   "deck": "md",
+   "system": "equipment",
+   "name": "AAK-2611",
+   "triangles": 1571
+  },
+  {
+   "tag": "AAK-7001",
+   "deck": "md",
+   "system": "equipment",
+   "name": "AAK-7001",
+   "triangles": 584
+  },
+  {
+   "tag": "AAK-7011",
+   "deck": "md",
+   "system": "equipment",
+   "name": "AAK-7011",
+   "triangles": 680
+  },
+  {
+   "tag": "CAE-2614A",
+   "deck": "md",
+   "system": "equipment",
+   "name": "CAE-2614A",
+   "triangles": 10474
+  },
+  {
+   "tag": "CAE-2614B",
+   "deck": "md",
+   "system": "equipment",
+   "name": "CAE-2614B",
+   "triangles": 10386
+  },
+  {
+   "tag": "HAL-5704",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HAL-5704",
+   "triangles": 4452
+  },
+  {
+   "tag": "HAL-7001",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HAL-7001",
+   "triangles": 1405
+  },
+  {
+   "tag": "HAL-7011",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HAL-7011",
+   "triangles": 1443
+  },
+  {
+   "tag": "HBG-2603",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HBG-2603",
+   "triangles": 1389
+  },
+  {
+   "tag": "HBG-2612A",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HBG-2612A",
+   "triangles": 6517
+  },
+  {
+   "tag": "HBG-2613",
+   "deck": "md",
+   "system": "equipment",
+   "name": "HBG-2613",
+   "triangles": 1356
+  },
+  {
+   "tag": "LAN-7000A",
+   "deck": "md",
+   "system": "equipment",
+   "name": "LAN-7000A",
+   "triangles": 16114
+  },
+  {
+   "tag": "LAN-7000B",
+   "deck": "md",
+   "system": "equipment",
+   "name": "LAN-7000B",
+   "triangles": 16791
+  },
+  {
+   "tag": "MAD-2603",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MAD-2603",
+   "triangles": 664
+  },
+  {
+   "tag": "MAD-2613",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MAD-2613",
+   "triangles": 649
+  },
+  {
+   "tag": "MAD-7002",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MAD-7002",
+   "triangles": 647
+  },
+  {
+   "tag": "MAD-7012",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MAD-7012",
+   "triangles": 532
+  },
+  {
+   "tag": "MAF-2401",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MAF-2401",
+   "triangles": 11066
+  },
+  {
+   "tag": "MBJ-4905",
+   "deck": "md",
+   "system": "equipment",
+   "name": "MBJ-4905",
+   "triangles": 5013
+  },
+  {
+   "tag": "QAY-2874",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2874",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2875",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2875",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2878",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2878",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2879",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2879",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2882",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2882",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2883",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2883",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2884",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2884",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2885",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2885",
+   "triangles": 12
+  },
+  {
+   "tag": "QAY-2886",
+   "deck": "md",
+   "system": "equipment",
+   "name": "QAY-2886",
+   "triangles": 12
+  },
+  {
+   "tag": "TOTE-TANKS",
+   "deck": "md",
+   "system": "equipment",
+   "name": "TOTE-TANKS",
+   "triangles": 8587
+  },
+  {
+   "tag": "ZZZ-2604",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-2604",
+   "triangles": 238
+  },
+  {
+   "tag": "ZZZ-2606",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-2606",
+   "triangles": 1348
+  },
+  {
+   "tag": "ZZZ-2614",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-2614",
+   "triangles": 230
+  },
+  {
+   "tag": "ZZZ-2616",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-2616",
+   "triangles": 1391
+  },
+  {
+   "tag": "ZZZ-7001",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-7001",
+   "triangles": 210
+  },
+  {
+   "tag": "ZZZ-7011",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-7011",
+   "triangles": 238
+  },
+  {
+   "tag": "ZZZ-9908",
+   "deck": "md",
+   "system": "equipment",
+   "name": "ZZZ-9908",
+   "triangles": 129648
+  }
+ ]
+}

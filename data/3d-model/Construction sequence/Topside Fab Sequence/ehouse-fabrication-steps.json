@@ -1,0 +1,19 @@
+{
+  "source": "2021-4591-65-1022 Rev 0, ST-CGF Topside E-House Fabrication Sequence Drawing (2 sheets, issued for information 20 Nov 2025)",
+  "note": "Stages transcribed from the drawing. Items clouded on the drawing (Rev 0 changes) are kept as written.",
+  "stages": [
+    { "no": 1, "sheet": 1, "title": "Preparation", "items": ["Preparation of materials for cutting, beveling", "Fabricate temporary supports"] },
+    { "no": 2, "sheet": 1, "title": "Layout supports and assemble decks", "items": ["Layout temporary support and assembly intermediate deck part 3 (E-House deck level 1)", "Layout temporary support and assembly E-House deck level 2 and level 3"] },
+    { "no": 3, "sheet": 1, "title": "Columns and wall on E-House level 1", "items": ["Install columns and wall on E-House level 1"] },
+    { "no": 4, "sheet": 1, "title": "Lift E-House deck level 2, supports for level 1", "items": ["Site moving and lifting E-House deck level 2", "Install supports for architectural, piping, E&I, HVAC for E-House level 1"] },
+    { "no": 5, "sheet": 1, "title": "Columns and wall on deck level 2", "items": ["Install columns and wall on E-House deck level 2", "Install remaining supports for architectural, piping, E&I, HVAC below deck level 1"] },
+    { "no": 6, "sheet": 1, "title": "Lift E-House deck level 3, supports for level 2", "items": ["Site moving and lifting E-House deck level 3", "Install supports for architectural, piping, E&I, HVAC for E-House level 2", "Install beam or double plate of holding part (stair, HVAC, ducting support) which connect directly to E-House for complete install the rest structure at final position"] },
+    { "no": 7, "sheet": 1, "title": "Level 1: hot work, painting, insulation, ducting", "items": ["Clear hot work for E-House level 1", "Touch up painting and release for install insulation", "Install insulation, install ducting, cable tray, ladder for E-House level 1", "Install remaining supports for architectural, piping, E&I, HVAC for deck level 2"] },
+    { "no": 8, "sheet": 1, "title": "Equipment on E-House deck level 1", "items": ["Install equipment on E-House deck level 1 (not include transformer)"] },
+    { "no": 9, "sheet": 2, "title": "Level 2: hot work, painting, insulation, ducting", "items": ["Clear hot work for E-House level 2", "Touch up painting and release for install insulation", "Install insulation, install ducting, cable tray, ladder for E-House level 2"] },
+    { "no": 10, "sheet": 2, "title": "Equipment on E-House deck level 2", "items": ["Install equipment on E-House deck level 2"] },
+    { "no": 11, "sheet": 2, "title": "HVAC, stair, final painting", "items": ["Install HVAC and ducting system for E-House (hold any part clashing with rigging arrangement)", "Install stair and stair case", "Touch up and final painting & marking"] },
+    { "no": 12, "sheet": 2, "title": "Hold clashing parts for trailers", "items": ["Hold pipe rack, cable tray, piping which is clashing with trailer and lashing arrangement", "Keep main supports and release temporary supports for trailers arrangement and site moving"] },
+    { "no": 13, "sheet": 2, "title": "Ready for site moving and lifting", "items": ["Ready for site moving and lifting"] }
+  ]
+}

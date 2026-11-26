@@ -1,0 +1,415 @@
+{
+ "model": "dsf",
+ "name": "DSF",
+ "origin": [
+  17.369837760925293,
+  -17.39364528656006,
+  -10.456799507141113
+ ],
+ "upAxis": "Y",
+ "source": "261001 Rev B, CGF Topside DSF Fabrication Sequence (3 of 4 sheets in the file, issued for review 1 Oct 2026)",
+ "upright": true,
+ "groups": [
+  {
+   "id": "structural",
+   "name": "Structural",
+   "color": "#8fa3c4"
+  },
+  {
+   "id": "equipment",
+   "name": "Equipment",
+   "color": "#e8943a"
+  },
+  {
+   "id": "piping",
+   "name": "Piping and supports",
+   "color": "#2f9d83"
+  },
+  {
+   "id": "e_i",
+   "name": "Electrical & instrument",
+   "color": "#e5a93a"
+  },
+  {
+   "id": "telecom",
+   "name": "Telecom",
+   "color": "#d4543b"
+  },
+  {
+   "id": "hvac",
+   "name": "HVAC",
+   "color": "#3b82f6"
+  },
+  {
+   "id": "safety",
+   "name": "Safety",
+   "color": "#c4478a"
+  }
+ ],
+ "decks": [
+  {
+   "id": "stage3",
+   "name": "Lower box L3-3, Lower box L3-4",
+   "step": 3,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage3.glb",
+   "bytes": 7816,
+   "triangles": 2000,
+   "parts": {
+    "structural": 2000
+   },
+   "labels": [
+    "Lower box L3-3",
+    "Lower box L3-4"
+   ]
+  },
+  {
+   "id": "stage4",
+   "name": "Lower box L3-1, Lower box L3-2, Lower box L3-5\u2026",
+   "step": 4,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage4.glb",
+   "bytes": 12160,
+   "triangles": 3588,
+   "parts": {
+    "structural": 3588
+   },
+   "labels": [
+    "Lower box L3-1",
+    "Lower box L3-2",
+    "Lower box L3-5",
+    "Lower box L3-6"
+   ]
+  },
+  {
+   "id": "stage5",
+   "name": "Cross girders and transverse beams",
+   "step": 5,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage5.glb",
+   "bytes": 4820,
+   "triangles": 840,
+   "parts": {
+    "structural": 840
+   },
+   "labels": [
+    "Cross girders and transverse beams"
+   ]
+  },
+  {
+   "id": "stage6",
+   "name": "Horizontal bracing",
+   "step": 6,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage6.glb",
+   "bytes": 27500,
+   "triangles": 5530,
+   "parts": {
+    "structural": 5530
+   },
+   "labels": [
+    "Horizontal bracing"
+   ]
+  },
+  {
+   "id": "stage7",
+   "name": "Lower box L4-1, Lower box L4-2, Lower box L4-3\u2026",
+   "step": 7,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage7.glb",
+   "bytes": 17864,
+   "triangles": 5564,
+   "parts": {
+    "structural": 5564
+   },
+   "labels": [
+    "Lower box L4-1",
+    "Lower box L4-2",
+    "Lower box L4-3",
+    "Lower box L4-4",
+    "Lower box L4-5",
+    "Lower box L4-6"
+   ]
+  },
+  {
+   "id": "stage8",
+   "name": "Middle box M3-A, Middle box M3-C, Middle box M4-A\u2026",
+   "step": 8,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage8.glb",
+   "bytes": 24624,
+   "triangles": 8286,
+   "parts": {
+    "structural": 8288
+   },
+   "labels": [
+    "Middle box M3-A",
+    "Middle box M3-C",
+    "Middle box M4-A",
+    "Middle box M4-C"
+   ]
+  },
+  {
+   "id": "stage9",
+   "name": "Upper box U3-A, Upper box U3-C, Upper box U4-A\u2026",
+   "step": 9,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage9.glb",
+   "bytes": 24772,
+   "triangles": 7740,
+   "parts": {
+    "structural": 7740
+   },
+   "labels": [
+    "Upper box U3-A",
+    "Upper box U3-C",
+    "Upper box U4-A",
+    "Upper box U4-C"
+   ]
+  },
+  {
+   "id": "stage10",
+   "name": "Tubular frames",
+   "step": 10,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage10.glb",
+   "bytes": 12936,
+   "triangles": 2791,
+   "parts": {
+    "structural": 2791
+   },
+   "labels": [
+    "Tubular frames"
+   ]
+  },
+  {
+   "id": "stage11",
+   "name": "DSF support DSU-3.1",
+   "step": 11,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage11.glb",
+   "bytes": 3316,
+   "triangles": 448,
+   "parts": {
+    "structural": 448
+   },
+   "labels": [
+    "DSF support DSU-3.1"
+   ]
+  },
+  {
+   "id": "stage12",
+   "name": "Timbers, clip plates and bolts",
+   "step": 12,
+   "kind": "fab",
+   "follow": null,
+   "file": "stage12.glb",
+   "bytes": 32888,
+   "triangles": 10400,
+   "parts": {
+    "structural": 10400
+   },
+   "labels": [
+    "Timbers, clip plates and bolts"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "no": 1,
+   "sheet": 1,
+   "title": "Fabrication of DSF parts",
+   "items": [
+    "Prepare materials: cutting, beveling, rolling",
+    "Fabricate 24 DSF box parts in workshop (max 12 m per part), see DSF part list (row 3 shown, row 4 similar)",
+    "Fabricate main supports and temporary supports"
+   ],
+   "actions": []
+  },
+  {
+   "no": 2,
+   "sheet": 1,
+   "title": "Layout supports",
+   "items": [
+    "Layout main supports and temporary supports at final position",
+    "Survey & leveling check all supports"
+   ],
+   "actions": []
+  },
+  {
+   "no": 3,
+   "sheet": 1,
+   "title": "Erect lower box row 3 (centre)",
+   "items": [
+    "Lift & set lower parts L3-3, L3-4 on supports",
+    "Align, level and fit-up splice L3-3/L3-4, weld splice joint, NDT"
+   ],
+   "actions": [
+    {
+     "deck": "stage3",
+     "kind": "fab",
+     "label": "Fabricate and fit: Lower box L3-3, Lower box L3-4"
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "sheet": 1,
+   "title": "Erect lower box row 3",
+   "items": [
+    "Lift & set lower parts L3-2, L3-5 then L3-1, L3-6",
+    "Fit-up & weld splice joints, NDT",
+    "Dimensional check of lower box row 3"
+   ],
+   "actions": [
+    {
+     "deck": "stage4",
+     "kind": "fab",
+     "label": "Fabricate and fit: Lower box L3-1, Lower box L3-2, Lower box L3-5, Lower box L3-6"
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "sheet": 2,
+   "title": "Install cross girders",
+   "items": [
+    "Install cross girders CG-C (grid C) & CG-A (grid A) from row 3, free ends on temporary supports",
+    "Install transverse beams BR-2 & BR-3",
+    "Fit-up & welding at row 3, NDT"
+   ],
+   "actions": [
+    {
+     "deck": "stage5",
+     "kind": "fab",
+     "label": "Fabricate and fit: Cross girders and transverse beams"
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "sheet": 2,
+   "title": "Install horizontal bracings",
+   "items": [
+    "Install full horizontal bracings and gusset plates",
+    "Fit-up & welding at row 3 and bracing nodes, NDT",
+    "Survey row 4 connection points before setting lower box row 4"
+   ],
+   "actions": [
+    {
+     "deck": "stage6",
+     "kind": "fab",
+     "label": "Fabricate and fit: Horizontal bracing"
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "sheet": 2,
+   "title": "Erect lower box row 4",
+   "items": [
+    "Lift & set lower parts L4-3, L4-4 then L4-2, L4-5 then L4-1, L4-6",
+    "Fit-up & weld splice joints and connections to cross girders / bracings, NDT",
+    "Dimensional check of lower box row 3 & row 4"
+   ],
+   "actions": [
+    {
+     "deck": "stage7",
+     "kind": "fab",
+     "label": "Fabricate and fit: Lower box L4-1, Lower box L4-2, Lower box L4-3, Lower box L4-4\u2026"
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "sheet": 2,
+   "title": "Erect middle box",
+   "items": [
+    "Lift & set middle parts M3-C1/C2, M3-A1/A2, M4-C1/C2, M4-A1/A2 on lower box",
+    "Fit-up & welding, NDT"
+   ],
+   "actions": [
+    {
+     "deck": "stage8",
+     "kind": "fab",
+     "label": "Fabricate and fit: Middle box M3-A, Middle box M3-C, Middle box M4-A, Middle box M4-C"
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "sheet": 3,
+   "title": "Erect upper box",
+   "items": [
+    "Lift & set upper parts U3-C, U3-A, U4-C, U4-A",
+    "Fit-up & welding, NDT"
+   ],
+   "actions": [
+    {
+     "deck": "stage9",
+     "kind": "fab",
+     "label": "Fabricate and fit: Upper box U3-A, Upper box U3-C, Upper box U4-A, Upper box U4-C"
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "sheet": 3,
+   "title": "Install tubular frames",
+   "items": [
+    "Install tubular frames TF-C (grid C) & TF-A (grid A)",
+    "Fit-up & welding, NDT"
+   ],
+   "actions": [
+    {
+     "deck": "stage10",
+     "kind": "fab",
+     "label": "Fabricate and fit: Tubular frames"
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "sheet": 3,
+   "title": "Install DSF support",
+   "items": [
+    "Install DSF support DSU-3.1 on row 3",
+    "Complete welding & NDT, final dimensional control",
+    "Touch-up and final painting"
+   ],
+   "actions": [
+    {
+     "deck": "stage11",
+     "kind": "fab",
+     "label": "Fabricate and fit: DSF support DSU-3.1"
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "sheet": 3,
+   "title": "Install timbers",
+   "items": [
+    "Remove temporary supports",
+    "Jack up DSF, remove packings, install timbers, clip plates & bolts, lower DSF onto main supports",
+    "Ready for weighing / load-out"
+   ],
+   "actions": [
+    {
+     "deck": "stage12",
+     "kind": "fab",
+     "label": "Fabricate and fit: Timbers, clip plates and bolts"
+    }
+   ]
+  }
+ ]
+}

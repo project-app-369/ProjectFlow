@@ -1,0 +1,18 @@
+{
+  "source": "261001 Rev B, CGF Topside DSF Fabrication Sequence (3 of 4 sheets in the file, issued for review 1 Oct 2026)",
+  "note": "Part names are those of the drawing: L3-1..6 / L4-1..6 lower box rows 3 and 4, M3/M4-A1,A2,C1,C2 middle box, U3/U4-A,C upper box, CG-A / CG-C cross girders, BR-2 / BR-3 transverse beams, TF-A / TF-C tubular frames, DSU-3.1 DSF support. DSF parts are at most 12 m long (upper box parts of 13.5 m stay in one piece).",
+  "stages": [
+    { "no": 1, "sheet": 1, "title": "Fabrication of DSF parts", "items": ["Prepare materials: cutting, beveling, rolling", "Fabricate 24 DSF box parts in workshop (max 12 m per part), see DSF part list (row 3 shown, row 4 similar)", "Fabricate main supports and temporary supports"], "parts": [] },
+    { "no": 2, "sheet": 1, "title": "Layout supports", "items": ["Layout main supports and temporary supports at final position", "Survey & leveling check all supports"], "parts": ["main support", "temporary support"] },
+    { "no": 3, "sheet": 1, "title": "Erect lower box row 3 (centre)", "items": ["Lift & set lower parts L3-3, L3-4 on supports", "Align, level and fit-up splice L3-3/L3-4, weld splice joint, NDT"], "parts": ["L3-3", "L3-4"] },
+    { "no": 4, "sheet": 1, "title": "Erect lower box row 3", "items": ["Lift & set lower parts L3-2, L3-5 then L3-1, L3-6", "Fit-up & weld splice joints, NDT", "Dimensional check of lower box row 3"], "parts": ["L3-2", "L3-5", "L3-1", "L3-6"] },
+    { "no": 5, "sheet": 2, "title": "Install cross girders", "items": ["Install cross girders CG-C (grid C) & CG-A (grid A) from row 3, free ends on temporary supports", "Install transverse beams BR-2 & BR-3", "Fit-up & welding at row 3, NDT"], "parts": ["CG-C", "CG-A", "BR-2", "BR-3"] },
+    { "no": 6, "sheet": 2, "title": "Install horizontal bracings", "items": ["Install full horizontal bracings and gusset plates", "Fit-up & welding at row 3 and bracing nodes, NDT", "Survey row 4 connection points before setting lower box row 4"], "parts": ["horizontal bracing"] },
+    { "no": 7, "sheet": 2, "title": "Erect lower box row 4", "items": ["Lift & set lower parts L4-3, L4-4 then L4-2, L4-5 then L4-1, L4-6", "Fit-up & weld splice joints and connections to cross girders / bracings, NDT", "Dimensional check of lower box row 3 & row 4"], "parts": ["L4-1", "L4-2", "L4-3", "L4-4", "L4-5", "L4-6"] },
+    { "no": 8, "sheet": 2, "title": "Erect middle box", "items": ["Lift & set middle parts M3-C1/C2, M3-A1/A2, M4-C1/C2, M4-A1/A2 on lower box", "Fit-up & welding, NDT"], "parts": ["M3-C1", "M3-C2", "M3-A1", "M3-A2", "M4-C1", "M4-C2", "M4-A1", "M4-A2"] },
+    { "no": 9, "sheet": 3, "title": "Erect upper box", "items": ["Lift & set upper parts U3-C, U3-A, U4-C, U4-A", "Fit-up & welding, NDT"], "parts": ["U3-C", "U3-A", "U4-C", "U4-A"] },
+    { "no": 10, "sheet": 3, "title": "Install tubular frames", "items": ["Install tubular frames TF-C (grid C) & TF-A (grid A)", "Fit-up & welding, NDT"], "parts": ["TF-C", "TF-A"] },
+    { "no": 11, "sheet": 3, "title": "Install DSF support", "items": ["Install DSF support DSU-3.1 on row 3", "Complete welding & NDT, final dimensional control", "Touch-up and final painting"], "parts": ["DSU-3.1"] },
+    { "no": 12, "sheet": 3, "title": "Install timbers", "items": ["Remove temporary supports", "Jack up DSF, remove packings, install timbers, clip plates & bolts, lower DSF onto main supports", "Ready for weighing / load-out"], "parts": ["timber", "clip plate"] }
+  ]
+}

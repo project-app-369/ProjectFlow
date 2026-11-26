@@ -1,0 +1,1634 @@
+{
+ "model": "topside",
+ "name": "ST-CGF Topside",
+ "origin": [
+  17.369837760925293,
+  -17.39364528656006,
+  -10.456799507141113
+ ],
+ "upAxis": "Y",
+ "source": "2021-4591-65-1005 Rev 0, ST-CGF Topside Fabrication Sequence Drawing (5 sheets, issued for information 13 Apr 2026)",
+ "upright": true,
+ "groups": [
+  {
+   "id": "structural",
+   "name": "Structural",
+   "color": "#8fa3c4"
+  },
+  {
+   "id": "equipment",
+   "name": "Equipment",
+   "color": "#e8943a"
+  },
+  {
+   "id": "piping",
+   "name": "Piping and supports",
+   "color": "#2f9d83"
+  },
+  {
+   "id": "e_i",
+   "name": "Electrical & instrument",
+   "color": "#e5a93a"
+  },
+  {
+   "id": "telecom",
+   "name": "Telecom",
+   "color": "#d4543b"
+  },
+  {
+   "id": "hvac",
+   "name": "HVAC",
+   "color": "#3b82f6"
+  },
+  {
+   "id": "safety",
+   "name": "Safety",
+   "color": "#c4478a"
+  }
+ ],
+ "decks": [
+  {
+   "id": "s2A-to-7",
+   "name": "Intermediate deck part 1",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2A-to-7.glb",
+   "bytes": 97864,
+   "triangles": 19992,
+   "parts": {
+    "structural": 20057
+   },
+   "labels": [
+    "Intermediate deck part 1"
+   ],
+   "fabShift": [
+    82.58,
+    -21.63,
+    30.11
+   ],
+   "moveStep": 12
+  },
+  {
+   "id": "s2A-to-8",
+   "name": "Intermediate deck part 2",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2A-to-8.glb",
+   "bytes": 141324,
+   "triangles": 29424,
+   "parts": {
+    "structural": 29526
+   },
+   "labels": [
+    "Intermediate deck part 2"
+   ],
+   "fabShift": [
+    138.16,
+    -21.63,
+    34.58
+   ],
+   "moveStep": 13
+  },
+  {
+   "id": "s2A-to-13",
+   "name": "Main deck part 1",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2A-to-13.glb",
+   "bytes": 108348,
+   "triangles": 22949,
+   "parts": {
+    "structural": 23130
+   },
+   "labels": [
+    "Main deck part 1"
+   ],
+   "fabShift": [
+    79.04,
+    -29.63,
+    35.84
+   ],
+   "moveStep": 18
+  },
+  {
+   "id": "s2A-to-14",
+   "name": "Main deck part 2",
+   "step": 2,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2A-to-14.glb",
+   "bytes": 131236,
+   "triangles": 26359,
+   "parts": {
+    "structural": 26412
+   },
+   "labels": [
+    "Main deck part 2"
+   ],
+   "fabShift": [
+    135.53,
+    -29.63,
+    87.31
+   ],
+   "moveStep": 19
+  },
+  {
+   "id": "s2B-to-15",
+   "name": "E-House",
+   "step": 3,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2B-to-15.glb",
+   "bytes": 383936,
+   "triangles": 80315,
+   "parts": {
+    "structural": 80618
+   },
+   "labels": [
+    "E-House"
+   ],
+   "fabShift": [
+    81.98,
+    -22.02,
+    57.4
+   ],
+   "moveStep": 20
+  },
+  {
+   "id": "s2B-to-25B",
+   "name": "Deck support frame",
+   "step": 3,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2B-to-25B.glb",
+   "bytes": 164484,
+   "triangles": 47187,
+   "parts": {
+    "structural": 47189
+   },
+   "labels": [
+    "Deck support frame"
+   ],
+   "fabShift": [
+    173.34,
+    -1.71,
+    94.72
+   ],
+   "moveStep": 36
+  },
+  {
+   "id": "s2C-to-6C",
+   "name": "Access platforms",
+   "step": 4,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2C-to-6C.glb",
+   "bytes": 152708,
+   "triangles": 28073,
+   "parts": {
+    "structural": 28073
+   },
+   "labels": [
+    "Access platforms"
+   ],
+   "fabShift": [
+    73.54,
+    -12.87,
+    222.31
+   ],
+   "moveStep": 11
+  },
+  {
+   "id": "s2D-to-27",
+   "name": "Sub-cellar deck platforms",
+   "step": 5,
+   "kind": "fab",
+   "follow": null,
+   "file": "s2D-to-27.glb",
+   "bytes": 76704,
+   "triangles": 15179,
+   "parts": {
+    "structural": 15268
+   },
+   "labels": [
+    "Sub-cellar deck platforms"
+   ],
+   "fabShift": [
+    115.25,
+    -14.83,
+    126.9
+   ],
+   "moveStep": 38
+  },
+  {
+   "id": "s3",
+   "name": "Skidway",
+   "step": 6,
+   "kind": "fab",
+   "follow": null,
+   "file": "s3.glb",
+   "bytes": 19888,
+   "triangles": 6488,
+   "parts": {
+    "structural": 6488
+   },
+   "labels": [
+    "Skidway"
+   ]
+  },
+  {
+   "id": "s5",
+   "name": "Cellar deck",
+   "step": 8,
+   "kind": "fab",
+   "follow": null,
+   "file": "s5.glb",
+   "bytes": 552880,
+   "triangles": 109323,
+   "parts": {
+    "structural": 109519
+   },
+   "labels": [
+    "Cellar deck"
+   ]
+  },
+  {
+   "id": "s6A",
+   "name": "Columns and braces",
+   "step": 9,
+   "kind": "fab",
+   "follow": null,
+   "file": "s6A.glb",
+   "bytes": 78864,
+   "triangles": 23486,
+   "parts": {
+    "structural": 23486
+   },
+   "labels": [
+    "Columns and braces"
+   ]
+  },
+  {
+   "id": "s6B",
+   "name": "Stage 6B: 37 groups",
+   "step": 10,
+   "kind": "lift",
+   "follow": null,
+   "file": "s6B.glb",
+   "bytes": 2310284,
+   "triangles": 479886,
+   "parts": {
+    "equipment": 479951
+   },
+   "labels": [
+    "DV-8007",
+    "DV-8008",
+    "DV-8009",
+    "DV-8010",
+    "Equipment on cellar deck",
+    "HAP-4302A",
+    "HAP-4302B",
+    "HBA-4904A",
+    "HBA-4904B",
+    "KAH-3004",
+    "MAJ-4903A",
+    "MAJ-4903B",
+    "MAJ-4906",
+    "MBD-2501",
+    "MBD-2701",
+    "MBF-4302",
+    "MBL-5010",
+    "MBL-6410",
+    "MBL-6411",
+    "PBE-4304A",
+    "PBE-4304B",
+    "PBE-4902B",
+    "PBE-4907A",
+    "PBE-4907B",
+    "QAY-2874",
+    "QAY-2875",
+    "QAY-2878",
+    "QAY-2879",
+    "QAY-2882",
+    "QAY-2883",
+    "QAY-2884",
+    "QAY-2885",
+    "QAY-2886",
+    "WHCP-2870",
+    "ZZZ-5000",
+    "ZZZ-6400",
+    "ZZZ-6405"
+   ]
+  },
+  {
+   "id": "s6C",
+   "name": "Pipe rack below intermediate deck",
+   "step": 11,
+   "kind": "fab",
+   "follow": null,
+   "file": "s6C.glb",
+   "bytes": 69288,
+   "triangles": 14602,
+   "parts": {
+    "structural": 14628
+   },
+   "labels": [
+    "Pipe rack below intermediate deck"
+   ]
+  },
+  {
+   "id": "s9",
+   "name": "Fire and blast wall",
+   "step": 14,
+   "kind": "fab",
+   "follow": null,
+   "file": "s9.glb",
+   "bytes": 77216,
+   "triangles": 16844,
+   "parts": {
+    "structural": 16981
+   },
+   "labels": [
+    "Fire and blast wall"
+   ]
+  },
+  {
+   "id": "s10",
+   "name": "ZZZ-4101",
+   "step": 15,
+   "kind": "lift",
+   "follow": null,
+   "file": "s10.glb",
+   "bytes": 12604,
+   "triangles": 2863,
+   "parts": {
+    "equipment": 2863
+   },
+   "labels": [
+    "ZZZ-4101"
+   ]
+  },
+  {
+   "id": "s11",
+   "name": "Stage 11: 13 groups",
+   "step": 16,
+   "kind": "lift",
+   "follow": null,
+   "file": "s11.glb",
+   "bytes": 199660,
+   "triangles": 52436,
+   "parts": {
+    "equipment": 52492
+   },
+   "labels": [
+    "FM-200-XA",
+    "FM-200-XB",
+    "HAP-5703A",
+    "HAP-5703B",
+    "LAN-7100",
+    "MBD-2613A",
+    "MBD-2613B",
+    "MBF-5701",
+    "MBF-5702A",
+    "MBF-5702B",
+    "ZAU-3003",
+    "ZZZ-4201",
+    "ZZZ-4202"
+   ]
+  },
+  {
+   "id": "s12",
+   "name": "Pipe rack below main deck",
+   "step": 17,
+   "kind": "fab",
+   "follow": null,
+   "file": "s12.glb",
+   "bytes": 91716,
+   "triangles": 19924,
+   "parts": {
+    "structural": 19941
+   },
+   "labels": [
+    "Pipe rack below main deck"
+   ]
+  },
+  {
+   "id": "s15",
+   "name": "Stage 15: 3 groups",
+   "step": 20,
+   "kind": "fab",
+   "follow": null,
+   "file": "s15.glb",
+   "bytes": 390816,
+   "triangles": 73229,
+   "parts": {
+    "e_i": 44991,
+    "hvac": 27798,
+    "telecom": 446
+   },
+   "labels": [
+    "Electrical and instrument (E-House)",
+    "HVAC (E-House)",
+    "Telecom (E-House)"
+   ]
+  },
+  {
+   "id": "s16",
+   "name": "Stage 16: 2 groups",
+   "step": 21,
+   "kind": "fab",
+   "follow": null,
+   "file": "s16.glb",
+   "bytes": 577028,
+   "triangles": 109004,
+   "parts": {
+    "structural": 109100
+   },
+   "labels": [
+    "Platforms and miscellaneous on intermediate deck",
+    "Remaining structures on intermediate deck"
+   ]
+  },
+  {
+   "id": "s17",
+   "name": "Stage 17: 9 groups",
+   "step": 22,
+   "kind": "lift",
+   "follow": null,
+   "file": "s17.glb",
+   "bytes": 635944,
+   "triangles": 133781,
+   "parts": {
+    "equipment": 133795
+   },
+   "labels": [
+    "Equipment on intermediate deck",
+    "HBG-2502A",
+    "HBG-2502B",
+    "MAD-2415",
+    "MAF-2401",
+    "Pedestal crane adaptor",
+    "ZZZ-4710",
+    "ZZZ-7102"
+   ]
+  },
+  {
+   "id": "s18",
+   "name": "Stage 18: 12 groups",
+   "step": 23,
+   "kind": "fab",
+   "follow": null,
+   "file": "s18.glb",
+   "bytes": 2914992,
+   "triangles": 720539,
+   "parts": {
+    "piping": 591924,
+    "e_i": 109568,
+    "hvac": 6175,
+    "telecom": 1868,
+    "safety": 11150
+   },
+   "labels": [
+    "Electrical and instrument",
+    "HVAC",
+    "Piping and supports",
+    "Safety",
+    "Telecom"
+   ]
+  },
+  {
+   "id": "s19",
+   "name": "Stage 19: 34 groups",
+   "step": 24,
+   "kind": "lift",
+   "follow": null,
+   "file": "s19.glb",
+   "bytes": 750352,
+   "triangles": 166483,
+   "parts": {
+    "equipment": 166681
+   },
+   "labels": [
+    "AAK-2601",
+    "AAK-2611",
+    "AAK-7001",
+    "AAK-7011",
+    "CAE-2614A",
+    "CAE-2614B",
+    "Equipment on main deck",
+    "HAL-5704",
+    "HAL-7001",
+    "HAL-7011",
+    "HBG-2603",
+    "HBG-2612A",
+    "HBG-2613",
+    "MAD-2603",
+    "MAD-2613",
+    "MAD-7002",
+    "MAD-7012",
+    "QAY-2874",
+    "QAY-2875",
+    "QAY-2878",
+    "QAY-2879",
+    "QAY-2882",
+    "QAY-2883",
+    "QAY-2884",
+    "QAY-2885",
+    "QAY-2886",
+    "TOTE-TANKS",
+    "Vendor equipment on main deck",
+    "ZZZ-2604",
+    "ZZZ-2606",
+    "ZZZ-2614",
+    "ZZZ-2616",
+    "ZZZ-7001",
+    "ZZZ-7011"
+   ]
+  },
+  {
+   "id": "s20A",
+   "name": "GTG, glycol and expansion platforms (1)",
+   "step": 25,
+   "kind": "fab",
+   "follow": null,
+   "file": "s20A.glb",
+   "bytes": 385184,
+   "triangles": 74127,
+   "parts": {
+    "structural": 74141
+   },
+   "labels": [
+    "GTG, glycol and expansion platforms (1)"
+   ]
+  },
+  {
+   "id": "s20B",
+   "name": "Stage 20B: 2 groups",
+   "step": 26,
+   "kind": "fab",
+   "follow": null,
+   "file": "s20B.glb",
+   "bytes": 168552,
+   "triangles": 33050,
+   "parts": {
+    "equipment": 5013,
+    "structural": 28114
+   },
+   "labels": [
+    "GTG service platforms (2)",
+    "MBJ-4905"
+   ]
+  },
+  {
+   "id": "s20C",
+   "name": "GTG service platforms",
+   "step": 27,
+   "kind": "fab",
+   "follow": null,
+   "file": "s20C.glb",
+   "bytes": 29696,
+   "triangles": 5434,
+   "parts": {
+    "structural": 5444
+   },
+   "labels": [
+    "GTG service platforms"
+   ]
+  },
+  {
+   "id": "s20D",
+   "name": "Stage 20D: 3 groups",
+   "step": 28,
+   "kind": "lift",
+   "follow": null,
+   "file": "s20D.glb",
+   "bytes": 132368,
+   "triangles": 34024,
+   "parts": {
+    "equipment": 34046
+   },
+   "labels": [
+    "Equipment gas turbine generators",
+    "LAN-7000A",
+    "LAN-7000B"
+   ]
+  },
+  {
+   "id": "s21",
+   "name": "Safety",
+   "step": 29,
+   "kind": "fab",
+   "follow": null,
+   "file": "s21.glb",
+   "bytes": 6708,
+   "triangles": 1266,
+   "parts": {
+    "safety": 1266
+   },
+   "labels": [
+    "Safety"
+   ]
+  },
+  {
+   "id": "s22A",
+   "name": "Pedestal crane A-frame",
+   "step": 30,
+   "kind": "lift",
+   "follow": null,
+   "file": "s22A.glb",
+   "bytes": 1179240,
+   "triangles": 200191,
+   "parts": {
+    "equipment": 200605
+   },
+   "labels": [
+    "Pedestal crane A-frame"
+   ]
+  },
+  {
+   "id": "s22B",
+   "name": "Mercury removal unit",
+   "step": 31,
+   "kind": "lift",
+   "follow": null,
+   "file": "s22B.glb",
+   "bytes": 22872,
+   "triangles": 6082,
+   "parts": {
+    "equipment": 6082
+   },
+   "labels": [
+    "Mercury removal unit"
+   ]
+  },
+  {
+   "id": "s22C",
+   "name": "ZZZ-9908",
+   "step": 32,
+   "kind": "lift",
+   "follow": null,
+   "file": "s22C.glb",
+   "bytes": 684956,
+   "triangles": 129641,
+   "parts": {
+    "equipment": 129648
+   },
+   "labels": [
+    "ZZZ-9908"
+   ]
+  },
+  {
+   "id": "s23",
+   "name": "Miscellaneous steel on main deck",
+   "step": 33,
+   "kind": "fab",
+   "follow": null,
+   "file": "s23.glb",
+   "bytes": 515224,
+   "triangles": 100249,
+   "parts": {
+    "structural": 100334
+   },
+   "labels": [
+    "Miscellaneous steel on main deck"
+   ]
+  },
+  {
+   "id": "s27",
+   "name": "Stage 27: 6 groups",
+   "step": 38,
+   "kind": "fab",
+   "follow": null,
+   "file": "s27.glb",
+   "bytes": 476192,
+   "triangles": 96579,
+   "parts": {
+    "piping": 15240,
+    "equipment": 59576,
+    "e_i": 20781,
+    "telecom": 1010
+   },
+   "labels": [
+    "ABJ-6202",
+    "Electrical and instrument",
+    "Equipment on sub-cellar deck",
+    "MBF-6101",
+    "Piping and supports",
+    "Telecom"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "no": 1,
+   "id": "1",
+   "sheet": 1,
+   "title": "Preparation of materials and temporary supports",
+   "items": [
+    "Preparation of materials for cutting, beveling, rolling",
+    "Fabricate temporary supports"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": []
+  },
+  {
+   "no": 2,
+   "id": "2A",
+   "sheet": 1,
+   "title": "Assemble intermediate deck part 1 and 2, main deck part 1 and 2",
+   "items": [
+    "Layout temporary support and assembly intermediate deck part 1 and part 2",
+    "Layout temporary support and assembly main deck part 1 and part 2"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2A-to-7",
+     "kind": "fab",
+     "label": "Fabricate: Intermediate deck part 1"
+    },
+    {
+     "deck": "s2A-to-8",
+     "kind": "fab",
+     "label": "Fabricate: Intermediate deck part 2"
+    },
+    {
+     "deck": "s2A-to-13",
+     "kind": "fab",
+     "label": "Fabricate: Main deck part 1"
+    },
+    {
+     "deck": "s2A-to-14",
+     "kind": "fab",
+     "label": "Fabricate: Main deck part 2"
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "id": "2B",
+   "sheet": 1,
+   "title": "E-House and deck support frame",
+   "items": [
+    "Fabricate E-House included intermediate deck part 3",
+    "Fabricate deck support frame"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2B-to-15",
+     "kind": "fab",
+     "label": "Fabricate: E-House"
+    },
+    {
+     "deck": "s2B-to-25B",
+     "kind": "fab",
+     "label": "Fabricate: Deck support frame"
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "id": "2C",
+   "sheet": 1,
+   "title": "Services platform and miscellaneous",
+   "items": [
+    "Fabricate services platform",
+    "Fabricate miscellaneous"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2C-to-6C",
+     "kind": "fab",
+     "label": "Fabricate: Access platforms"
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "id": "2D",
+   "sheet": 1,
+   "title": "Sub-cellar deck",
+   "items": [
+    "Layout temporary support and sub-cellar deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2D-to-27",
+     "kind": "fab",
+     "label": "Fabricate: Sub-cellar deck platforms"
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "id": "3",
+   "sheet": 1,
+   "title": "Skidway",
+   "items": [
+    "Layout concrete block of skidway",
+    "Fabricate skidway"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s3",
+     "kind": "fab",
+     "label": "Install: Skidway"
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "id": "4",
+   "sheet": 1,
+   "title": "Temporary support of cellar deck",
+   "items": [
+    "Layout temporary support of cellar deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": []
+  },
+  {
+   "no": 8,
+   "id": "5",
+   "sheet": 1,
+   "title": "Assemble cellar deck",
+   "items": [
+    "Assembly cellar deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s5",
+     "kind": "fab",
+     "label": "Install: Cellar deck"
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "id": "6A",
+   "sheet": 2,
+   "title": "Cellar deck: fire and blast wall, columns, braces, equipment supports",
+   "items": [
+    "Install fire & blast wall on cellar deck",
+    "Install column & brace on cellar deck",
+    "Install equipment support on cellar deck",
+    "Hold X-brace for installing equipment"
+   ],
+   "date": null,
+   "from": "2026-12",
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s6A",
+     "kind": "fab",
+     "label": "Install: Columns and braces"
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "id": "6B",
+   "sheet": 2,
+   "title": "Install equipment on cellar deck",
+   "items": [
+    "Install equipment on cellar deck"
+   ],
+   "date": null,
+   "from": "2026-12",
+   "equipment": [
+    {
+     "tag": "MBL-6410 & 6411",
+     "name": "Instrument air receiver",
+     "date": "2026-12-28"
+    },
+    {
+     "tag": "WHCP-2870",
+     "name": "Wellhead control panel",
+     "date": "2026-12-19"
+    },
+    {
+     "tag": "MBD-2501",
+     "name": "Production separator",
+     "date": "2027-01-30"
+    },
+    {
+     "tag": "MBD-2701",
+     "name": "Test separator",
+     "date": "2027-02-03"
+    },
+    {
+     "tag": "HBA-4904A/B",
+     "name": "Seawater/cooling water exchanger A/B",
+     "date": "2027-03-01"
+    },
+    {
+     "tag": "ZZZ-6400 & 6405",
+     "name": "Instrument air compressor",
+     "date": "2027-04-09"
+    },
+    {
+     "tag": "DV-8007 to 8010",
+     "name": "FW deluge valve skid",
+     "date": "2027-01-25"
+    },
+    {
+     "tag": "MBL-5010 & ZZZ-5000",
+     "name": "Nitrogen receiver & generator package",
+     "date": "2027-01-09"
+    },
+    {
+     "tag": "MBF-4302",
+     "name": "HP flare scrubber",
+     "date": "2027-01-09"
+    }
+   ],
+   "actions": [
+    {
+     "deck": "s6B",
+     "kind": "lift",
+     "label": "Lift in: DV-8007, DV-8008, DV-8009\u2026"
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "id": "6C",
+   "sheet": 2,
+   "title": "Cellar deck: service platform and pipe rack",
+   "items": [
+    "Install equipment service platform on cellar deck",
+    "Pre-layout pipe rack below intermediate deck on cellar deck"
+   ],
+   "date": null,
+   "from": "2026-12",
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2C-to-6C",
+     "kind": "move",
+     "label": "Lift and move into place: Access platforms"
+    },
+    {
+     "deck": "s6C",
+     "kind": "fab",
+     "label": "Install: Pipe rack below intermediate deck"
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "id": "7",
+   "sheet": 2,
+   "title": "Site move and lift intermediate deck part 1",
+   "items": [
+    "Site moving and lifting intermediate deck part 1"
+   ],
+   "date": "2027-01-22",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2A-to-7",
+     "kind": "move",
+     "label": "Lift and move into place: Intermediate deck part 1"
+    }
+   ]
+  },
+  {
+   "no": 13,
+   "id": "8",
+   "sheet": 2,
+   "title": "Site move and lift intermediate deck part 2",
+   "items": [
+    "Site moving and lifting intermediate deck part 2"
+   ],
+   "date": "2027-02-16",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2A-to-8",
+     "kind": "move",
+     "label": "Lift and move into place: Intermediate deck part 2"
+    }
+   ]
+  },
+  {
+   "no": 14,
+   "id": "9",
+   "sheet": 2,
+   "title": "Intermediate deck: fire and blast wall, columns",
+   "items": [
+    "Install fire & blast wall on intermediate deck",
+    "Install column on intermediate deck"
+   ],
+   "date": "2027-02-24",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s9",
+     "kind": "fab",
+     "label": "Install: Fire and blast wall"
+    }
+   ]
+  },
+  {
+   "no": 15,
+   "id": "10",
+   "sheet": 2,
+   "title": "Lift remaining equipment on cellar deck, skid to final position",
+   "items": [
+    "Lifting remaining equipment on cellar deck, then skid to final position"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": [
+    {
+     "tag": "ZZZ-4101",
+     "name": "Hypochlorite generator",
+     "date": "2027-04-26"
+    },
+    {
+     "tag": "skidding frame",
+     "name": "Skidding frame (typ.)",
+     "date": null
+    }
+   ],
+   "actions": [
+    {
+     "deck": "s10",
+     "kind": "lift",
+     "label": "Lift in: ZZZ-4101"
+    }
+   ]
+  },
+  {
+   "no": 16,
+   "id": "11",
+   "sheet": 2,
+   "title": "Install equipment on intermediate deck",
+   "items": [
+    "Install equipment on intermediate deck"
+   ],
+   "date": null,
+   "from": "2027-02",
+   "equipment": [
+    {
+     "tag": "LAN-7100",
+     "name": "Diesel generator",
+     "date": "2027-03-01"
+    },
+    {
+     "tag": "ZAU-3003",
+     "name": "Sales gas metering skid",
+     "date": "2027-03-16"
+    },
+    {
+     "tag": "ZZZ-4202",
+     "name": "H2S scavenger",
+     "date": "2027-04-02"
+    },
+    {
+     "tag": "ZZZ-4201",
+     "name": "Corrosion inhibitor",
+     "date": "2027-04-05"
+    },
+    {
+     "tag": "MBD-2613A/B",
+     "name": "Gas compressor suction scrubber",
+     "date": "2027-03-08"
+    },
+    {
+     "tag": "MBF-5701",
+     "name": "Fuel gas scrubber",
+     "date": "2027-04-20"
+    },
+    {
+     "tag": "HAP-5703A/B & MBF-5702A/B",
+     "name": "Fuel gas superheater/filter A/B",
+     "date": "2027-03-12"
+    },
+    {
+     "tag": "FM-200XA",
+     "name": "FM200 skid",
+     "date": "2027-04-21"
+    }
+   ],
+   "actions": [
+    {
+     "deck": "s11",
+     "kind": "lift",
+     "label": "Lift in: FM-200-XA, FM-200-XB, HAP-5703A\u2026"
+    }
+   ]
+  },
+  {
+   "no": 17,
+   "id": "12",
+   "sheet": 3,
+   "title": "Intermediate deck: workshop and pipe rack",
+   "items": [
+    "Install workshop on intermediate deck",
+    "Pre-layout pipe rack below main deck on intermediate deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s12",
+     "kind": "fab",
+     "label": "Install: Pipe rack below main deck"
+    }
+   ]
+  },
+  {
+   "no": 18,
+   "id": "13",
+   "sheet": 3,
+   "title": "Site move and lift main deck part 1",
+   "items": [
+    "Site moving and lifting main deck part 1"
+   ],
+   "date": "2027-03-29",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2A-to-13",
+     "kind": "move",
+     "label": "Lift and move into place: Main deck part 1"
+    }
+   ]
+  },
+  {
+   "no": 19,
+   "id": "14",
+   "sheet": 3,
+   "title": "Site move and lift main deck part 2",
+   "items": [
+    "Site moving and lifting main deck part 2",
+    "Hold beams"
+   ],
+   "date": "2027-04-17",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2A-to-14",
+     "kind": "move",
+     "label": "Lift and move into place: Main deck part 2"
+    }
+   ]
+  },
+  {
+   "no": 20,
+   "id": "15",
+   "sheet": 3,
+   "title": "Site move and lift E-House module",
+   "items": [
+    "Site moving and lifting E-House module (included intermediate deck part 3)"
+   ],
+   "date": "2027-06-02",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2B-to-15",
+     "kind": "move",
+     "label": "Lift and move into place: E-House"
+    },
+    {
+     "deck": "s15",
+     "kind": "fab",
+     "label": "Install: Electrical and instrument (E-House), HVAC (E-House), Telecom (E-House)"
+    }
+   ]
+  },
+  {
+   "no": 21,
+   "id": "16",
+   "sheet": 3,
+   "title": "Remaining structures on intermediate deck",
+   "items": [
+    "Install remaining structures on intermediate deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s16",
+     "kind": "fab",
+     "label": "Install: Platforms and miscellaneous on intermediate deck, Remaining structures on intermediate deck"
+    }
+   ]
+  },
+  {
+   "no": 22,
+   "id": "17",
+   "sheet": 3,
+   "title": "Pedestal crane adaptor and remaining equipment on intermediate deck",
+   "items": [
+    "Install pedestal crane adaptor",
+    "Install remaining equipment on intermediate deck"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": [
+    {
+     "tag": "MAF-2401",
+     "name": "Glycol contactor",
+     "date": "2027-06-12"
+    },
+    {
+     "tag": "ZZZ-4710",
+     "name": "Glycol regeneration",
+     "date": "2027-06-24"
+    },
+    {
+     "tag": "MAD-2415",
+     "name": "Dehydrated gas coalescer",
+     "date": "2027-07-06"
+    }
+   ],
+   "actions": [
+    {
+     "deck": "s17",
+     "kind": "lift",
+     "label": "Lift in: Equipment on intermediate deck, HBG-2502A, HBG-2502B\u2026"
+    }
+   ]
+  },
+  {
+   "no": 23,
+   "id": "18",
+   "sheet": 3,
+   "title": "E&I, piping and HVAC systems",
+   "items": [
+    "Install E&I systems",
+    "Install piping",
+    "Install HVAC systems"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s18",
+     "kind": "fab",
+     "label": "Install: Electrical and instrument, HVAC, Piping and supports\u2026"
+    }
+   ]
+  },
+  {
+   "no": 24,
+   "id": "19",
+   "sheet": 3,
+   "title": "Install equipment on main deck",
+   "items": [
+    "Install equipment on main deck"
+   ],
+   "date": null,
+   "from": "2027-05",
+   "equipment": [
+    {
+     "tag": "LAN-7000A/B",
+     "name": "Gas turbine generator train A/B",
+     "date": null
+    },
+    {
+     "tag": "CAE-2614A/B",
+     "name": "Gas compressor A/B",
+     "date": null
+    },
+    {
+     "tag": "HAL-5704",
+     "name": "Fuel gas pre-cooler",
+     "date": null
+    },
+    {
+     "tag": "silencer",
+     "name": "Silencer",
+     "date": null
+    },
+    {
+     "tag": "boom rest",
+     "name": "Boom rest",
+     "date": null
+    }
+   ],
+   "actions": [
+    {
+     "deck": "s19",
+     "kind": "lift",
+     "label": "Lift in: AAK-2601, AAK-2611, AAK-7001\u2026"
+    }
+   ]
+  },
+  {
+   "no": 25,
+   "id": "20A",
+   "sheet": 4,
+   "title": "GTG service platform, exhaust support part 1, glycol and cooling water platforms",
+   "items": [
+    "Install GTC service platform, GTG exhaust support part 1",
+    "Install glycol platform, cooling water expansion platform"
+   ],
+   "date": null,
+   "from": "2027-06",
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s20A",
+     "kind": "fab",
+     "label": "Install: GTG, glycol and expansion platforms (1)"
+    }
+   ]
+  },
+  {
+   "no": 26,
+   "id": "20B",
+   "sheet": 4,
+   "title": "GTG, GTC service platform and remaining service platforms",
+   "items": [
+    "Install GTG, GTC service platform and remaining service platforms",
+    "Cooling water expansion vessel MBJ-4905",
+    "Drop test platform after glycol generator installation"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s20B",
+     "kind": "fab",
+     "label": "Install: GTG service platforms (2), MBJ-4905"
+    }
+   ]
+  },
+  {
+   "no": 27,
+   "id": "20C",
+   "sheet": 4,
+   "title": "GTG, GTC supply duct, expansion joints, boom rest",
+   "items": [
+    "Install GTG, GTC supply duct, expansion joints and remaining boom rest"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s20C",
+     "kind": "fab",
+     "label": "Install: GTG service platforms"
+    }
+   ]
+  },
+  {
+   "no": 28,
+   "id": "20D",
+   "sheet": 4,
+   "title": "GTG A and B with silencers and exhaust supports",
+   "items": [
+    "Install GTG A & B with silencers and exhaust supports (part 2, included duct)"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s20D",
+     "kind": "lift",
+     "label": "Lift in: Equipment gas turbine generators, LAN-7000A, LAN-7000B"
+    }
+   ]
+  },
+  {
+   "no": 29,
+   "id": "21",
+   "sheet": 4,
+   "title": "Remaining E&I, piping and HVAC",
+   "items": [
+    "Install remain E&I systems",
+    "Install remain piping",
+    "Install remain HVAC systems"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s21",
+     "kind": "fab",
+     "label": "Install: Safety"
+    }
+   ]
+  },
+  {
+   "no": 30,
+   "id": "22A",
+   "sheet": 4,
+   "title": "Pedestal crane A-frame",
+   "items": [
+    "Install pedestal crane A-frame"
+   ],
+   "date": null,
+   "from": "2027-07",
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s22A",
+     "kind": "lift",
+     "label": "Lift in: Pedestal crane A-frame"
+    }
+   ]
+  },
+  {
+   "no": 31,
+   "id": "22B",
+   "sheet": 4,
+   "title": "Gas mercury removal unit on main deck",
+   "items": [
+    "Install gas mercury removal unit ZZZ-2510 on main deck"
+   ],
+   "date": "2027-08-01",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s22B",
+     "kind": "lift",
+     "label": "Lift in: Mercury removal unit"
+    }
+   ]
+  },
+  {
+   "no": 32,
+   "id": "22C",
+   "sheet": 4,
+   "title": "Pedestal crane boom",
+   "items": [
+    "Install pedestal crane boom"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s22C",
+     "kind": "lift",
+     "label": "Lift in: ZZZ-9908"
+    }
+   ]
+  },
+  {
+   "no": 33,
+   "id": "23",
+   "sheet": 5,
+   "title": "Painting touch-up, testing, miscellaneous",
+   "items": [
+    "Painting touch-up",
+    "Testing",
+    "Install miscellaneous"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s23",
+     "kind": "fab",
+     "label": "Install: Miscellaneous steel on main deck"
+    }
+   ]
+  },
+  {
+   "no": 34,
+   "id": "24",
+   "sheet": 5,
+   "title": "Complete remaining work",
+   "items": [
+    "Complete remain work",
+    "Remove scaffolding",
+    "Remove temporary support"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": []
+  },
+  {
+   "no": 35,
+   "id": "25A",
+   "sheet": 5,
+   "title": "Install jacking system",
+   "items": [
+    "Install jacking system"
+   ],
+   "date": null,
+   "from": null,
+   "equipment": null,
+   "actions": []
+  },
+  {
+   "no": 36,
+   "id": "25B",
+   "sheet": 5,
+   "title": "Jacking topside, site move and install deck support frame on skidway",
+   "items": [
+    "Jacking topside",
+    "Site moving and install deck support frame on skidway"
+   ],
+   "date": "2027-11-27",
+   "from": null,
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2B-to-25B",
+     "kind": "move",
+     "label": "Lift and move into place: Deck support frame"
+    }
+   ]
+  },
+  {
+   "no": 37,
+   "id": "26",
+   "sheet": 5,
+   "title": "Install 6 remaining legs with LMU",
+   "items": [
+    "Install 6 remaining legs and LMU"
+   ],
+   "date": null,
+   "from": "2027-12",
+   "equipment": null,
+   "actions": []
+  },
+  {
+   "no": 38,
+   "id": "27",
+   "sheet": 5,
+   "title": "Sub-cellar deck (included equipment, piping and E&I), jack to final position",
+   "items": [
+    "Site moving sub-cellar deck (included equipment, piping and E&I)",
+    "Jacking sub-cellar deck to final position",
+    "Complete remain work on sub-cellar deck"
+   ],
+   "date": null,
+   "from": "2028-01",
+   "equipment": null,
+   "actions": [
+    {
+     "deck": "s2D-to-27",
+     "kind": "move",
+     "label": "Lift and move into place: Sub-cellar deck platforms"
+    },
+    {
+     "deck": "s27",
+     "kind": "fab",
+     "label": "Install: ABJ-6202, Electrical and instrument, Equipment on sub-cellar deck\u2026"
+    }
+   ]
+  },
+  {
+   "no": 39,
+   "id": "28",
+   "sheet": 5,
+   "title": "Complete work, ready for load-out",
+   "items": [
+    "Complete work",
+    "Ready for load-out"
+   ],
+   "date": "2028-02-29",
+   "from": null,
+   "equipment": null,
+   "actions": []
+  }
+ ]
+}

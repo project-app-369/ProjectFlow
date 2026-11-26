@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ViewerControl } from '../FacilityViewer';
 import { Icon } from '../icons';
 import { lazyPage } from '../lazyPage';
@@ -10,12 +11,21 @@ const FacilityViewer = lazyPage(() => import('../FacilityViewer'));
 
 type Kind = 'fab' | 'lift' | 'upend' | 'static';
 interface Action { deck: string; kind: Kind | 'rollup' | 'move'; label: string }
-interface SeqStep { no: number; sheet: number; title: string; items: string[]; actions: Action[] }
-interface SeqDeck { id: string; name: string; step: number | null; kind: Kind; follow: string | null; file: string; parts: Record<string, number>; pivot?: { p: [number, number, number]; dir: number }; rollStep?: number; fabOffset?: number }
+interface SeqStep { date?: string | null; from?: string | null; id?: string; equipment?: { tag: string; name: string; date: string | null }[] | null; no: number; sheet: number; title: string; items: string[]; actions: Action[] }
+interface SeqDeck { fabShift?: Vec3; moveStep?: number; id: string; name: string; step: number | null; kind: Kind; follow: string | null; file: string; parts: Record<string, number>; pivot?: { p: [number, number, number]; dir: number }; rollStep?: number; fabOffset?: number }
 interface SeqGroup { id: string; name: string; color: string }
-interface Sequence { source: string; groups: SeqGroup[]; decks: SeqDeck[]; steps: SeqStep[] }
+interface Sequence { source: string; name?: string; upright?: boolean; groups: SeqGroup[]; decks: SeqDeck[]; steps: SeqStep[] }
+
+/** The sequences of this page: the jacket is built lying on its side; the topside, its E-House and the DSF stand as built, parts fabricated in a yard are lifted into place. */
+const SEQUENCES = [
+  { id: 'jacket', label: 'ST-CGF Jacket', sheets: 22, desc: 'How the ST-CGF jacket is fabricated, step by step (drawing 2021-4589-65-4015, Rev 1). The model is split into the components the drawing builds, and they move as it does: the jacket is built lying on its side, each row fabricated face down on the launch cradle and rolled up, framing, pipework and tanks lifted in.' },
+  { id: 'topside', label: 'ST-CGF Topside', sheets: 5, desc: 'How the ST-CGF topside is fabricated and assembled (drawing 2021-4591-65-1005, 28 stages): decks, E-House and deck support frame built in the yard and lifted into place, then equipment, E&I, piping and HVAC.' },
+  { id: 'ehouse', label: 'E-House', sheets: 2, desc: 'How the E-House module is built (drawing 2021-4591-65-1022, 13 stages): deck levels, walls, supports, equipment and systems level by level.' },
+  { id: 'dsf', label: 'DSF', sheets: 3, desc: 'How the deck support frame is fabricated and erected (drawing 261001 Rev B, 12 stages): lower, middle and upper box, cross girders, bracing, tubular frames and timbers.' },
+] as const;
 
 const OFFSHORE = 'offshore';
+type Vec3 = [number, number, number];
 const NO_TAGS: ReadonlySet<string> = new Set();
 const NO_COLOURS: Readonly<Record<string, string>> = {};
 const noop = () => undefined;
@@ -65,6 +75,7 @@ interface Frame { visible: Set<string>; matrix: Map<string, number[] | null>; ac
  * face down on the launch cradle until its roll-up, which turns it about that leg row until its plane stands vertical.
  */
 function snapshot(seq: Sequence, byId: Map<string, SeqDeck>, step: number, t: number, lay: number): Frame {
+  const upright = !!seq.upright;
   const visible = new Set<string>();
   const matrix = new Map<string, number[] | null>();
   const timeline = new Map<string, { start: number; end: number }[]>(); // per step, action windows
@@ -102,15 +113,21 @@ function snapshot(seq: Sequence, byId: Map<string, SeqDeck>, step: number, t: nu
     visible.add(d.id);
     const { f, pivot } = flatness(d);
     const lift = d.kind === 'lift' ? (1 - ease(appear)) * LIFT : 0;
-    let m = move(lift, 0, 0); // up, while lying on its side, is the model's +X (the cradle is under the -X leg row)
+    let m = upright ? move(0, lift, 0) : move(lift, 0, 0); // up, while lying on its side, is the model's +X (the cradle is under the -X leg row)
     if (pivot && f) {
       const [px, py, pz] = pivot.p;
       m = mul(mul(mul(move(px, py, pz), turnY(pivot.dir * (Math.PI / 2) * f)), move(-px, -py, -pz)), m);
     }
-    const shift = offset(d); // the model's Y runs along the viewer's -Z
+    const shift = upright ? 0 : offset(d); // the model's Y runs along the viewer's -Z
     if (shift) m = mul(move(0, 0, -shift), m);
+    let yard = 0;
+    if (upright && d.fabShift) { // fabricated in the yard, lifted and moved into place at its install step
+      const p = progress(d.id, ['move']);
+      yard = Number.isNaN(p) || p < 0 ? 1 : 1 - ease(p);
+      if (yard) m = mul(move(d.fabShift[0] * yard, d.fabShift[1] * yard + Math.sin(Math.PI * (1 - yard)) * LIFT * 0.5, d.fabShift[2] * yard), m);
+    }
     if (lay) m = mul(turnZ((Math.PI / 2) * lay), m);
-    matrix.set(d.id, lay === 0 && !f && !lift && !shift ? null : flat(m));
+    matrix.set(d.id, lay === 0 && !f && !lift && !shift && !yard ? null : flat(m));
   }
   const cur = seq.steps.find(s => s.no === step);
   const w = cur ? windows(cur) : [];
@@ -123,11 +140,14 @@ const totalSeconds = (s: SeqStep | undefined) => (s && s.actions.length ? s.acti
 /** Construction → Construction Sequence: the fabrication sequence of the ST-CGF jacket (drawing 2021-4589-65-4015), step by step, with the components of the model moving as the drawing builds them. */
 export default function ConstructionSequence() {
   const { dark } = usePrefs();
+  const [params, setParams] = useSearchParams();
+  const sid = SEQUENCES.find(x => x.id === params.get('sequence'))?.id ?? 'jacket';
+  const info = SEQUENCES.find(x => x.id === sid)!;
   const seq = useQuery({
-    queryKey: ['jacket-sequence', 2],
+    queryKey: ['sequence', sid, 3],
     queryFn: async () => {
-      const r = await fetch(`${import.meta.env.BASE_URL}sequence/jacket/sequence.json`, { cache: 'no-cache' });
-      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) throw new Error('The sequence files have not been built yet (data/3d-model/pipeline/build_sequence.py).');
+      const r = await fetch(`${import.meta.env.BASE_URL}sequence/${sid}/sequence.json`, { cache: 'no-cache' });
+      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) throw new Error('The sequence files have not been built yet (data/3d-model/pipeline).');
       return (await r.json()) as Sequence;
     },
     staleTime: 60_000,
@@ -152,7 +172,7 @@ export default function ConstructionSequence() {
   const step = steps.find(s => s.no === now);
   const last = steps.length;
   const byId = useMemo(() => new Map((data?.decks ?? []).map(d => [d.id, d])), [data]);
-  const decks = useMemo(() => (data?.decks ?? []).map(d => ({ id: d.id, name: d.name, url: new URL(`${import.meta.env.BASE_URL}sequence/jacket/${d.file}`, document.baseURI).href })), [data]);
+  const decks = useMemo(() => (data?.decks ?? []).map(d => ({ id: d.id, name: d.name, url: new URL(`${import.meta.env.BASE_URL}sequence/${sid}/${d.file}`, document.baseURI).href })), [data, sid]);
 
   /** Starts the motion of a step from its beginning (or shows it finished). */
   const show = useCallback((n: number, animate: boolean) => {
@@ -216,6 +236,9 @@ export default function ConstructionSequence() {
   const stepRef = useRef(now);
   stepRef.current = now;
   useEffect(() => { clock.current.dirty = true; }, [now]);
+  useEffect(() => { // a new sequence starts from its first step, with the jacket lying down only for the jacket
+    const c = clock.current; c.lay = c.layTo = sid === 'jacket' ? 1 : 0; c.fitted = false; c.t = 0; c.running = false; setCurrent(null); setPlaying(false); setUpright(false);
+  }, [sid]);
   useEffect(() => { if (data && current === null) show(now, true); }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { list.current?.querySelector('[aria-current="step"]')?.scrollIntoView({ block: 'nearest' }); }, [now]);
 
@@ -237,20 +260,21 @@ export default function ConstructionSequence() {
 
   return (
     <>
-      <PageHead title="Construction sequence" desc="How the ST-CGF jacket is fabricated, step by step (drawing 2021-4589-65-4015, Rev 1). The model is split into the components the drawing builds, and they move as it does: the jacket is built lying on its side, each row fabricated face down on the launch cradle and rolled up, framing, pipework and tanks lifted in."
+      <PageHead title="Construction sequence" desc={info.desc}
         actions={<Btn kind="small" icon="refresh" onClick={() => void seq.refetch()}>Refresh</Btn>} />
       <div className="stats">
-        <Stat label="Steps" value={data ? last : '—'} foot={data ? `${steps.filter(s => s.actions.length).length} move components of the model` : 'Fabrication sequence of the jacket'} icon="layers" />
-        <Stat label="Components" value={data ? modelDecks.length : '—'} foot="Rows, framing, diagonals, pipework, tanks…" icon="box" />
+        <Stat label="Steps" value={data ? last : '—'} foot={data ? `${steps.filter(s => s.actions.length).length} move components of the model` : `Fabrication sequence · ${info.label}`} icon="layers" />
+        <Stat label="Components" value={data ? modelDecks.length : '—'} foot={sid === 'jacket' ? 'Rows, framing, diagonals, pipework, tanks…' : 'Decks, platforms, equipment, systems…'} icon="box" />
         <Stat label="Built so far" value={data ? built.toLocaleString('en-GB') : '—'} foot={data ? `of ${total.toLocaleString('en-GB')} model parts, after step ${now}` : ''} icon="chart" />
-        <Stat label="Changed in Rev 1" value={data ? rev1 : '—'} foot="Steps with clouded changes on the drawing" icon="edit" />
+        {sid === 'jacket' ? <Stat label="Changed in Rev 1" value={data ? rev1 : '—'} foot="Steps with clouded changes on the drawing" icon="edit" />
+          : <Stat label="Lifted into place" value={data ? data.decks.filter(d => d.moveStep).length : '—'} foot="Built in the yard first, then lifted and moved" icon="edit" />}
       </div>
 
       {seq.error ? <ErrorBox error={seq.error} /> : !data ? <Loading label="Loading the sequence…" /> : (
         <div className="fl-grid">
           <div className="panel fl-view">
             <div className="panel-head">
-              <div><h2>ST-CGF Jacket · step {now} of {last}</h2><p>{step?.title}. Drag to orbit, right-drag to pan, scroll to zoom.</p></div>
+              <div><h2>{info.label} · step {now} of {last}</h2><p>{step?.title}. Drag to orbit, right-drag to pan, scroll to zoom.</p></div>
               <div className="actions">
                 <Btn kind="small" icon="chevron-left" iconOnly aria-label="Previous step" disabled={now <= 1} onClick={() => go(now - 1)} />
                 <Btn kind="small primary" onClick={() => { if (playing) setPlaying(false); else { setPlaying(true); show(now >= last ? 1 : now, true); } }}>{playing ? 'Pause' : 'Play all'}</Btn>
@@ -261,10 +285,13 @@ export default function ConstructionSequence() {
             <div className="seq-scrub">
               <input type="range" min={1} max={last} step={1} value={now} aria-label="Step" onChange={e => go(Number(e.target.value))} />
             </div>
+            <div className="chip-bar" role="group" aria-label="Sequence">
+              {SEQUENCES.map(x => <button key={x.id} type="button" className={`chip-filter ${sid === x.id ? 'active' : ''}`} aria-pressed={sid === x.id} onClick={() => { const q = new URLSearchParams(params); q.set('sequence', x.id); setParams(q, { replace: true }); }}>{x.label}</button>)}
+            </div>
             <div className="chip-bar" role="group" aria-label="View">
               <button type="button" className={`chip-filter ${focus ? 'active' : ''}`} aria-pressed={focus} onClick={() => setFocus(f => !f)} title="Show this step's components in colour and the rest in grey">Highlight this step</button>
               {data.decks.some(d => d.id === OFFSHORE) && <button type="button" className={`chip-filter ${offshore ? 'active' : ''}`} aria-pressed={offshore} onClick={() => setOffshore(o => !o)} title="Piles and conductors are installed offshore, not in the yard">Piles &amp; conductors (offshore)</button>}
-              <button type="button" className={`chip-filter ${upright ? 'active' : ''}`} aria-pressed={upright} onClick={() => { const u = !upright; setUpright(u); clock.current.layTo = u ? 0 : 1; }} title="The jacket is built lying on its side; show it standing as installed">Installed position (upright)</button>
+              {sid === 'jacket' && <button type="button" className={`chip-filter ${upright ? 'active' : ''}`} aria-pressed={upright} onClick={() => { const u = !upright; setUpright(u); clock.current.layTo = u ? 0 : 1; }} title="The jacket is built lying on its side; show it standing as installed">Installed position (upright)</button>}
               <button type="button" className="chip-filter" onClick={() => control.current?.fit()}>Fit view</button>
               <label className="seq-speed">Speed <select className="filter" value={speed} aria-label="Animation speed" onChange={e => setSpeed(Number(e.target.value))}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select></label>
             </div>
@@ -278,7 +305,8 @@ export default function ConstructionSequence() {
               {step?.actions.length ? Object.entries(stepParts).map(([g, n]) => <span key={g}><i className="fl-dot" style={{ background: groupColour(g) }} aria-hidden="true" />{groupName(g)} <b>{n.toLocaleString('en-GB')}</b></span>)
                 : <span>This step moves no components of the model (temporary works, tests or preparation).</span>}
             </div>
-            <p className="tiny muted seq-note">The model carries no construction-sequence data, so each part is given to a component from where it stands: the four frames (Row 2, 2.1, 5.1 and 5 along the jacket), the bays between them, the elevation of the framing, and the Navisworks sets of the jacket. The jacket is built lying on its side on the launch cradles, each row face down and then rolled up about the leg row on the launch cradle (the -X side). The ground and skid ways are only drawn to show this.</p>
+            {sid === 'jacket' ? <p className="tiny muted seq-note">The model carries no construction-sequence data, so each part is given to a component from where it stands: the four frames (Row 2, 2.1, 5.1 and 5 along the jacket), the bays between them, the elevation of the framing, and the Navisworks sets of the jacket. The jacket is built lying on its side on the launch cradles, each row face down and then rolled up about the leg row on the launch cradle (the -X side). The ground and skid ways are only drawn to show this.</p>
+              : <p className="tiny muted seq-note">The parts are given to a stage from the Selection Sets the model carries (decks, E-House, platforms, crane, equipment by tag) and from the discipline and deck of each zone. Parts built in a yard (decks, E-House, deck support frame, platforms) stand east of the platform until the stage that lifts them in. Small fittings (bolts, clamps, cut-outs) are left out to keep the model light.</p>}
           </div>
 
           <div className="panel fl-list">
@@ -293,7 +321,7 @@ export default function ConstructionSequence() {
                   </button>
                   {s.no === now && (
                     <div className="seq-body">
-                      <p className="tiny muted">Sheet {s.sheet} of 22</p>
+                      <p className="tiny muted">Sheet {s.sheet} of {info.sheets}{s.date ? ` · tentative lifting date ${s.date}` : s.from ? ` · from ${s.from}` : ''}</p>
                       {s.actions.length > 0 && (
                         <>
                           <h3 className="seq-sub">Components in this step</h3>
