@@ -2,6 +2,7 @@
 // Supabase's Deno runtime resolves npm: imports at deployment time.
 // @ts-ignore Deno specifier is resolved by Supabase, not the local TypeScript compiler.
 import postgres from 'npm:postgres@3.4.7';
+import { handleAi } from '../../sheets/src/ai';
 import { Api } from '../../sheets/src/api';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
 import { noMailer } from '../../sheets/src/mailer';
@@ -14,6 +15,8 @@ if (!connectionString) throw new Error('Supabase did not provide SUPABASE_DB_URL
 const sql = postgres(connectionString, { prepare: false, max: 1, idle_timeout: 10, connect_timeout: 10 });
 // When SESSION_SECRET is set (supabase secrets set SESSION_SECRET=...), sign-in with a password is required and a stated user is ignored.
 const sessionSecret = Deno.env.get('SESSION_SECRET');
+// The AI helpers of Issues, Risks and Concerns (supabase secrets set OPENAI_API_KEY=... OPENAI_MODEL=...): without a key they report that they are not set up.
+const ai = { apiKey: Deno.env.get('OPENAI_API_KEY'), model: Deno.env.get('OPENAI_MODEL'), baseUrl: Deno.env.get('OPENAI_BASE_URL') };
 const backupSheet = 'https://docs.google.com/spreadsheets/d/1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY/edit';
 const headers = {
   'content-type': 'application/json; charset=utf-8',
@@ -89,7 +92,7 @@ export default {
       const payload = request.method === 'POST'
         ? await request.json() as Payload
         : { method: 'GET', path: url.searchParams.get('path') ?? '', user: url.searchParams.get('user') ?? undefined, session: url.searchParams.get('session') ?? undefined };
-      const result = await serve(payload);
+      const result = (await handleAi(payload, async r => { const out = await serve(r); return Array.isArray(out) ? out[0] : out; }, ai)) ?? await serve(payload);
       return new Response(JSON.stringify(result), { status: 200, headers });
     } catch (error) {
       return new Response(JSON.stringify(fail(500, 'API_V3_ERROR', error instanceof Error ? error.message : 'Unexpected error.')), { status: 200, headers });

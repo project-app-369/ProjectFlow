@@ -1,3 +1,4 @@
+import { aiContext } from './ai';
 import type { Api } from './api';
 import { readSession, requireConfigure, requireMember, requireWrite, resolveActor, type Actor } from './auth';
 import type { Resource } from './crud';
@@ -147,6 +148,14 @@ const ROUTES: Route[] = [
   route('GET', `${PID}/expediting/packages/(?<id>[^/]+)`, c => c.api.svc.expeditingGet(c.p.pid, c.p.id), { module: EXPEDITING }),
 
   // issue management
+  // what the AI helpers read (see ai.ts): the register in short form, for the analysis (read access) and for extraction (write access)
+  ...(['issues', 'risks', 'concerns'] as const).flatMap(kind => {
+    const module = { issues: ISSUES, risks: RISKS, concerns: CONCERNS }[kind];
+    return [
+      route('GET', `${PID}/ai/context/${kind}`, c => aiContext(c.api, c.p.pid, kind), { module }),
+      route('POST', `${PID}/ai/context/${kind}`, c => { requireWrite(c.actor, c.p.pid); return aiContext(c.api, c.p.pid, kind); }, { module }),
+    ];
+  }),
   route('GET', `${PID}/issues/insights`, c => c.api.issues.insights(c.p.pid), { module: ISSUES }),
   route('GET', `${PID}/issues[.]csv`, c => c.api.issues.csv(c.p.pid, c.q), { module: ISSUES }),
   route('GET', `${PID}/issues`, c => c.api.issues.list(c.p.pid, c.q), { module: ISSUES }),

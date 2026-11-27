@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, type ReactNode } from 'react';
 import { downloadCsv, errorText, request, type Insights, type Issue, type Page } from '../api';
 import { DataTable } from '../DataTable';
+import { AiTools } from '../AiTools';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
@@ -92,6 +93,7 @@ export default function Issues() {
       <PageHead title="Issue management" desc="Persons in charge, sub-tasks, history and due-date reminders."
         actions={<>
           <Btn kind="small" onClick={() => downloadCsv(`${base}.csv${list.query(extra)}`, 'issues.csv').catch(e => toast(e.message))}>Export CSV</Btn>
+          <AiTools kind="issues" />
           {access.canWrite && <Btn kind="small" iconOnly icon="bell" aria-label="Send due reminders now" title="Send due reminders now" disabled={remindAll.isPending} onClick={() => remindAll.mutate()}>Send due reminders</Btn>}
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpen('new')}>New issue</Btn>}
         </>} />

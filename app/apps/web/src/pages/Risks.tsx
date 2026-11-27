@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { downloadCsv, errorText, request, RISK_STATUSES, type Insights, type Milestone, type Page, type Risk, type RiskHeatmap, type RiskMatrix, type RiskOptions } from '../api';
 import { DataTable } from '../DataTable';
+import { AiTools } from '../AiTools';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
@@ -92,6 +93,7 @@ export default function Risks() {
       <PageHead title="Risk register" desc={`${heat.data?.matrix.version ?? 'Project matrix'}: probability × worst impact (schedule, cost, scope, quality). The post-mitigation rating, once recorded, is the current one.`}
         actions={<>
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${list.query(extra)}`, 'risk-register.csv').catch(e => toast(e.message))}>Export CSV</Btn>
+          <AiTools kind="risks" />
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpen('new')}>New risk</Btn>}
         </>} />
       <InsightsView compact data={insights.data} error={insights.error} onFilter={filter.pick} active={filter.isOn}

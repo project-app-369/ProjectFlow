@@ -219,7 +219,7 @@ export class FacilitiesService {
       return top ? { start: (top.workStart as string | null) ?? null, finish: (top.workFinish as string | null) ?? null } : null;
     };
     const view = (m: Loose) => ({
-      id: String(m.id), description: String(m.description), baseline: (m.planBaseline as string | null) ?? null, working: (m.planSub as string | null) ?? null,
+      id: String(m.id), description: String(m.description), baseline: (m.planBaseline as string | null) ?? null, working: ((m.planSub ?? m.planBaseline) as string | null) ?? null,
       forecast: (m.forecast as string | null) ?? null, actual: (m.actual as string | null) ?? null, status: m.status as string, major: Boolean(m.major),
     });
     const byDate = (a: ReturnType<typeof view>, b: ReturnType<typeof view>) => String(a.actual ?? a.forecast ?? a.baseline).localeCompare(String(b.actual ?? b.forecast ?? b.baseline));
@@ -287,7 +287,7 @@ export class FacilitiesService {
     });
     const critical = activities.filter(a => a.float <= 7 && a.finish >= cutoff).sort((a, b) => a.float - b.float || a.finish.localeCompare(b.finish));
     const key = this.reg.milestoneViews(projectId).filter(m => m.kind !== 'Equipment').map(m => ({
-      id: String(m.id), description: String(m.description), facility: String(m.facility ?? ''), baseline: (m.planBaseline as string | null) ?? null, working: (m.planSub as string | null) ?? null,
+      id: String(m.id), description: String(m.description), facility: String(m.facility ?? ''), baseline: (m.planBaseline as string | null) ?? null, working: ((m.planSub ?? m.planBaseline) as string | null) ?? null,
       forecast: (m.forecast as string | null) ?? null, actual: (m.actual as string | null) ?? null, status: m.status as string, major: Boolean(m.major),
     })).sort((a, b) => String(a.actual ?? a.forecast ?? a.working ?? a.baseline).localeCompare(String(b.actual ?? b.forecast ?? b.working ?? b.baseline)));
     return {

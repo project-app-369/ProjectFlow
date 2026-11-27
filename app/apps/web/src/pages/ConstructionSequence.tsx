@@ -228,7 +228,12 @@ export default function ConstructionSequence() {
         sent.set(d.id, key);
         ctl.setTransform(d.id, m ?? null);
       }
-      if (!c.fitted || c.refit) { c.fitted = true; c.refit = false; ctl.fit(); }
+      if (!c.fitted || c.refit) {
+        c.fitted = true; c.refit = false;
+        // the viewer's bounds follow the placement transforms a moment later: fitting in this very frame frames the untransformed model (edge-on, off to one side)
+        ctl.fit();
+        for (const ms of [250, 900]) setTimeout(() => { if (control.current === ctl) ctl.fit(); }, ms);
+      }
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
@@ -237,6 +242,7 @@ export default function ConstructionSequence() {
   stepRef.current = now;
   useEffect(() => { clock.current.dirty = true; }, [now]);
   useEffect(() => { // a new sequence starts from its first step, with the jacket lying down only for the jacket
+    control.current = null; // the previous sequence's viewer is gone: its control must not take the first fit of the new one
     const c = clock.current; c.lay = c.layTo = sid === 'jacket' ? 1 : 0; c.fitted = false; c.t = 0; c.running = false; setCurrent(null); setPlaying(false); setUpright(false);
   }, [sid]);
   useEffect(() => { if (data && current === null) show(now, true); }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -297,7 +303,7 @@ export default function ConstructionSequence() {
             </div>
             <div className="fl-stage-wrap">
               <Suspense fallback={<Loading label="Loading the 3D viewer…" />}>
-                <FacilityViewer decks={decks} tags={NO_TAGS} visible={visible} selected={null} colors={NO_COLOURS} highlight={highlight} controlRef={control} dark={dark} onPick={noop} />
+                <FacilityViewer key={sid} decks={decks} tags={NO_TAGS} visible={visible} selected={null} colors={NO_COLOURS} highlight={highlight} controlRef={control} dark={dark} onPick={noop} />
               </Suspense>
               {step && step.actions[active] && <div className="seq-caption" role="status">{step.actions[active].label}</div>}
             </div>

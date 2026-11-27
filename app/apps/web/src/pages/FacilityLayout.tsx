@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ViewerControl, ViewerExtra } from '../FacilityViewer';
 import { errorText, request, type FacilityEquipment, type FacilityEquipmentResponse } from '../api';
 import { useDeepLink } from '../deepLink';
 import { diffDays, fmtDate, localToday } from '../format';
@@ -9,29 +10,23 @@ import { lazyPage } from '../lazyPage';
 import { useAccess, useApp, usePrefs, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Loading, Modal, PageHead, Stat } from '../ui';
 import { FacilityEquipmentForm } from './FacilityEquipmentForm';
+import { EQUIPMENT_GROUP, MANUAL_VALVES, TopsideSystems, type Discipline, type EntryPick, type LevelEntry } from './TopsideSystems';
 
 const FacilityViewer = lazyPage(() => import('../FacilityViewer'));
 
-interface DeckFile { id: string; name: string; file: string; bytes: number; equipment: number }
-interface Manifest { decks: DeckFile[]; units: { tag: string; deck: string }[] }
-
-const MODEL_BASE = `${import.meta.env.BASE_URL}models/facility/`;
+interface DeckFile { id: string; name: string; file: string; bytes: number; equipment: number; elevation?: number }
+interface Manifest { decks: DeckFile[]; systems?: { deck: string; disc: string; file: string; bytes: number }[]; units: { tag: string; deck: string; disc?: string; equipment?: boolean }[]; disciplines?: Discipline[]; levels?: LevelEntry[] }
 
 /** The models of the project: the topside is split by deck into equipment, the others by system; both are listed with Tag, name, ROS and ETA. */
-type ModelId = 'topside2' | 'topside' | 'jacket' | 'lqm' | 'linkbridge';
+type ModelId = 'topside2' | 'jacket' | 'lqm' | 'linkbridge';
 /** `slug` is the facility in the address: ?facility=cgf-topside */
-const MODELS: { id: ModelId; label: string; slug: string }[] = [{ id: 'topside2', label: 'ST-CGF Topside', slug: 'cgf-topside' }, { id: 'topside', label: 'ST-CGF Topside (old)', slug: 'cgf-topside-old' }, { id: 'jacket', label: 'ST-CGF Jacket', slug: 'cgf-jacket' }, { id: 'lqm', label: 'LQM#2', slug: 'lqm2' }, { id: 'linkbridge', label: 'Link Bridge', slug: 'link-bridge' }];
+const MODELS: { id: ModelId; label: string; slug: string }[] = [{ id: 'topside2', label: 'ST-CGF Topside', slug: 'cgf-topside' }, { id: 'jacket', label: 'ST-CGF Jacket', slug: 'cgf-jacket' }, { id: 'lqm', label: 'LQM#2', slug: 'lqm2' }, { id: 'linkbridge', label: 'Link Bridge', slug: 'link-bridge' }];
 /** A system row of the jacket, LQM or link bridge is tagged <prefix>-<group id>; the group id names the part of the 3D model. */
 /** The systems of the LQM#2 that run through every floor: a chip highlights one in all floors (nodes named LQ-<floor>-<id>). */
 const LQM_SYSTEMS = [
   { id: 'hvac', label: 'HVAC', colour: '#3b82f6' }, { id: 'piping', label: 'Steel piping', colour: '#2f9d83' }, { id: 'piping_frp', label: 'FRP piping', colour: '#9bd14b' },
   { id: 'telecom', label: 'Telecom', colour: '#d4543b' }, { id: 'lighting', label: 'Lighting', colour: '#ffe066' }, { id: 'fg', label: 'Fire & gas', colour: '#f06292' },
   { id: 'e_i', label: 'E&I', colour: '#e5a93a' }, { id: 'safety', label: 'Safety', colour: '#d62839' },
-];
-/** The systems of the new topside model that run through every deck: a chip highlights one in all decks (nodes named TS-<deck>-<id>). */
-const TOPSIDE_SYSTEMS = [
-  { id: 'structural', label: 'Structural', colour: '#8fa3c4' }, { id: 'piping', label: 'Piping & supports', colour: '#2f9d83' }, { id: 'e_i', label: 'E&I', colour: '#e5a93a' },
-  { id: 'telecom', label: 'Telecom', colour: '#d4543b' }, { id: 'hvac', label: 'HVAC', colour: '#3b82f6' }, { id: 'safety', label: 'Safety', colour: '#c4478a' },
 ];
 /** The equipment list is one for both topside models; the database knows it as the model "topside". */
 const dataModel = (m: ModelId): string => (m === 'topside2' ? 'topside' : m);
@@ -58,6 +53,7 @@ const shortDate = (d: string | null) => (d ? fmtDate(d).replace(/ \d{2}(\d{2})$/
 const methodKey = (m: string | null) => (m && /skid/i.test(m) ? 'Skidding' : m && /crane|lift/i.test(m) ? 'Lift by Crane' : null);
 
 const NO_TAGS: ReadonlySet<string> = new Set();
+const NO_EXTRA: ViewerExtra[] = [];
 const NO_COLOURS: Readonly<Record<string, string>> = {};
 
 function Dot({ colour }: { colour: string }) {
@@ -82,8 +78,15 @@ export default function FacilityLayout() {
   const model: ModelId = MODELS.find(m => m.slug === params.get('facility'))?.id ?? 'topside2';
   const [highlight, setHighlight] = useState<string | null>(null);
   const [systemHL, setSystemHL] = useState<string | null>(null);
+  /** The topside's own systems: Level 1 is a discipline, Level 2 what inside it is highlighted (a group, a pipe line, a tag). */
+  const [discHL, setDiscHL] = useState<string | null>(null);
+  const [entryHL, setEntryHL] = useState<EntryPick>(null);
+  const [rightTab, setRightTab] = useState<'equipment' | 'systems'>('equipment');
+  /** How far apart the deck boxes are pulled, 0 to 100 %. */
+  const [apart, setApart] = useState(0);
+  const control = useRef<ViewerControl | null>(null);
   const switchModel = (m: ModelId) => {
-    setHidden(new Set()); setHighlight(null); setSystemHL(null); setPicked(null);
+    setHidden(new Set()); setHighlight(null); setSystemHL(null); setPicked(null); setDiscHL(null); setEntryHL(null); setRightTab('equipment'); setApart(0);
     const p = new URLSearchParams(params);
     p.set('facility', MODELS.find(x => x.id === m)!.slug); p.delete('id');
     setParams(p);
@@ -124,11 +127,11 @@ export default function FacilityLayout() {
     refetchInterval: 60_000,
   });
   /** The topside and the LQM#2 are split by deck / floor into equipment; the jacket and the link bridge by system. */
-  const decked = model === 'topside' || model === 'topside2' || model === 'lqm';
+  const decked = model === 'topside2' || model === 'lqm';
   const manifest = useQuery({
     queryKey: ['facility-manifest', model],
     enabled: decked,
-    queryFn: async () => { const r = await fetch(model === 'topside' ? `${MODEL_BASE}facility-model.json` : `${import.meta.env.BASE_URL}models/${model}/model.json`, { cache: 'no-cache' }); if (!r.ok) throw new Error('The 3D model files are missing.'); return (await r.json()) as Manifest; },
+    queryFn: async () => { const r = await fetch(`${import.meta.env.BASE_URL}models/${model}/model.json`, { cache: 'no-cache' }); if (!r.ok) throw new Error('The 3D model files are missing.'); return (await r.json()) as Manifest; },
     staleTime: 60_000, // a rebuilt model must show up: a stale copy in the persisted query cache would list the old decks
   });
 
@@ -162,10 +165,12 @@ export default function FacilityLayout() {
     p.set('facility', MODELS.find(m => m.id === (hit?.model === 'topside' || !hit ? 'topside2' : hit.model))!.slug);
     setParams(p, { replace: true });
   }, [params, openTag, equipment.data, setParams]);
+  /** Every node of the deck files (the viewer finds equipment and highlight parts by name) and, of those, the listed equipment. */
   const inModel = useMemo(() => new Set((manifest.data?.units ?? []).map(u => u.tag)), [manifest.data]);
+  const equipmentInModel = useMemo(() => new Set((manifest.data?.units ?? []).filter(u => !u.tag.startsWith('TS-')).map(u => u.tag)), [manifest.data]);
   /** In 3D: a topside equipment is a part of the model; a system row is a group of it. */
   const systemIds = useMemo(() => new Set((other.data?.groups ?? []).map(g => g.id)), [other.data]);
-  const modelled = (tag: string) => (decked ? inModel.has(tag) : systemIds.has(groupOf(tag)));
+  const modelled = (tag: string) => (decked ? equipmentInModel.has(tag) : systemIds.has(groupOf(tag)));
   const topDecks = manifest.data?.decks ?? [];
   const groupColours = useMemo(() => Object.fromEntries((other.data?.groups ?? []).map(g => [g.id, g.color])), [other.data]);
   const modelDecks = decked ? topDecks : (other.data?.groups ?? []).map(g => ({ id: g.id, name: g.name, file: g.file, bytes: g.bytes, equipment: 0 }));
@@ -243,20 +248,69 @@ export default function FacilityLayout() {
   const hud = full ? open ?? pickedItem : open ? null : pickedItem;
   const today = localToday();
   // the viewer resolves a path against the page's own address (/m/...), so it gets full URLs
-  const fileBase = model === 'topside' ? MODEL_BASE : `${import.meta.env.BASE_URL}models/${model}/`;
-  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${fileBase}${d.file}`, document.baseURI).href }));
+  const fileBase = `${import.meta.env.BASE_URL}models/${model}/`;
+  // the file's size is part of its address: a rebuilt model never comes from a copy the browser or the host kept under the same name
+  const decks = modelDecks.map(d => ({ id: d.id, name: d.name, url: new URL(`${fileBase}${d.file}?v=${d.bytes}`, document.baseURI).href }));
+  // part 2 of the topside: the system files of the picked discipline are fetched only then (the overview above is light)
+  const extra = useMemo(() => (model !== 'topside2' || !discHL ? NO_EXTRA : (manifest.data?.systems ?? []).filter(x => x.disc === discHL || (x.disc === 'valves' && (discHL === 'instrument' || discHL === 'steel_piping' || discHL === 'frp_piping'))).map(x => ({ id: `sys-${x.deck}-${x.disc}`, name: `${x.deck} ${x.disc}`, parent: x.deck, url: new URL(`${fileBase}${x.file}?v=${x.bytes}`, document.baseURI).href }))),
+    [model, discHL, manifest.data, fileBase]);
   const triangles = (other.data?.groups ?? []).reduce((s, g) => s + g.triangles, 0);
   const megabytes = (other.data?.groups ?? []).reduce((s, g) => s + g.bytes, 0) / 1e6;
 
+  const disciplines = useMemo(() => (manifest.data?.disciplines ?? []).filter(d => d.triangles > 0), [manifest.data]);
+  const levels = useMemo(() => manifest.data?.levels ?? [], [manifest.data]);
+  const modelledEquipment = useMemo(() => items.filter(i => equipmentInModel.has(i.tag)).map(i => ({ tag: i.tag, name: i.name, deck: i.deck })), [items, equipmentInModel]);
+  /** The parts the system highlight lights in the topside: a whole discipline, or one entry of it, in every deck; the rest turns see-through. */
+  const topsideHL = useMemo(() => {
+    if (model !== 'topside2' || !discHL) return null;
+    const ns = entryHL?.kind === 'group' ? new Set(levels.filter(l => l.disc === discHL && l.group === entryHL.group).map(l => l.n)) : entryHL?.kind === 'level' ? new Set([entryHL.n]) : null;
+    const allTags = !entryHL || (entryHL.kind === 'group' && entryHL.group === EQUIPMENT_GROUP);
+    const manual = entryHL?.kind === 'group' && entryHL.group === MANUAL_VALVES;
+    // the actuated valves sit between the pieces of a line: they light with a whole piping discipline, so no line looks cut
+    const valveNs = discHL === 'steel_piping' || discHL === 'frp_piping' ? new Set(levels.filter(l => l.group === 'Instrument valves').map(l => l.n)) : null;
+    const match = (name: string) => {
+      if (!name.startsWith('TS-')) return discHL === 'mechanical' && (allTags || (entryHL?.kind === 'tag' && entryHL.tag === name));
+      const [, , disc, n, flag] = name.split('-');
+      if (disc === discHL) return manual ? flag === 'v' : !entryHL || (!!ns && ns.has(Number(n)));
+      return !!valveNs && !entryHL && disc === 'instrument' && valveNs.has(Number(n));
+    };
+    return { match, colour: null };
+  }, [model, discHL, entryHL, levels]);
+  // a discipline or one entry of it was picked: frame what stays lit (a single pipe line is small inside the whole platform)
+  useEffect(() => {
+    if (model !== 'topside2' || !discHL) return;
+    let tries = 0, timer = 0;
+    const frame = () => { if (control.current) control.current.fit(); else if (tries++ < 20) timer = window.setTimeout(frame, 300); };
+    timer = window.setTimeout(frame, 400);
+    return () => window.clearTimeout(timer);
+  }, [model, discHL, entryHL]);
+  // the deck boxes pulled apart along the vertical: each box at its own elevation plus the gap
+  const appliedApart = useRef(0);
+  useEffect(() => {
+    if (model !== 'topside2') return;
+    if (!apart && !appliedApart.current) return;
+    let timer = 0, tries = 0;
+    const apply = () => {
+      const c = control.current;
+      if (!c) { if (tries++ < 240) timer = window.setTimeout(apply, 500); return; }
+      topDecks.forEach((d, i) => { const lift = (apart / 100) * 14 * i; c.setTransform(d.id, lift ? [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, lift, 0, 1] : null); });
+      if (Math.abs(apart - appliedApart.current) > 15) c.fit();
+      appliedApart.current = apart;
+    };
+    apply();
+    return () => window.clearTimeout(timer);
+  }, [apart, topDecks, model]);
+  const systemsTab = model === 'topside2' && rightTab === 'systems' && disciplines.length > 0;
+
   return (
     <>
-      <PageHead title="Facility layout" desc="The ST-CGF topside (by deck and by system, with its equipment), the earlier topside model, ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
+      <PageHead title="Facility layout" desc="The ST-CGF topside (by deck and by system, with its equipment), ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
         actions={<>
           {decked && access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>Add equipment</Btn>}
           <Btn kind="small" icon="refresh" onClick={refresh}>Refresh</Btn>
         </>} />
       <div className="stats">
-        <Stat label={decked ? 'Equipment' : 'Systems'} value={equipment.data ? stats.total : '—'} foot={decked ? `${inModel.size} shown in 3D` : `${systemIds.size} shown in 3D`} icon="box" />
+        <Stat label={decked ? 'Equipment' : 'Systems'} value={equipment.data ? stats.total : '—'} foot={decked ? `${equipmentInModel.size} shown in 3D` : `${systemIds.size} shown in 3D`} icon="box" />
         <Stat label="ETA after ROS" value={equipment.data ? stats.late : '—'} foot={<span className={stats.late ? 'negative' : ''}>Arrives after it is needed on site</span>} icon="risk" />
         <Stat label="Close to ROS" value={equipment.data ? stats.soon : '—'} foot={`Less than ${SOON_DAYS} days of margin`} icon="clock" />
         <Stat label="No dates" value={equipment.data ? stats.none : '—'} foot={<span className={stats.none ? 'warning' : ''}>{decked ? 'Edit an equipment' : 'Edit a system'} to add its ROS and ETA</span>} icon="calendar" />
@@ -285,7 +339,7 @@ export default function FacilityLayout() {
             {modelDecks.map(d => (
               <span key={d.id} className="chip-split">
                 <button type="button" className={`chip-filter ${visibleDecks.has(d.id) ? 'active' : ''}`} aria-pressed={visibleDecks.has(d.id)} onClick={() => toggleDeck(d.id)} onDoubleClick={() => onlyDeck(d.id)} title={`Click to show or hide, double-click to show this ${decked ? 'deck' : 'system'} alone`}>
-                  {!decked && <i className="fl-dot" style={{ background: groupColours[d.id] }} aria-hidden="true" />}{d.name}{decked ? <span>{model === 'topside' || model === 'topside2' ? d.equipment : items.filter(i => i.deck === d.name).length}</span> : (() => { const it = systemRows.get(d.id); const st = it ? delivery(it).state : 'none'; return <span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>; })()}
+                  {!decked && <i className="fl-dot" style={{ background: groupColours[d.id] }} aria-hidden="true" />}{d.name}{decked ? <span>{model === 'topside2' ? d.equipment : items.filter(i => i.deck === d.name).length}</span> : (() => { const it = systemRows.get(d.id); const st = it ? delivery(it).state : 'none'; return <span className={st === 'late' ? 'negative' : st === 'soon' ? 'warning' : ''} title={DELIVERY_LABEL[st]}>{st === 'late' ? 'Late' : st === 'soon' ? 'Soon' : st === 'ok' ? 'OK' : '—'}</span>; })()}
                 </button>
                 {!decked && <button type="button" className={`chip-filter chip-hl ${highlight === d.id ? 'active' : ''}`} aria-pressed={highlight === d.id} aria-label={`Highlight ${d.name}`} title={highlight === d.id ? 'Clear the highlight' : `Highlight ${d.name}: the rest turns grey`} onClick={() => setHighlight(h => (h === d.id ? null : d.id))}><Icon name="search" /></button>}
               </span>
@@ -293,14 +347,23 @@ export default function FacilityLayout() {
             <button type="button" className="chip-filter" onClick={() => { setHidden(new Set()); setHighlight(null); setSystemHL(null); }}>{decked ? `All ${deckWord}s` : 'All systems'}</button>
           </div>
           {model === 'topside2' && (
-            <div className="chip-bar" role="group" aria-label="Systems, in all decks">
-              <span className="tiny muted">Systems in all decks</span>
-              {TOPSIDE_SYSTEMS.map(sy => (
-                <button key={sy.id} type="button" className={`chip-filter ${systemHL === sy.id ? 'active' : ''}`} aria-pressed={systemHL === sy.id} title={systemHL === sy.id ? 'Clear the highlight' : `Highlight ${sy.label} in all decks: the rest turns grey`} onClick={() => setSystemHL(h => (h === sy.id ? null : sy.id))}>
-                  <i className="fl-dot" style={{ background: sy.colour }} aria-hidden="true" />{sy.label}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="chip-bar fl-apart" role="group" aria-label="Deck boxes">
+                <label className="seq-speed">Separate the decks <input type="range" min={0} max={100} step={5} value={apart} aria-label="Separate the deck boxes" onChange={e => setApart(Number(e.target.value))} /> {apart ? `${Math.round(apart * 0.14 * 10) / 10} m per level` : 'in place'}</label>
+                <span className="tiny muted">{topDecks.filter(d => d.elevation).map(d => `${d.name.replace(' Deck', '')} +${d.elevation!.toFixed(1)} m`).join(' · ')}</span>
+              </div>
+              {disciplines.length > 0 && (
+                <div className="chip-bar" role="group" aria-label="Systems, level 1">
+                  <span className="tiny muted">Systems</span>
+                  {disciplines.map(d => (
+                    <button key={d.id} type="button" className={`chip-filter ${discHL === d.id ? 'active' : ''}`} aria-pressed={discHL === d.id} title={discHL === d.id ? 'Clear the highlight' : `Highlight ${d.name} in all decks: the rest turns see-through`}
+                      onClick={() => { setDiscHL(h => (h === d.id ? null : d.id)); setEntryHL(null); if (discHL !== d.id) setRightTab('systems'); }}>
+                      <i className="fl-dot" style={{ background: d.color }} aria-hidden="true" />{d.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {model === 'lqm' && (
             <div className="chip-bar" role="group" aria-label="Systems, in all floors">
@@ -320,7 +383,7 @@ export default function FacilityLayout() {
           <div className="fl-stage-wrap">
             {notBuilt ? <div className="panel empty">The {modelLabel} model has not been prepared yet. Its files are produced from the Navisworks model by the 3D pipeline (data/3d-model/pipeline).</div> : (decked ? manifest.error : other.error) ? <ErrorBox error={(decked ? manifest.error : other.error)!} /> : !modelDecks.length ? <Loading label="Loading the model list…" /> : (
               <Suspense fallback={<Loading label="Loading the 3D viewer…" />}>
-                <FacilityViewer key={model} decks={decks} tags={decked ? inModel : NO_TAGS} visible={visibleDecks} selected={decked ? active : null} colors={decked ? colours : NO_COLOURS} highlight={highlight} systemHL={(model === 'lqm' || model === 'topside2') && systemHL ? { suffix: systemHL, colour: [...LQM_SYSTEMS, ...TOPSIDE_SYSTEMS].find(x => x.id === systemHL)?.colour ?? '#3b82f6' } : null} dark={dark} onPick={pickInModel} />
+                <FacilityViewer key={model} controlRef={control} decks={decks} extra={extra} tags={decked ? inModel : NO_TAGS} visible={visibleDecks} selected={decked ? active : null} colors={decked ? colours : NO_COLOURS} highlight={highlight} systemHL={model === 'topside2' ? topsideHL : model === 'lqm' && systemHL ? { suffix: systemHL, colour: LQM_SYSTEMS.find(x => x.id === systemHL)?.colour ?? '#3b82f6' } : null} dark={dark} onPick={pickInModel} />
               </Suspense>
             )}
             {hud && (
@@ -346,10 +409,16 @@ export default function FacilityLayout() {
 
         <div className="panel fl-list">
           <div className="panel-head"><div><h2>{decked ? `Equipment by ${deckWord}` : 'Systems'}</h2><p>{equipment.data ? `${shown.length} of ${items.length} ${decked ? 'equipment' : 'systems'} · ROS = required on site, ETA = expected on site` : '…'}</p></div></div>
-          <div className="toolbar">
+          {model === 'topside2' && disciplines.length > 0 && (
+            <div className="chip-bar model-tabs" role="tablist" aria-label="List">
+              <button type="button" role="tab" aria-selected={!systemsTab} className={`chip-filter model-tab ${!systemsTab ? 'active' : ''}`} onClick={() => setRightTab('equipment')}>Equipment</button>
+              <button type="button" role="tab" aria-selected={systemsTab} className={`chip-filter model-tab ${systemsTab ? 'active' : ''}`} onClick={() => setRightTab('systems')}>Systems</button>
+            </div>
+          )}
+          {!systemsTab && <div className="toolbar">
             <label className="search"><Icon name="search" /><input placeholder={decked ? 'Search tag, name, vendor or package…' : 'Search system, tag or package…'} value={filter} onChange={e => setFilter(e.target.value)} aria-label={decked ? 'Search equipment' : 'Search systems'} /></label>
-          </div>
-          {equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">{decked ? 'No equipment yet. Use Add equipment.' : 'No systems listed for this model yet.'}</div> : (
+          </div>}
+          {systemsTab ? <TopsideSystems disciplines={disciplines} levels={levels} equipment={modelledEquipment} disc={discHL} pick={entryHL} onDisc={setDiscHL} onPick={setEntryHL} /> : equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">{decked ? 'No equipment yet. Use Add equipment.' : 'No systems listed for this model yet.'}</div> : (
             <div className="fl-groups">
               {model === 'lqm' && (() => {
                 const all = LQM_SYSTEMS.map(sy => {

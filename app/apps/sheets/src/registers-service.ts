@@ -78,7 +78,8 @@ export class RegistersService {
   private milestoneView(m: Row, cutoff: string): Any {
     const status = milestoneStatus(m, cutoff);
     const due = String(m.forecast ?? m.planBaseline ?? '');
-    return { ...strip(m), major: isMajorMilestone(m), status, slipDays: m.planBaseline && m.forecast ? daysBetween(String(m.planBaseline), String(m.forecast)) : null, daysToGo: !m.actual && due ? daysBetween(cutoff, due) : null };
+    // a milestone with no working-schedule date is planned as the baseline says: derived here, never stored, so a later baseline change carries through
+    return { ...strip(m), planSub: m.planSub ?? m.planBaseline ?? null, major: isMajorMilestone(m), status, slipDays: m.planBaseline && m.forecast ? daysBetween(String(m.planBaseline), String(m.forecast)) : null, daysToGo: !m.actual && due ? daysBetween(cutoff, due) : null };
   }
 
   /** Keeps milestones by the look-ahead window: not yet achieved and due (forecast, else baseline) inside it. */

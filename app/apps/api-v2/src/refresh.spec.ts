@@ -40,4 +40,17 @@ describe('reference data refresh', () => {
     expect(rows).toHaveLength(seeded - 1);
     expect(rows.find(r => r.tag === 'MBD-2501')?.method).toBe('Lift by Crane');
   });
+
+  it('loads the construction budget once, switches Construction → Budget on, and keeps corrected hours', () => {
+    const store = new MemoryStore('x');
+    seedStore(store, seedData);
+    store.deleteRows(SHEET.budget, COLUMNS.budget, { projectId: 'sttp2b' });
+    const first = refreshStore(store);
+    expect(first.map(c => c.dataset)).toEqual(expect.arrayContaining([expect.stringContaining(SHEET.budget)]));
+    const rows = store.readRows(SHEET.budget, COLUMNS.budget);
+    expect(rows.length).toBeGreaterThan(400);
+    store.deleteRow(SHEET.budget, COLUMNS.budget, 'id', String(rows[0].id), { projectId: 'sttp2b' });
+    expect(refreshStore(store)).toEqual([]);
+    expect(store.readRows(SHEET.budget, COLUMNS.budget)).toHaveLength(rows.length - 1);
+  });
 });

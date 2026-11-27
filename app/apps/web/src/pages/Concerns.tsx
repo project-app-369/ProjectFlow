@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CONCERN_AREAS, CONCERN_STATUSES, CONCERN_TYPES, downloadCsv, request, SEVERITIES, type Concern, type ConcernSummary, type Page } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
+import { AiTools } from '../AiTools';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
 import { SortBy, useListState, usePrefetchNext } from '../Register';
@@ -79,6 +80,7 @@ export default function Concerns() {
       <PageHead title="Risks & Concerns" desc="Risks that may happen, concerns that are building, and issues already hurting a package, each with an owner and an action."
         actions={<>
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv${list.query({ type: filters.type, severity: filters.severity, area: filters.area, packageCode: pkg })}`, 'procurement-concerns.csv').catch(e => toast(e.message))}>Export CSV</Btn>
+          <AiTools kind="concerns" />
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New concern</Btn>}
         </>} />
       <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />

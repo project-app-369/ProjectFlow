@@ -255,11 +255,11 @@ export function ensureAllSheets(store: Store) {
 }
 
 /** The construction manhour budget with the hours spent (MPI tracking workbook). Loaded once; a project that already has a budget keeps its own. */
-function appendSeedBudget(store: Store, raw: SeedData) {
+export function appendSeedBudget(store: Store, raw: SeedData, now = new Date().toISOString()): number {
   const rows = seedRows(raw).budget;
-  if (!rows.length || store.readRows(SHEET.budget, COLUMNS.budget).some(r => r.projectId === PROJECT_ID)) return;
-  const now = new Date().toISOString();
+  if (!rows.length || store.readRows(SHEET.budget, COLUMNS.budget).some(r => r.projectId === PROJECT_ID)) return 0;
   store.appendRows(SHEET.budget, COLUMNS.budget, rows.map(r => ({ ...r, updatedAt: now })));
+  return rows.length;
 }
 
 /**

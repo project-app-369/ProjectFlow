@@ -11,7 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
-import { appendSeedFacilityEquipment, enableModuleChain, ensureAllSheets, seedRows } from '../../sheets/src/seed';
+import { appendSeedBudget, appendSeedFacilityEquipment, enableModuleChain, ensureAllSheets, seedRows } from '../../sheets/src/seed';
 import { seedData } from '../../sheets/src/seed-data';
 import { connectWithRetry, createPool, readSnapshot, withWriteLock, writeSnapshot } from './db';
 
@@ -52,6 +52,12 @@ export function refreshStore(store: MemoryStore, raw = seedData, now = new Date(
     changes.push({ dataset: `${SHEET.facilityEquipment} (loaded once, then kept in the app)`, before: 0, after: seeded });
     // the feature arrives with its data: switch it on, and the Construction group above it, where an older database has them Disabled
     for (const key of enableModuleChain(store, 'construction.facility-layout', now)) changes.push({ dataset: `${SHEET.modules} (${key}: Disabled → Enabled)`, before: 1, after: 1 });
+  }
+  // The construction budget carries hours that people correct in the app, so it is loaded once, while the project has none.
+  const budget = appendSeedBudget(store, raw, now);
+  if (budget) {
+    changes.push({ dataset: `${SHEET.budget} (loaded once, then kept in the app)`, before: 0, after: budget });
+    for (const key of enableModuleChain(store, 'construction.budget', now)) changes.push({ dataset: `${SHEET.modules} (${key}: Disabled → Enabled)`, before: 1, after: 1 });
   }
   const project = rows.project[0] as { cutoff?: string };
   const was = store.readRows(SHEET.projects, COLUMNS.projects).find(p => p.id === pid);

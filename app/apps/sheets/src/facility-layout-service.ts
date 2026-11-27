@@ -102,7 +102,7 @@ export class FacilityLayoutService {
       .map(this.item)
       .sort((a, b) => deckRank(a.deck) - deckRank(b.deck) || a.deck.localeCompare(b.deck) || a.tag.localeCompare(b.tag, undefined, { numeric: true }));
     const present = new Set(items.map(i => i.deck));
-    const decks = [...DECK_ORDER.filter(d => present.has(d)), ...[...present].filter(d => !DECK_ORDER.includes(d)).sort()];
+    const decks = [...DECK_ORDER.filter(d => present.has(d)), ...[...present].filter(d => !DECK_ORDER.includes(d)).sort((a, b) => a.localeCompare(b))];
     return { items, decks };
   }
 }

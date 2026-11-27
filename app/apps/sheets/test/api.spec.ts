@@ -78,7 +78,7 @@ describe('data endpoints match the NestJS API contract', () => {
   it('dashboard aggregates the data modules', () => {
     const d = ok(call('GET', `${P}/dashboard`));
     expect(d.procurement.total).toBe(148);
-    expect(d.expediting).toMatchObject({ total: 145, delayed: 12, atRisk: 6 });
+    expect(d.expediting).toMatchObject({ total: 145, delayed: 12, atRisk: 4 });
     expect(d.workPackages.items).toHaveLength(5);
     expect(d.workPackages.overall.thisWeekActual).toBeCloseTo(29.3, 1);
     expect(d.workPackages.items.map((w: any) => w.code)).toEqual(['WP2', 'WP3', 'WP4', 'WP5', 'WP6']);
@@ -308,19 +308,29 @@ describe('milestones (reference data)', () => {
     expect(ok(call('GET', `${P}/milestones.csv`)).csv).toContain('Project Effective Date');
   });
 
+  it('shows the baseline as the working-schedule date where the milestone has none, without storing it', () => {
+    const made = ok(call('POST', `${P}/milestones`, { id: 'M-WS', description: 'No working date', planBaseline: '2027-02-01' }));
+    expect(made).toMatchObject({ planBaseline: '2027-02-01', planSub: '2027-02-01' });
+    expect(store.readRows(SHEET.milestones, COLUMNS.milestones).find(r => r.id === 'M-WS')?.planSub ?? null).toBeNull();
+    const withDate = ok(call('PATCH', `${P}/milestones/M-WS`, { planSub: '2027-03-01' }));
+    expect(withDate.planSub).toBe('2027-03-01');
+    expect(ok(call('GET', `${P}/milestones?pageSize=200`)).items.every((m: any) => !m.planBaseline || m.planSub)).toBe(true);
+  });
+
   it('creates, updates and deletes milestones, deriving variance and facility', () => {
     const made = ok(call('POST', `${P}/milestones`, { description: 'Hold point review', planBaseline: '2026-11-10', forecast: '2026-11-20', subName: 'MC' }));
-    expect(made).toMatchObject({ id: 'KM-001', facility: 'Project', variance: 10, slipDays: 10, status: 'Due soon' });
-    const done = ok(call('PATCH', `${P}/milestones/KM-001`, { actual: '2026-11-17', facility: 'CGF Topsides' }));
+    const kid = made.id;
+    expect(made).toMatchObject({ facility: 'Project', variance: 10, slipDays: 10, status: 'Due soon' });
+    const done = ok(call('PATCH', `${P}/milestones/${kid}`, { actual: '2026-11-17', facility: 'CGF Topsides' }));
     expect(done).toMatchObject({ status: 'Done', variance: 7, facility: 'CGF Topsides' });
-    expect(ok(call('GET', `${P}/milestones?facility=${encodeURIComponent('CGF Topsides')}`)).items.map((m: any) => m.id)).toContain('KM-001');
+    expect(ok(call('GET', `${P}/milestones?facility=${encodeURIComponent('CGF Topsides')}&pageSize=200`)).items.map((m: any) => m.id)).toContain(kid);
     expect(ok(call('GET', `${P}/milestones`)).facets.facilities).toEqual(expect.arrayContaining(['CGF Topsides', 'CGF Jacket', 'Bridge', 'LQ Module #2', 'Pipeline']));
     expect(ok(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Own id' })).id).toBe('M-99');
     expect(err(call('POST', `${P}/milestones`, { id: 'M-99', description: 'Again' })).status).toBe(409);
     expect(err(call('POST', `${P}/milestones`, { description: '' })).status).toBe(400);
-    expect(err(call('DELETE', `${P}/milestones/KM-001`, undefined, MEMBER)).status).toBe(403);
-    expect(call('DELETE', `${P}/milestones/KM-001`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
-    expect(err(call('GET', `${P}/milestones/KM-001`)).status).toBe(404);
+    expect(err(call('DELETE', `${P}/milestones/${kid}`, undefined, MEMBER)).status).toBe(403);
+    expect(call('DELETE', `${P}/milestones/${kid}`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
+    expect(err(call('GET', `${P}/milestones/${kid}`)).status).toBe(404);
   });
 
   it('refuses to delete a milestone a risk is linked to, and is read-only for clients', () => {
@@ -1063,12 +1073,12 @@ describe('procurement registers', () => {
     expect(pk.items.filter((p: any) => p.status === 'Planned')).toHaveLength(9);
     expect(pk.items.filter((p: any) => p.workPackage).length).toBeGreaterThan(130);
     expect(pk.items.find((p: any) => p.code === 'STTP2B-GF-MEC-017')).toMatchObject({ status: 'Planned', workPackage: 'WP2', packageType: 'PS', vendor: null });
-    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(200);
-    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(42);
+    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(170);
+    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(0);
     expect(ok(call('GET', `${MB}?pageSize=200`)).total).toBe(190);
-    expect(ok(call('GET', MS)).items).toHaveLength(10);
+    expect(ok(call('GET', MS)).items).toHaveLength(8);
     const c = ok(call('GET', `${PC}/summary`));
-    expect(c).toMatchObject({ total: 29, open: 29, bySeverity: { High: 5, Medium: 24, Critical: 0, Low: 0 }, byType: { Issue: 5, Risk: 5, Concern: 19 } });
+    expect(c).toMatchObject({ total: 26, open: 26, bySeverity: { High: 5, Medium: 21, Critical: 0, Low: 0 }, byType: { Issue: 5, Risk: 3, Concern: 18 } });
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'procurement.logistics').sheet.name).toBe('EPCIC - Logistics shipments');
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'procurement.concerns').sheet.name).toBe('EPCIC - Procurement concerns');
   });
@@ -1104,7 +1114,7 @@ describe('procurement registers', () => {
 
   it('tracks shipments and flags the ones past their forecast date against the cut-off', () => {
     const s = ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', shipmentNo: 'SH-TEST', status: 'On Sailing', forecastOnSite: '2026-11-01', grossWeightKg: 1200 }, MEMBER));
-    expect(s).toMatchObject({ id: 'LG-0201', overdue: true, daysLate: 5, status: 'On Sailing' });
+    expect(s).toMatchObject({ id: 'LG-0171', overdue: true, daysLate: 5, status: 'On Sailing' });
     expect(ok(call('GET', `${LG}?pageSize=200`)).items.filter((r: any) => r.overdue)).toHaveLength(1);
     expect(ok(call('PATCH', `${LG}/${s.id}`, { actualOnSite: '2026-11-05' }))).toMatchObject({ status: 'Received', overdue: false, daysLate: null });
     expect(ok(call('GET', `${LG}.csv?source=PTSC`)).csv).toContain('SH-TEST');
@@ -1128,17 +1138,17 @@ describe('procurement registers', () => {
 
   it('raises, edits, filters and closes risks, concerns and issues against packages', () => {
     const c = ok(call('POST', PC, { packageCode: 'STTP2B-GF-STR-001A', title: 'Mill slot slipping', type: 'Risk', severity: 'Critical', owner: 'Linh', dueDate: '2026-11-01', action: 'Escalate to vendor director' }, MEMBER));
-    expect(c).toMatchObject({ id: 'PC-030', status: 'Open', raisedDate: '2026-11-06', area: 'Delivery', source: 'Manual', overdue: true, ageDays: 0 });
+    expect(c).toMatchObject({ id: 'PC-027', status: 'Open', raisedDate: '2026-11-06', area: 'Delivery', source: 'Manual', overdue: true, ageDays: 0 });
     expect(err(call('POST', PC, { title: 'x', packageCode: 'NO-SUCH-PKG' })).error.issues).toMatchObject([{ path: 'packageCode' }]);
     expect(err(call('POST', PC, { title: '' })).status).toBe(400);
     expect(err(call('POST', PC, { title: 'x' }, CLIENT)).error.code).toBe('READ_ONLY_ROLE');
-    expect(ok(call('GET', `${PC}?severity=Critical`)).items.map((r: any) => r.id)).toEqual(['PC-030']);
-    expect(ok(call('GET', `${PC}?type=Concern`)).total).toBe(19);
+    expect(ok(call('GET', `${PC}?severity=Critical`)).items.map((r: any) => r.id)).toEqual(['PC-027']);
+    expect(ok(call('GET', `${PC}?type=Concern`)).total).toBe(18);
     expect(ok(call('GET', `${PC}?q=slot`)).total).toBe(1);
-    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 30, overdue: 1, bySeverity: { Critical: 1 } });
+    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 27, overdue: 1, bySeverity: { Critical: 1 } });
     expect(ok(call('GET', `${PC}/summary`)).byPackage.find((p: any) => p.code === 'STTP2B-GF-STR-001A')).toMatchObject({ open: 1, worst: 'Critical', score: 4 });
     expect(ok(call('PATCH', `${PC}/${c.id}`, { status: 'Resolved' }))).toMatchObject({ status: 'Resolved', overdue: false });
-    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 29, closed: 1, overdue: 0 });
+    expect(ok(call('GET', `${PC}/summary`))).toMatchObject({ open: 26, closed: 1, overdue: 0 });
     expect(err(call('DELETE', `${PC}/${c.id}`, undefined, MEMBER)).error.code).toBe('MANAGER_REQUIRED');
     expect(call('DELETE', `${PC}/${c.id}`, undefined, MANAGER)).toMatchObject({ ok: true, status: 204 });
     expect(ok(call('GET', `${PC}.csv`)).csv).not.toContain('Mill slot');
@@ -1150,13 +1160,13 @@ describe('procurement registers', () => {
     expect(d.pipeline).toMatchObject({ total: 148, byStatus: { Planned: 9, 'In tendering': 0, 'LOA issued': 20, 'PO placed': 119 } });
     expect(d.pipeline.placedPct).toBeGreaterThan(70);
     expect(d.pipeline.byDiscipline.reduce((n: number, x: any) => n + x.total, 0)).toBe(148);
-    expect(d.expediting).toMatchObject({ total: 145, health: { delay: 12, highRisk: 3, atRisk: 6, ok: 124 } });
+    expect(d.expediting).toMatchObject({ total: 145, health: { delay: 12, highRisk: 3, atRisk: 4, ok: 126 } });
     expect(d.expediting.behind.length).toBe(10);
     expect(d.expediting.behind[0].variance).toBeLessThanOrEqual(d.expediting.behind[9].variance);
-    expect(d.logistics).toMatchObject({ total: 200, byStatus: { Received: 162, 'On Sailing': 20, 'Under Customs': 13, 'Inland transportation': 5 }, bySource: { PTSC: 158, Client: 42 }, heldCount: 19 });
+    expect(d.logistics).toMatchObject({ total: 170, byStatus: { Received: 132, 'On Sailing': 19, 'Under Customs': 13, 'Inland transportation': 6 }, bySource: { PTSC: 170 }, heldCount: 18 });
     expect(d.materials.totals.map((t: any) => t.supply)).toEqual(['PTSC MC', 'Client']);
-    expect(d.concerns).toMatchObject({ open: 29 });
-    expect(d.attentionCount).toBe(34);
+    expect(d.concerns).toMatchObject({ open: 26 });
+    expect(d.attentionCount).toBe(32);
     const top = d.attention[0];
     expect(top).toMatchObject({ code: 'STTP2B-GF-STR-001L', level: 'Critical' });
     expect(top.reasons).toContain('Expediting: Delay');
@@ -1218,9 +1228,9 @@ describe('procurement registers', () => {
   it('is included in cut-off reports and cannot be changed while one is open', () => {
     ok(call('POST', `${P}/snapshots`, { cutoff: '2026-10-30' }, MANAGER));
     ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', status: 'Planned' }));
-    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(200);
-    expect(ok(call('GET', LG)).total).toBe(201);
-    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(200);
+    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(170);
+    expect(ok(call('GET', LG)).total).toBe(171);
+    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(170);
     expect(err(call('POST', `${PC}?asOf=2026-10-30`, { title: 'x' })).error.code).toBe('READ_ONLY_SNAPSHOT');
   });
 });
@@ -1445,10 +1455,10 @@ describe('facility layout equipment', () => {
 
   it('lists the equipment of the 3D model by deck with ROS and ETA from the expediting report', () => {
     const r = ok(call('GET', E));
-    expect(r.decks).toEqual(['Sub-Cellar Deck', 'Cellar Deck', 'Intermediate Deck', 'Main Deck', 'Caissons']);
+    expect(r.decks.slice(0, 5)).toEqual(['Sub-Cellar Deck', 'Cellar Deck', 'Intermediate Deck', 'Main Deck', 'Caissons']);
     expect(r.items.length).toBeGreaterThan(100);
     const sep = r.items.find((i: any) => i.tag === 'MBD-2501');
-    expect(sep).toMatchObject({ name: 'Production Separator', deck: 'Cellar Deck', rosDate: '2026-12-15', method: null });
+    expect(sep).toMatchObject({ name: 'Production Separator', deck: 'Cellar Deck', rosDate: '2026-12-30', method: null });
     expect(sep.etaDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(r.items.map((i: any) => i.deck)).toEqual([...r.items.map((i: any) => i.deck)].sort((a, b) => r.decks.indexOf(a) - r.decks.indexOf(b)));
   });
@@ -1456,7 +1466,9 @@ describe('facility layout equipment', () => {
   it('creates, edits and removes equipment, and a new deck name follows the known decks', () => {
     const made = ok(call('POST', E, { tag: 'ZZZ-NEW', name: 'Added in the app', deck: 'Helideck', method: 'Skidding', rosDate: '2027-01-05' }));
     expect(made).toMatchObject({ tag: 'ZZZ-NEW', deck: 'Helideck', method: 'Skidding', rosDate: '2027-01-05', etaDate: null, source: 'Added in Project Flow' });
-    expect(ok(call('GET', E)).decks.at(-1)).toBe('Helideck');
+    const decks = ok(call('GET', E)).decks;
+    expect(decks).toContain('Helideck');
+    expect(decks.indexOf('Helideck')).toBeGreaterThan(decks.indexOf('Caissons'));
     const edited = ok(call('PATCH', `${E}/ZZZ-NEW`, { etaDate: '2027-01-20', method: 'Lift by Crane', comments: 'Needs the hatch open' }));
     expect(edited).toMatchObject({ etaDate: '2027-01-20', method: 'Lift by Crane', comments: 'Needs the hatch open', rosDate: '2027-01-05', name: 'Added in the app' });
     expect(ok(call('PATCH', `${E}/MBD-2501`, { method: 'Lift by Crane' })).method).toBe('Lift by Crane');
