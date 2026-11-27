@@ -88,7 +88,7 @@ const blank = (v: unknown) => (v == null || String(v).trim() === '' ? null : Str
 function bodyOf(kind: AiKind, r: Row): Row {
   const t = (k: string) => blank(r[k]);
   if (kind === 'issues') {
-    return { title: r.title.trim(), description: t('description'), priority: r.priority, discipline: t('discipline'), status: r.status, startDate: t('startDate'), dueDate: t('dueDate'), nextAction: t('nextAction'), remarks: t('remarks'), packageCode: t('packageCode'), subcontract: t('subcontract'), pics: String(r.pics ?? '').split(/[\s,;]+/).filter(e => e.includes('@')) };
+    return { title: r.title.trim(), description: t('description'), priority: r.priority, discipline: t('discipline'), status: r.status, startDate: t('startDate'), dueDate: t('dueDate'), nextAction: t('nextAction'), remarks: t('remarks'), packageCode: t('packageCode'), subcontract: t('subcontract'), pics: String(r.pics ?? '').split(/\s*[,;]\s*/).map(e => e.trim()).filter(Boolean) };
   }
   if (kind === 'risks') {
     return { title: r.title.trim(), description: t('description'), cause: t('cause'), effect: t('effect'), owner: String(r.owner ?? '').trim(), status: r.status, rbs: r.rbs, strategy: t('strategy'), mitigationCause: t('mitigationCause'), mitigationEffect: t('mitigationEffect'), planDate: t('planDate'), remark: t('remark') };
@@ -207,7 +207,7 @@ function CandidateCard({ kind, row: r, rbs, onChange }: { kind: AiKind; row: Row
           <Field label="Due date">{date('dueDate')}</Field>
           <Field label="Package">{txt('packageCode', 60)}</Field>
           <Field label="Service subcontract">{txt('subcontract', 80)}</Field>
-          <Field label="Persons in charge (e-mails)" full>{txt('pics', 400)}</Field>
+          <Field label="Persons in charge (names, separated by commas)" full>{txt('pics', 400)}</Field>
           <Field label="Description" full>{area('description')}</Field>
           <Field label="Next action" full>{area('nextAction')}</Field>
         </>}

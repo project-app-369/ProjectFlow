@@ -2111,3 +2111,72 @@ small{font-size:var(--fs-xs)}
 .mom-entry-head{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
 @keyframes mom-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.mom-party{animation:none}.mom-track span{transition:none}}
+
+/* ===== Task management audit (Personal → Task Management): labelled controls, one icon per meaning, motion on tokens ===== */
+.seg button{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-1);transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.lintel .seg button .icon{width:1rem;height:1rem;color:currentColor;stroke:currentColor}
+.task-card .task-top .mono{white-space:nowrap}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.period-nav{display:inline-flex;align-items:center;gap:var(--sp-1)}
+.task-views button{padding:0 var(--sp-3)}
+@media(max-width:480px){.task-views button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.task-views button{padding:0 var(--sp-3)}}
+.task-view{animation:task-view-in var(--dur) var(--ease) both}
+@keyframes task-view-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+/* compact status picker on cards: icon and word */
+.lintel .task-icon-select summary{width:auto;min-width:2.25rem;padding:0 var(--sp-2);display:inline-flex;align-items:center;gap:var(--sp-1);font-size:var(--fs-xs);font-weight:600;transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
+.task-icon-select summary:hover{background:var(--soft)}
+.lintel .task-icon-select-menu,.lintel .task-icon-select.status-picker .task-icon-select-menu{grid-template-columns:1fr;min-width:9.5rem}
+.lintel .task-icon-select-menu button{width:auto;justify-content:flex-start;display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-2);font-size:var(--fs-sm);color:var(--ink)}
+.task-icon-select-menu button .icon{color:var(--brand)}
+.task-icon-select[open] .task-icon-select-menu{animation:task-pop var(--dur-fast) var(--ease) both;transform-origin:top right}
+@keyframes task-pop{from{opacity:0;transform:scale(.97) translateY(-2px)}to{opacity:1;transform:none}}
+/* urgency and status choices in the task form: icon, word and hint */
+.task-editor .task-choice{display:flex;align-items:center;justify-content:flex-start;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);text-align:left;min-height:3.1rem}
+.task-editor .task-choice .icon{width:1.15rem;height:1.15rem;flex:none}
+.task-choice-text{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.task-choice-text strong{font-size:var(--fs-sm);color:var(--ink)}
+.task-choice-text small{color:var(--muted)}
+.task-choice.selected .task-choice-text strong{color:inherit}
+.task-editor .task-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* kanban: labelled columns, lift on hover, a held card and a clear drop target */
+.board-column > h3{display:flex;align-items:center;gap:var(--sp-2)}
+.board-column .task-card h3{color:var(--ink)}
+.board-column > h3 .col-label{font-weight:700;color:var(--ink)}
+.board-column > h3 .count{margin-left:auto}
+.lintel .task-card{transition:transform var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease),opacity var(--dur-fast) var(--ease)}
+.lintel .task-card:hover{transform:translateY(-2px);box-shadow:var(--glass-shadow,var(--shadow))}
+.lintel .kanban-card:active{cursor:grabbing}
+.lintel .kanban-card.dragging{opacity:.55;transform:rotate(-1deg) scale(.98);box-shadow:none}
+.lintel .board-4 .board-column{transition:background var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.lintel .board-column.drop-target{background:var(--soft);box-shadow:inset 0 0 0 2px var(--teal)}
+.board-column .drop-hint{padding:var(--sp-3);border:1px dashed var(--line);border-radius:var(--r);text-align:center}
+.board-column.drop-target .drop-hint{border-color:var(--teal);color:var(--teal-ink)}
+/* gantt legend and head, workload bar cell */
+.legend-status{display:inline-flex;align-items:center;gap:var(--sp-1)}
+.gantt-name-head{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.workload-bar{min-width:14rem}
+table.workload .stack{flex-direction:row;flex-wrap:nowrap;height:.875rem;background:var(--surface-subtle);border-radius:var(--pill);overflow:hidden}
+table.workload .stack-seg{flex:none;transition:width var(--dur-slow) var(--ease)}
+.cal-chip,.cal-date,.cal-more{transition:background var(--dur-fast) var(--ease),filter var(--dur-fast) var(--ease)}
+.cal-chip:hover{filter:brightness(.96)}
+.lintel .cal-cell.outside{background:var(--surface-subtle);opacity:.6}
+.lintel .cal-cell.today{background:color-mix(in srgb,var(--teal) 10%,transparent)}
+.lintel .seg button+button{border-left:0}
+@media (prefers-reduced-motion:reduce){.task-view,.task-icon-select[open] .task-icon-select-menu{animation:none}.lintel .task-card,.lintel .task-card:hover,.lintel .kanban-card.dragging{transition:none;transform:none}}
+
+/* ===== People picker (issues, sub-tasks): members by name, e-mail kept behind the chip ===== */
+.people-picker{display:flex;flex-direction:column;gap:var(--sp-2)}
+.people-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
+.person-chip{display:inline-flex;align-items:center;gap:var(--sp-2);padding:2px var(--sp-1) 2px 2px;border:1px solid var(--line);border-radius:var(--pill);background:var(--surface);font-size:var(--fs-sm);max-width:100%;animation:person-in var(--dur) var(--ease) both}
+.person-chip .person-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.person-chip small{font-size:var(--fs-xs)}
+.person-chip button{display:grid;place-items:center;width:20px;height:20px;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.person-chip button:hover,.person-chip button:focus-visible{background:var(--t-crit-bg);color:var(--t-crit)}
+.person-chip button .icon{width:12px;height:12px}
+.avatar.sm{width:22px;height:22px;font-size:var(--fs-xs);display:inline-grid;place-items:center;border-radius:var(--r-sm);background:var(--soft);color:var(--brand);font-weight:700;flex:none}
+.people-add{display:flex;gap:var(--sp-2)}
+.people-add input{flex:1;min-width:0}
+.subtask-owner{max-width:11rem}
+@keyframes person-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.person-chip{animation:none}}
+.delete-hint{margin-right:auto;align-self:center}

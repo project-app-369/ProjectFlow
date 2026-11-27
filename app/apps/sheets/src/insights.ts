@@ -375,6 +375,7 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
   const PRI = ['Critical', 'High', 'Medium', 'Low'], PRI_COLOR = [COLOR.critical, COLOR.high, COLOR.medium, COLOR.low];
   const byPic = new Map<string, AnyRow[]>();
   for (const r of open) for (const e of r.pics as string[]) byPic.set(e, [...(byPic.get(e) ?? []), r]);
+  const picName = new Map<string, string>(open.flatMap(r => ((r.people ?? []) as { email: string; name: string }[]).map(p => [p.email, p.name] as [string, string])));
   const picKeys = [...byPic.keys()].sort((a, b) => byPic.get(b)!.length - byPic.get(a)!.length).slice(0, 10);
   const team = tally(open, r => String(r.discipline ?? 'Unassigned'));
   const teamKeys = [...team.keys].sort((a, b) => team.get(b).length - team.get(a).length).slice(0, 12);
@@ -400,7 +401,7 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
       boxes: windows(open, r => (r.dueDate ? String(r.dueDate) : null), cutoff, rs => `${rs.filter(r => r.priority === 'Critical' || r.priority === 'High').length} critical or high`, 'None'),
     },
     charts: [
-      { title: 'Open issues by person in charge', sub: 'The ten people with most open issues. An issue with several PICs counts for each. Select a person to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: picKeys, filterKey: 'pic', series: series(picKeys, k => byPic.get(k)!) },
+      { title: 'Open issues by person in charge', sub: 'The ten people with most open issues. An issue with several PICs counts for each. Select a person to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: picKeys.map(k => picName.get(k) ?? k), filterKey: 'pic', filterValues: picKeys, series: series(picKeys, k => byPic.get(k)!) },
       { title: 'Open issues by team', sub: 'The responsible team named on the issue. Select a team to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: teamKeys, filterKey: 'discipline', series: series(teamKeys, team.get) },
       ...(pkg.keys.length ? [{ title: 'Open issues by procurement package', sub: 'Issues linked to a procurement or expediting package. Select a package to filter.', layout: 'bar' as const, stacked: true, unit: 'issues', categories: pkg.keys, filterKey: 'packageCode', series: series(pkg.keys, pkg.t.get) }] : []),
       ...(sub.keys.length ? [{ title: 'Open issues by service subcontract', sub: 'Issues linked to a subcontractor or service package. Select one to filter.', layout: 'bar' as const, stacked: true, unit: 'issues', categories: sub.keys, filterKey: 'subcontract', series: series(sub.keys, sub.t.get) }] : []),

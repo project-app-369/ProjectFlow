@@ -17,12 +17,15 @@ const PRIORITY_RANK: Record<string, number> = { Critical: 4, High: 3, Medium: 2,
 /** An item is reminded about when it is overdue or due within this many days. */
 export const REMIND_WITHIN_DAYS = 3;
 const MAX_PICS = 10;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+interface People { name: (email: string) => string; card: (email: string) => { email: string; name: string; userId: string | null }; resolve: (person: string) => string }
 
 const txt = (max: number) => z.string().trim().max(max).nullish().transform(v => (v ? v : null));
 const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const isoOpt = iso.nullish().transform(v => v ?? null);
-const email = z.string().trim().toLowerCase().email('Enter a valid email address.').max(120);
-const pics = z.array(email).max(MAX_PICS, `At most ${MAX_PICS} people can be responsible for one issue.`).transform(list => [...new Set(list)]);
+/** A person: an account name, a user id or an e-mail. Resolved to the account's e-mail (kept for reminders) when saved. */
+const person = z.string().trim().min(1, 'Pick a person.').max(120);
+const pics = z.array(person).max(MAX_PICS, `At most ${MAX_PICS} people can be responsible for one issue.`).transform(list => [...new Set(list)]);
 
 const issueFields = {
   title: z.string().trim().min(1).max(200), description: txt(2000), priority: z.enum(ISSUE_PRIORITIES), discipline: txt(60).transform(normaliseDiscipline), status: z.enum(ISSUE_STATUSES),
@@ -32,7 +35,7 @@ const issueFields = {
 };
 const issueCreate = z.object({ ...issueFields, priority: issueFields.priority.default('Medium'), status: issueFields.status.default('Not started'), pics: pics.default([]) });
 const issuePatch = z.object(issueFields).partial();
-const subtaskFields = { title: z.string().trim().min(1).max(200), pic: email.nullish().transform(v => v ?? null), dueDate: isoOpt, done: z.boolean() };
+const subtaskFields = { title: z.string().trim().min(1).max(200), pic: person.nullish().transform(v => v ?? null), dueDate: isoOpt, done: z.boolean() };
 const subtaskCreate = z.object({ ...subtaskFields, done: subtaskFields.done.default(false) });
 const subtaskPatch = z.object(subtaskFields).partial();
 const commentBody = z.object({ note: z.string().trim().min(1).max(1500) });
@@ -80,22 +83,43 @@ export class IssuesService {
   private subtaskRows(projectId: string) { return this.svc.rows(SHEET.issueSubtasks, COLUMNS.issueSubtasks, projectId); }
   private logRows(projectId: string) { return this.svc.rows(SHEET.issueLog, COLUMNS.issueLog, projectId); }
 
-  private subtaskView(s: Row): Any { const { projectId: _p, ...rest } = s; return { ...rest, done: s.done === 'Yes' }; }
+  private subtaskView(s: Row, who: People): Any { const { projectId: _p, ...rest } = s; return { ...rest, done: s.done === 'Yes', picName: s.pic ? who.name(String(s.pic)) : null }; }
 
-  private view(r: Row, cutoff: string, subs: Row[]): Any {
+  /** Accounts by e-mail, id and name, to show names and to turn a picked person into the e-mail reminders go to. */
+  private people(): People {
+    const users = this.store.readRows(SHEET.users, COLUMNS.users).filter(u => u.email);
+    const byEmail = new Map(users.map(u => [String(u.email).toLowerCase(), u]));
+    const find = (v: string) => {
+      const k = v.trim().toLowerCase();
+      return byEmail.get(k) ?? users.find(u => String(u.id).toLowerCase() === k) ?? users.find(u => String(u.name ?? '').trim().toLowerCase() === k);
+    };
+    return {
+      name: e => String(byEmail.get(e.toLowerCase())?.name ?? e),
+      card: e => { const u = byEmail.get(e.toLowerCase()); return { email: e, name: String(u?.name ?? e), userId: u ? String(u.id) : null }; },
+      resolve: v => {
+        const u = find(v);
+        if (u) return String(u.email).toLowerCase();
+        const k = v.trim().toLowerCase();
+        if (EMAIL.test(k)) return k;
+        throw new HttpError(400, { code: 'PERSON_UNKNOWN', message: `${v.trim()} has no account: pick someone from the list or enter an e-mail.` });
+      },
+    };
+  }
+
+  private view(r: Row, cutoff: string, subs: Row[], who: People): Any {
     const { projectId: _p, ...rest } = r;
     const mine = subs.filter(s => s.issueId === r.id);
     const due = r.dueDate ? String(r.dueDate) : null;
     return {
-      ...withDisciplines(rest), status: normStatus(r.status), priority: normPriority(r.priority), pics: picsOf(r), priorityRank: PRIORITY_RANK[normPriority(r.priority)],
+      ...withDisciplines(rest), status: normStatus(r.status), priority: normPriority(r.priority), pics: picsOf(r), people: picsOf(r).map(e => who.card(e)), priorityRank: PRIORITY_RANK[normPriority(r.priority)],
       overdue: isOpen(r) && !!due && due < cutoff, daysToDue: isOpen(r) && due ? daysBetween(cutoff, due) : null,
       subtasksTotal: mine.length, subtasksDone: mine.filter(s => s.done === 'Yes').length,
     };
   }
 
   private views(projectId: string): Any[] {
-    const cutoff = this.cutoff(projectId), subs = this.subtaskRows(projectId);
-    return this.rows(projectId).map(r => this.view(r, cutoff, subs));
+    const cutoff = this.cutoff(projectId), subs = this.subtaskRows(projectId), who = this.people();
+    return this.rows(projectId).map(r => this.view(r, cutoff, subs, who));
   }
 
   private log(projectId: string, issueId: string, actor: string, action: string, detail: { field?: string; from?: unknown; to?: unknown; note?: string } = {}) {
@@ -137,6 +161,8 @@ export class IssuesService {
       facets: {
         disciplines: disciplineFacets(all), statuses: [...ISSUE_STATUSES], priorities: [...ISSUE_PRIORITIES],
         pics: unique(all.flatMap(r => r.pics as string[])),
+        /** The same people with their names, for a filter that reads by name. */
+        picPeople: (() => { const who = this.people(); return unique(all.flatMap(r => r.pics as string[])).map(e => who.card(e)).sort((a, b) => a.name.localeCompare(b.name)); })(),
         packages: unique(all.map(r => r.packageCode as string).filter(Boolean)), subcontracts: unique(all.map(r => r.subcontract as string).filter(Boolean)),
       },
     };
@@ -147,16 +173,16 @@ export class IssuesService {
     return {
       filename: 'issues.csv',
       csv: toCsv([['ID', 'Title', 'Priority', 'Team', 'Package', 'Service subcontract', 'Status', 'PIC', 'Start', 'Due', 'Overdue', 'Sub-tasks done', 'Sub-tasks', 'Next action', 'Remarks'],
-        ...rows.map(r => [r.id, r.title, r.priority, r.discipline, r.packageCode, r.subcontract, r.status, r.pics.join('; '), r.startDate, r.dueDate, r.overdue ? 'Yes' : 'No', r.subtasksDone, r.subtasksTotal, r.nextAction, r.remarks])]),
+        ...rows.map(r => [r.id, r.title, r.priority, r.discipline, r.packageCode, r.subcontract, r.status, (r.people as Any[]).map(p => p.name).join('; '), r.startDate, r.dueDate, r.overdue ? 'Yes' : 'No', r.subtasksDone, r.subtasksTotal, r.nextAction, r.remarks])]),
     };
   }
 
   get(projectId: string, id: string) {
     const r = this.requireIssue(projectId, id);
-    const subs = this.subtaskRows(projectId);
+    const subs = this.subtaskRows(projectId), who = this.people();
     return {
-      ...this.view(r, this.cutoff(projectId), subs),
-      subtasks: subs.filter(s => s.issueId === id).sort((a, b) => Number(a.position) - Number(b.position)).map(s => this.subtaskView(s)),
+      ...this.view(r, this.cutoff(projectId), subs, who),
+      subtasks: subs.filter(s => s.issueId === id).sort((a, b) => Number(a.position) - Number(b.position)).map(s => this.subtaskView(s, who)),
       log: this.logRows(projectId).filter(l => l.issueId === id).sort((a, b) => String(b.at).localeCompare(String(a.at)) || String(b.id).localeCompare(String(a.id))).map(({ projectId: _p, ...l }) => (/^Loaded from the .*workbook/i.test(String(l.note ?? '')) ? { ...l, note: null } : l)),
     };
   }
@@ -184,13 +210,15 @@ export class IssuesService {
   /* ================= write ================= */
   create(projectId: string, body: unknown, actor: Actor) {
     requireWrite(actor, projectId);
-    const v = parse(issueCreate, body);
+    const parsed = parse(issueCreate, body);
     return this.store.withLock(() => {
+      const who = this.people();
+      const v = { ...parsed, pics: [...new Set(parsed.pics.map(who.resolve))] };
       const id = nextNo('ISS', this.rows(projectId), 3), now = this.now();
       const row: Row = { projectId, id, ...v, pics: v.pics.join(','), source: 'App', completedDate: v.status === 'Completed' ? this.today() : null, lastRemindedOn: null, createdAt: now, updatedAt: now, createdBy: actor.id };
       this.store.appendRows(SHEET.issues, COLUMNS.issues, [row]);
       this.log(projectId, id, actor.name, 'Created', { note: `Priority ${v.priority}${v.dueDate ? `, due ${v.dueDate}` : ''}` });
-      for (const p of v.pics) this.log(projectId, id, actor.name, 'PIC added', { to: p });
+      for (const p of v.pics) this.log(projectId, id, actor.name, 'PIC added', { to: who.name(p) });
       this.notifyAssigned(v.pics, String(v.title), id, actor, v.dueDate);
       return this.get(projectId, id);
     });
@@ -217,10 +245,11 @@ export class IssuesService {
       if ('status' in changes) changes.completedDate = changes.status === 'Completed' ? this.today() : null;
       if ('dueDate' in changes) changes.lastRemindedOn = null;
       if (patch.pics) {
-        const before = picsOf(cur), after = patch.pics as string[];
+        const who = this.people();
+        const before = picsOf(cur), after = [...new Set((patch.pics as string[]).map(who.resolve))];
         const added = after.filter(e => !before.includes(e)), removed = before.filter(e => !after.includes(e));
-        for (const e of added) this.log(projectId, id, actor.name, 'PIC added', { to: e });
-        for (const e of removed) this.log(projectId, id, actor.name, 'PIC removed', { from: e });
+        for (const e of added) this.log(projectId, id, actor.name, 'PIC added', { to: who.name(e) });
+        for (const e of removed) this.log(projectId, id, actor.name, 'PIC removed', { from: who.name(e) });
         if (added.length || removed.length) changes.pics = after.join(',');
         this.notifyAssigned(added, String(patch.title ?? cur.title), id, actor, (changes.dueDate ?? cur.dueDate) as string | null);
       }
@@ -253,13 +282,15 @@ export class IssuesService {
   /* ================= sub-tasks ================= */
   addSubtask(projectId: string, id: string, body: unknown, actor: Actor) {
     requireWrite(actor, projectId);
-    const v = parse(subtaskCreate, body);
+    const parsed = parse(subtaskCreate, body);
     return this.store.withLock(() => {
+      const who = this.people();
+      const v = { ...parsed, pic: parsed.pic ? who.resolve(parsed.pic) : null };
       const issue = this.requireIssue(projectId, id);
       const all = this.subtaskRows(projectId), mine = all.filter(s => s.issueId === id);
       const sid = nextNo('ST', all, 4);
       this.store.appendRows(SHEET.issueSubtasks, COLUMNS.issueSubtasks, [{ projectId, id: sid, issueId: id, title: v.title, pic: v.pic, dueDate: v.dueDate, done: v.done ? 'Yes' : 'No', position: mine.length + 1, lastRemindedOn: null, updatedAt: this.now() }]);
-      this.log(projectId, id, actor.name, 'Sub-task added', { note: `${sid}: ${v.title}${v.pic ? ` (${v.pic})` : ''}` });
+      this.log(projectId, id, actor.name, 'Sub-task added', { note: `${sid}: ${v.title}${v.pic ? ` (${who.name(v.pic)})` : ''}` });
       if (v.pic && v.pic !== (actor.email ?? '').toLowerCase()) this.mail([v.pic], `[Project Flow] Sub-task for ${id}: ${v.title}`, `${actor.name} gave you a sub-task on issue ${id} (${issue.title}).\n\n${v.title}\n${v.dueDate ? `Due: ${v.dueDate}\n` : ''}`);
       this.store.updateRow(SHEET.issues, COLUMNS.issues, 'id', id, { updatedAt: this.now() }, { projectId });
       return this.get(projectId, id);
@@ -268,8 +299,10 @@ export class IssuesService {
 
   updateSubtask(projectId: string, id: string, sid: string, body: unknown, actor: Actor) {
     requireWrite(actor, projectId);
-    const patch = parse(subtaskPatch, body);
+    const parsed = parse(subtaskPatch, body);
     return this.store.withLock(() => {
+      const who = this.people();
+      const patch = { ...parsed, ...(parsed.pic !== undefined ? { pic: parsed.pic ? who.resolve(parsed.pic) : null } : {}) };
       const issue = this.requireIssue(projectId, id);
       const cur = this.subtaskRows(projectId).find(s => s.id === sid && s.issueId === id);
       if (!cur) throw notFound('NOT_FOUND', `Sub-task "${sid}" was not found on ${id}.`);
@@ -278,7 +311,7 @@ export class IssuesService {
       if (patch.dueDate !== undefined && patch.dueDate !== (cur.dueDate ?? null)) { changes.dueDate = patch.dueDate; changes.lastRemindedOn = null; this.log(projectId, id, actor.name, 'Sub-task updated', { field: 'Due date', from: cur.dueDate, to: patch.dueDate, note: sid }); }
       if (patch.pic !== undefined && patch.pic !== (cur.pic ?? null)) {
         changes.pic = patch.pic;
-        this.log(projectId, id, actor.name, 'Sub-task updated', { field: 'PIC', from: cur.pic, to: patch.pic, note: sid });
+        this.log(projectId, id, actor.name, 'Sub-task updated', { field: 'PIC', from: cur.pic ? who.name(String(cur.pic)) : null, to: patch.pic ? who.name(patch.pic) : null, note: sid });
         if (patch.pic && patch.pic !== (actor.email ?? '').toLowerCase()) this.mail([patch.pic], `[Project Flow] Sub-task for ${id}: ${cur.title}`, `${actor.name} gave you a sub-task on issue ${id} (${issue.title}).\n\n${patch.title ?? cur.title}\n${(changes.dueDate ?? cur.dueDate) ? `Due: ${changes.dueDate ?? cur.dueDate}\n` : ''}`);
       }
       if (patch.done !== undefined && (patch.done ? 'Yes' : 'No') !== cur.done) { changes.done = patch.done ? 'Yes' : 'No'; this.log(projectId, id, actor.name, patch.done ? 'Sub-task done' : 'Sub-task reopened', { note: `${sid}: ${cur.title}` }); }
@@ -310,7 +343,7 @@ export class IssuesService {
       const issue = this.requireIssue(projectId, id);
       const subs = this.subtaskRows(projectId).filter(s => s.issueId === id && s.done !== 'Yes');
       const to = [...new Set([...picsOf(issue), ...subs.map(s => String(s.pic ?? '')).filter(Boolean)])];
-      if (!to.length) throw new HttpError(409, { code: 'NO_PIC', message: 'Nobody is assigned to this issue yet. Add a person in charge by email first.' });
+      if (!to.length) throw new HttpError(409, { code: 'NO_PIC', message: 'Nobody is assigned to this issue yet. Add a person in charge first.' });
       const due = issue.dueDate ? String(issue.dueDate) : null;
       this.mail(to, `[Project Flow] Reminder: ${id} ${issue.title}`, [
         `${actor.name} is reminding you about issue ${id}.`, '', String(issue.title), `Status: ${issue.status}`, due ? `Due: ${due}` : 'No due date set',

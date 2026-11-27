@@ -12,6 +12,7 @@ import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, ModalSkeleton, DateInput } from '../ui';
 import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, MultiFilter, People, StateSelect } from './governance';
 import { useDeepLink } from '../deepLink';
+import { useMembers } from './people';
 import { disciplineTitle } from '../disciplines';
 
 const PAGE_SIZE = 50;
@@ -215,6 +216,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
   const [error, setError] = useState('');
   const [removing, setRemoving] = useState(false);
   const opts = useQuery({ queryKey: ['risk-options', project.id], queryFn: () => request<RiskOptions>(`${base}/options`), staleTime: 60_000 });
+  const members = useMembers();
   const milestones = useQuery({ queryKey: ['milestone-options', project.id], queryFn: () => request<Page<Milestone>>(`/projects/${project.id}/milestones?pageSize=200`), staleTime: 60_000 });
   const m = opts.data?.matrix;
   const up = (k: string, val: Form[string]) => setV(s => ({ ...s, [k]: val }));
@@ -251,6 +253,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
       <Modal title={risk ? `${risk.id} · Risk` : 'New risk'} size="xl" onClose={onClose}
         actions={<>
           {risk && access.canManage && <Btn kind="text" onClick={() => setRemoving(true)}>Delete</Btn>}
+          {risk && access.canWrite && !access.canManage && <span className="tiny muted delete-hint">Only a Project Manager or Manager can delete risks.</span>}
           <Btn onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Btn>
           {!readOnly && <Btn kind="primary" disabled={save.isPending || !String(v.title).trim() || !v.rbs || !String(v.owner).trim()} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save'}</Btn>}
         </>}>
@@ -278,7 +281,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
                 {v.rbs && !opts.data?.breakdown.some(b => b.code === v.rbs) && <option value={String(v.rbs)}>{String(v.rbs)}</option>}
               </IconSelect>
               <label className="meta-item" title="Owner (several: separate with /)"><Icon name="people" /><input className="meta-input" placeholder="Owner" aria-label="Owner" value={String(v.owner)} maxLength={120} list="risk-owners" onChange={e => up('owner', e.target.value)} /></label>
-              <datalist id="risk-owners">{opts.data?.owners.map(o => <option key={o} value={o} />)}</datalist>
+              <datalist id="risk-owners">{[...new Set([...members.map(m => m.name), ...(opts.data?.owners ?? [])])].map(o => <option key={o} value={o}>{members.find(m => m.name === o)?.title ?? ''}</option>)}</datalist>
               <IconSelect icon="flag" label="Linked milestone" value={String(v.milestoneId ?? '')} onChange={x => up('milestoneId', x)}>
                 <option value="">No milestone</option>{milestones.data?.items.map(ms => <option key={ms.id} value={ms.id}>{ms.id} · {ms.description}</option>)}
               </IconSelect>
@@ -348,6 +351,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
 function RiskActions({ risk, base, canWrite, onChange }: { risk: Risk; base: string; canWrite: boolean; onChange: () => void }) {
   const toast = useToast();
   const [draft, setDraft] = useState({ action: '', owner: '', dueDate: '' });
+  const members = useMembers();
   const path = `${base}/${risk.id}/actions`;
   const run = useMutation({
     mutationFn: ({ method, url, body }: { method: string; url: string; body?: unknown }) => request<Risk>(url, { method, body: body ? JSON.stringify(body) : undefined }),
@@ -373,7 +377,8 @@ function RiskActions({ risk, base, canWrite, onChange }: { risk: Risk; base: str
       {canWrite && (
         <form className="subtask-add" onSubmit={e => { e.preventDefault(); run.mutate({ method: 'POST', url: path, body: { action: draft.action, owner: draft.owner || null, dueDate: draft.dueDate || null } }, { onSuccess: () => setDraft({ action: '', owner: '', dueDate: '' }) }); }}>
           <input placeholder="New action" aria-label="New action" value={draft.action} maxLength={1000} onChange={e => setDraft(d => ({ ...d, action: e.target.value }))} />
-          <input placeholder="Owner" aria-label="Action owner" value={draft.owner} maxLength={120} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))} style={{ maxWidth: 160 }} />
+          <input placeholder="Owner" aria-label="Action owner" list="risk-action-owners" autoComplete="off" value={draft.owner} maxLength={120} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))} className="subtask-owner" />
+          <datalist id="risk-action-owners">{members.map(m => <option key={m.userId} value={m.name}>{[m.title, m.role].filter(Boolean).join(' · ')}</option>)}</datalist>
           <DateInput aria-label="Action due date" value={draft.dueDate} onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value }))} style={{ maxWidth: 160 }} />
           <Btn kind="small" icon="plus" type="submit" disabled={!draft.action.trim() || run.isPending}>Add</Btn>
         </form>

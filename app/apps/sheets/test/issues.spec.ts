@@ -57,6 +57,21 @@ describe('issue management', () => {
     expect(ok(call('GET', `${I}?pic=bob@example.com`)).total).toBe(1);
   });
 
+  it('assigns people by account name or user id, shows their names and keeps their e-mail for reminders', () => {
+    const users = store.readRows(SHEET.users, COLUMNS.users).filter(u => u.email && u.status === 'Active');
+    const [a, b] = users;
+    const made = mk({ pics: [String(a.name).toUpperCase(), String(b.id)] });
+    expect(made.pics).toEqual([String(a.email).toLowerCase(), String(b.email).toLowerCase()]);
+    expect(made.people.map((p: any) => p.name)).toEqual([a.name, b.name]);
+    const detail = ok(call('GET', `${I}/${made.id}`));
+    expect(detail.log.filter((l: any) => l.action === 'PIC added').map((l: any) => l.toValue)).toEqual(expect.arrayContaining([a.name, b.name]));
+    const sub = ok(call('POST', `${I}/${made.id}/subtasks`, { title: 'Check the weld map', pic: String(b.name) }, MANAGER)).subtasks[0];
+    expect(sub).toMatchObject({ pic: String(b.email).toLowerCase(), picName: b.name });
+    expect(ok(call('GET', I)).facets.picPeople).toEqual(expect.arrayContaining([expect.objectContaining({ email: String(a.email).toLowerCase(), name: a.name })]));
+    const e = err(call('PATCH', `${I}/${made.id}`, { pics: ['Nobody Here'] }, MANAGER));
+    expect(e.error.code).toBe('PERSON_UNKNOWN');
+  });
+
   it('assigns several people by email, logs each change and tells the new people', () => {
     const made = mk({ pics: ['Ann@Example.com', 'bob@example.com', 'ann@example.com'] });
     expect(made.pics).toEqual(['ann@example.com', 'bob@example.com']);

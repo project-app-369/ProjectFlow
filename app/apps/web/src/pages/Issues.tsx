@@ -11,6 +11,7 @@ import { FilterChips, InsightsView, usePick } from '../Insights';
 import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { initialsOf } from './people';
 import { IssueDrawer, ISSUE_PRIORITIES, ISSUE_STATUSES } from './IssueDrawer';
 import { useDeepLink } from '../deepLink';
 import { MultiFilter } from './governance';
@@ -25,13 +26,12 @@ const WINDOWS: [string, string][] = [['overdue', 'Overdue'], ['30', 'Due within 
 
 const SORTS: [string, string][] = [['dueDate', 'Due date'], ['packageCode', 'Package'], ['subcontract', 'Subcontract'], ['startDate', 'Start date'], ['updatedAt', 'Last updated'], ['priorityRank', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['title', 'Title'], ['id', 'Issue no.']];
 
-interface IssuePage extends Page<Issue> { facets: Page<Issue>['facets'] & { priorities: string[]; pics: string[]; packages?: string[]; subcontracts?: string[] } }
+interface IssuePage extends Page<Issue> { facets: Page<Issue>['facets'] & { priorities: string[]; pics: string[]; picPeople?: { email: string; name: string }[]; packages?: string[]; subcontracts?: string[] } }
 
-const initials = (email: string) => email.split('@')[0].replace(/[^a-z0-9]/gi, ' ').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2) || '?';
 
 /** Governance → Management → Issues: monitor issues, their people in charge, sub-tasks and history, with due-date reminders. */
 export default function Issues() {
-  const { project, me } = useApp();
+  const { project } = useApp();
   const access = useAccess();
   const toast = useToast();
   const qc = useQueryClient();
@@ -50,7 +50,6 @@ export default function Issues() {
   const page = useQuery({ queryKey: ['issues', project.id, query], queryFn: () => request<IssuePage>(`${base}${query}`), placeholderData: keepPreviousData });
   usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['issues', project.id, q], q => request<IssuePage>(`${base}${q}`));
   const facets = page.data?.facets;
-  const suggestions = useMemo(() => [...new Set([...(facets?.pics ?? []), ...(me?.email ? [String(me.email).toLowerCase()] : [])])].sort(), [facets, me]);
   const setExtra = (k: 'priority' | 'pic' | 'within' | 'subcontract', v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
   /** A package in the summary opens the register for that package, like Risks & Concerns; anything else filters as usual. */
   const pick = (f: Record<string, string>) => {
@@ -84,7 +83,7 @@ export default function Issues() {
     {
       id: 'pic', header: 'PIC',
       cell: ({ row: { original: i } }) => (i.pics.length
-        ? <span className="avatars" title={i.pics.join('\n')}>{i.pics.slice(0, 3).map(e => <span key={e} className="avatar">{initials(e)}</span>)}{i.pics.length > 3 && <span className="avatar more">+{i.pics.length - 3}</span>}</span>
+        ? <span className="avatars" title={(i.people ?? []).map(p => p.name).join('\n') || i.pics.join('\n')}>{(i.people ?? i.pics.map(e => ({ email: e, name: e }))).slice(0, 3).map(p => <span key={p.email} className="avatar" title={p.name}>{initialsOf(p.name)}</span>)}{i.pics.length > 3 && <span className="avatar more">+{i.pics.length - 3}</span>}</span>
         : <span className="tiny warning" title="Nobody assigned"><Icon name="people" /></span>),
     },
     { id: 'due', header: 'DUE', meta: { sortKey: 'dueDate' }, cell: ({ row: { original: i } }) => <span className={i.overdue ? 'negative' : ''}>{i.dueDate ? fmtDate(i.dueDate) : '—'}{i.overdue ? ' · overdue' : ''}</span> },
@@ -120,7 +119,7 @@ export default function Issues() {
               {(facets?.subcontracts ?? []).map(c => <option key={c} value={c}>{c}{subLabel(c) && subLabel(c) !== c ? ` · ${subLabel(c)}` : ''}</option>)}
             </select>
             <MultiFilter icon="layers" label="Filter by team (tick one or more)" allLabel="All teams" options={facets?.disciplines ?? []} value={list.state.discipline} onChange={v => list.set({ discipline: v })} />
-            <select className="filter" aria-label="Filter by person in charge" value={filter.extra.pic} onChange={e => setExtra('pic', e.target.value)}><option value="">Everyone</option><option value="none">Nobody assigned</option>{(facets?.pics ?? []).map(p => <option key={p}>{p}</option>)}</select>
+            <select className="filter" aria-label="Filter by person in charge" value={filter.extra.pic} onChange={e => setExtra('pic', e.target.value)}><option value="">Everyone</option><option value="none">Nobody assigned</option>{(facets?.picPeople ?? (facets?.pics ?? []).map(e => ({ email: e, name: e }))).map(p => <option key={p.email} value={p.email}>{p.name}</option>)}</select>
             <select className="filter" aria-label="Filter by due date" value={filter.extra.within} onChange={e => setExtra('within', e.target.value)}><option value="">Any due date</option>{WINDOWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             <label className="check-inline tiny"><input type="checkbox" checked={openOnly && !list.state.status} disabled={!!list.state.status} onChange={e => { setOpenOnly(e.target.checked); list.set({}); }} />Open only</label>
             <SortBy options={SORTS} sort={list.state.sort} order={list.state.order} fallback="dueDate" onChange={list.setSort} />
@@ -135,7 +134,7 @@ export default function Issues() {
           </>
         )}
       </div>
-      {open && <IssueDrawer base={base} id={open === 'new' ? null : open} canWrite={access.canWrite} canManage={access.canManage} suggestions={suggestions} options={options.data} defaultPackage={pkg && pkg !== 'none' ? pkg : null} onClose={() => setOpen(null)} />}
+      {open && <IssueDrawer base={base} id={open === 'new' ? null : open} canWrite={access.canWrite} canManage={access.canManage} options={options.data} defaultPackage={pkg && pkg !== 'none' ? pkg : null} onClose={() => setOpen(null)} />}
     </>
   );
 }
