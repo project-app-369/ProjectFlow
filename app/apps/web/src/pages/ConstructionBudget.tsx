@@ -10,6 +10,8 @@ import { lazyPage } from '../lazyPage';
 
 const BudgetHistogramChart = lazyPage(() => import('../BudgetHistogramChart'));
 const hrs = (n: number) => `${n.toLocaleString('en-GB', { maximumFractionDigits: 1 })} h`;
+/** KPI cards: whole hours, millions shortened so the figure fits the card. */
+const kpiHrs = (n: number) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toLocaleString('en-GB', { maximumFractionDigits: 2 })}M h` : `${Math.round(n).toLocaleString('en-GB')} h`);
 
 /** Construction → Budget: manhour budget per WBS activity, and when those hours fall. */
 export default function ConstructionBudget() {
@@ -61,18 +63,18 @@ export default function ConstructionBudget() {
         actions={<>
           <Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}.csv`, 'construction-budget.csv').catch(e => toast(e.message))}>Export CSV</Btn>
           {access.canWrite && <Btn kind="small" onClick={() => setImporting(true)}>Import WBS</Btn>}
-          {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setEditing({ node: null })}>Add activity</Btn>}
+          {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setEditing({ node: null })}>New activity</Btn>}
         </>} />
       <div className="stats">
-        <Stat label="Budget" value={s ? hrs(s.totalHours) : '—'} foot={`${s?.activities ?? '—'} activities`} icon="layers" />
-        <Stat label="Scheduled" value={s ? hrs(s.scheduledHours) : '—'} foot="Activities with start and finish" icon="calendar" />
-        <Stat label="Not scheduled" value={s ? hrs(s.unscheduledHours) : '—'} foot={<span className={s?.unscheduledHours ? 'warning' : ''}>Add dates to see these in the histogram</span>} icon="clock" />
-        <Stat label="Peak" value={h?.peak ? hrs(h.peak.hours) : '—'} foot={h?.peak ? `${by === 'week' ? 'Week' : 'Month'} of ${fmtShort(h.peak.start)}` : 'No scheduled hours yet'} icon="chart" />
-        <Stat label="Spent" value={s?.actualHours != null ? hrs(s.actualHours) : '—'} foot={s?.progressPct != null ? `${s.progressPct}% of the budget earned` : 'No hours reported yet'} icon="clock" />
+        <Stat label="Budget" value={s ? kpiHrs(s.totalHours) : '—'} foot={`${s?.activities ?? '—'} activities`} icon="layers" />
+        <Stat label="Scheduled" value={s ? kpiHrs(s.scheduledHours) : '—'} foot="Activities with start and finish" icon="calendar" />
+        <Stat label="Not scheduled" value={s ? kpiHrs(s.unscheduledHours) : '—'} foot={<span className={s?.unscheduledHours ? 'warning' : ''}>Add dates to see these in the histogram</span>} icon="clock" />
+        <Stat label="Peak" value={h?.peak ? kpiHrs(h.peak.hours) : '—'} foot={h?.peak ? `${by === 'week' ? 'Week' : 'Month'} of ${fmtShort(h.peak.start)}` : 'No scheduled hours yet'} icon="chart" />
+        <Stat label="Spent" value={s?.actualHours != null ? kpiHrs(s.actualHours) : '—'} foot={s?.progressPct != null ? `${s.progressPct}% of the budget earned` : 'No hours reported yet'} icon="clock" />
         <Stat label="Cost performance" value={s?.cpi ?? '—'} foot={s?.cpi == null ? 'Needs spent hours' : <span className={s.cpi >= 1 ? 'positive' : s.cpi >= 0.95 ? 'warning' : 'negative'}>Earned ÷ spent · {s.cpi >= 1 ? 'on or under budget' : 'over budget'}</span>} icon="chart" />
       </div>
 
-      <div className="panel" style={{ marginBottom: 22 }}>
+      <div className="panel">
         <div className="panel-head">
           <div><h2>Manhour histogram</h2><p>Each activity's hours are spread evenly across its planned start to finish{h && h.from ? ` · ${fmtShort(h.from)} – ${fmtDate(h.to)}` : ''}</p></div>
           <div className="actions">
@@ -89,7 +91,7 @@ export default function ConstructionBudget() {
           <>
             <Suspense fallback={<Loading label="Loading chart…" />}><BudgetHistogramChart data={h} /></Suspense>
             {(h.truncated || h.outsideHours > 0 || h.unscheduledHours > 0) && (
-              <p className="tiny muted" style={{ padding: '0 22px 16px' }}>
+              <p className="tiny muted panel-body">
                 {h.unscheduledHours > 0 && `${hrs(h.unscheduledHours)} have no dates and are not shown. `}
                 {h.truncated && 'The range is too long to show every period. '}
               </p>
@@ -118,7 +120,7 @@ export default function ConstructionBudget() {
               <tbody>
                 {visible.map(n => (
                   <tr key={n.wbs} className={n.leaf ? '' : 'wbs-parent'}>
-                    <td className="mono"><span style={{ paddingLeft: filter ? 0 : (n.level - 1) * 18 }}>
+                    <td className="mono"><span style={{ paddingLeft: filter ? 0 : `calc(${n.level - 1} * var(--sp-4))` }}>
                       {!n.leaf && !filter ? <button type="button" className="tree-toggle" aria-label={`${collapsed.has(n.wbs) ? 'Expand' : 'Collapse'} ${n.wbs}`} aria-expanded={!collapsed.has(n.wbs)} onClick={() => toggle(n.wbs)}>{collapsed.has(n.wbs) ? '▸' : '▾'}</button> : <span className="tree-toggle" />}
                       {n.wbs}</span></td>
                     <td><strong style={{ fontWeight: n.leaf ? 500 : 700 }}>{n.name}</strong>{n.notes && <small className="muted" style={{ display: 'block', whiteSpace: 'normal' }}>{n.notes}</small>}</td>
@@ -181,7 +183,7 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
   });
 
   return (
-    <Modal title={node ? `${node.wbs} · Edit activity` : 'Add activity'} onClose={onClose}
+    <Modal title={node ? `${node.wbs} · Edit activity` : 'New activity'} onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || !v.name.trim() || (!node && !v.wbs.trim()) || bad} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save'}</Btn></>}>
       <div className="dialog-body">
         <div className="form-grid">
@@ -208,7 +210,7 @@ function ActivityForm({ node, parent, nodes, base, onClose, onSaved }: { node: W
           {bad && <p className="negative tiny" style={{ gridColumn: '1/-1' }}>Plan finish cannot be before plan start.</p>}
           <Field label="Notes" full><textarea value={v.notes} maxLength={500} onChange={e => up('notes', e.target.value)} /></Field>
         </div>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );
@@ -230,7 +232,7 @@ function ImportDialog({ base, canReplace, hasData, onClose, onDone }: { base: st
     <Modal popout={false} title="Import WBS" onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={!ready || send.isPending} onClick={() => { setError(''); send.mutate(); }}>{send.isPending ? 'Importing…' : mode === 'replace' ? 'Replace budget' : `Import ${parsed.rows.length || ''} rows`}</Btn></>}>
       <div className="dialog-body">
-        <p style={{ marginBottom: 12 }}>Paste rows copied from a spreadsheet (or CSV text). The first row is a header with these columns, in any order: <strong>WBS, Name</strong>, and optionally <strong>Parent, Discipline, Manhours, Start, Finish, Notes</strong>. Dates may be yyyy-mm-dd or dd/mm/yyyy. Nothing is imported unless every row is valid.</p>
+        <p className="mb-3">Paste rows copied from a spreadsheet (or CSV text). The first row is a header with these columns, in any order: <strong>WBS, Name</strong>, and optionally <strong>Parent, Discipline, Manhours, Start, Finish, Notes</strong>. Dates may be yyyy-mm-dd or dd/mm/yyyy. Nothing is imported unless every row is valid.</p>
         <div className="form-grid">
           <Field label="Pasted rows" full>
             <textarea value={text} rows={9} spellCheck={false} placeholder={'WBS\tName\tParent\tDiscipline\tManhours\tStart\tFinish\n1\tJacket\n1.1\tRoll up\t1\tStructural\t4200\t02/11/2026\t15/11/2026'} onChange={e => setText(e.target.value)} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13 }} />
@@ -245,13 +247,13 @@ function ImportDialog({ base, canReplace, hasData, onClose, onDone }: { base: st
           )}
         </div>
         {text.trim() && (
-          <p className={parsed.errors.length ? 'negative' : 'positive'} style={{ marginTop: 14 }}>
+          <p className={`${parsed.errors.length ? 'negative' : 'positive'} mt-3`}>
             {parsed.errors.length ? `${parsed.errors.length} problem${parsed.errors.length === 1 ? '' : 's'} found.` : `${parsed.rows.length} rows ready · ${hrs(parsed.rows.reduce((n, r) => n + (r.manhours ?? 0), 0))} typed in total.`}
           </p>
         )}
-        {parsed.errors.length > 0 && <ul className="tiny negative" style={{ margin: '6px 0 0', paddingLeft: 18 }}>{parsed.errors.slice(0, 8).map(e => <li key={e}>{e}</li>)}{parsed.errors.length > 8 && <li>…and {parsed.errors.length - 8} more</li>}</ul>}
-        {mode === 'replace' && ready && <p className="warning" style={{ marginTop: 12 }}>This deletes the current budget and cannot be undone.</p>}
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {parsed.errors.length > 0 && <ul className="tiny negative mt-2 list-indent">{parsed.errors.slice(0, 8).map(e => <li key={e}>{e}</li>)}{parsed.errors.length > 8 && <li>…and {parsed.errors.length - 8} more</li>}</ul>}
+        {mode === 'replace' && ready && <p className="warning mt-3">This deletes the current budget and cannot be undone.</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );

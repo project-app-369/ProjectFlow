@@ -306,7 +306,7 @@ export default function FacilityLayout() {
     <>
       <PageHead title="Facility layout" desc="The ST-CGF topside (by deck and by system, with its equipment), ST-CGF jacket, LQM#2 and link bridge in 3D. The topside is split by deck and the LQM#2 by floor into equipment, the other models by system; each one has its ROS and ETA, and picking it in the list or the model shows its dates."
         actions={<>
-          {decked && access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>Add equipment</Btn>}
+          {decked && access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setOpenTag('new')}>New equipment</Btn>}
           <Btn kind="small" icon="refresh" onClick={refresh}>Refresh</Btn>
         </>} />
       <div className="stats">
@@ -418,7 +418,7 @@ export default function FacilityLayout() {
           {!systemsTab && <div className="toolbar">
             <label className="search"><Icon name="search" /><input placeholder={decked ? 'Search tag, name, vendor or package…' : 'Search system, tag or package…'} value={filter} onChange={e => setFilter(e.target.value)} aria-label={decked ? 'Search equipment' : 'Search systems'} /></label>
           </div>}
-          {systemsTab ? <TopsideSystems disciplines={disciplines} levels={levels} equipment={modelledEquipment} disc={discHL} pick={entryHL} onDisc={setDiscHL} onPick={setEntryHL} /> : equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">{decked ? 'No equipment yet. Use Add equipment.' : 'No systems listed for this model yet.'}</div> : (
+          {systemsTab ? <TopsideSystems disciplines={disciplines} levels={levels} equipment={modelledEquipment} disc={discHL} pick={entryHL} onDisc={setDiscHL} onPick={setEntryHL} /> : equipment.error ? <ErrorBox error={equipment.error} /> : equipment.isPending ? <Loading /> : !deckNames.length ? <div className="empty">{decked ? 'No equipment yet. Use New equipment.' : 'No systems listed for this model yet.'}</div> : (
             <div className="fl-groups">
               {model === 'lqm' && (() => {
                 const all = LQM_SYSTEMS.map(sy => {
@@ -491,7 +491,7 @@ export default function FacilityLayout() {
               })}
             </div>
           )}
-          {model === 'jacket' && <p className="tiny muted" style={{ padding: '0 var(--card-px) var(--card-py)' }}>ETA = the last item of the expediting-report packages that feed the system (jacket steel, anodes, flooding, fenders, grating, cradle timber); piles, conductors, risers and J-tubes are in no package of the report. Every system but “Jacket structure” and “Anodes & supports” is a Selection Set saved in CGF-Jacket.nwd (the four rows, launch cradle, piles, conductors and their guides, caissons, risers, J-tubes, bridge landing, flooding, buoyancy tanks, fenders, gratings…). What no set holds is structure or anodes, told apart by fabrication phase.</p>}
+          {model === 'jacket' && <p className="tiny muted panel-body">ETA = the last item of the expediting-report packages that feed the system (jacket steel, anodes, flooding, fenders, grating, cradle timber); piles, conductors, risers and J-tubes are in no package of the report. Every system but “Jacket structure” and “Anodes & supports” is a Selection Set saved in CGF-Jacket.nwd (the four rows, launch cradle, piles, conductors and their guides, caissons, risers, J-tubes, bridge landing, flooding, buoyancy tanks, fenders, gratings…). What no set holds is structure or anodes, told apart by fabrication phase.</p>}
         </div>
       </div>
 

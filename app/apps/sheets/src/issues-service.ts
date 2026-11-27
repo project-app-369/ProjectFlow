@@ -27,6 +27,8 @@ const pics = z.array(email).max(MAX_PICS, `At most ${MAX_PICS} people can be res
 const issueFields = {
   title: z.string().trim().min(1).max(200), description: txt(2000), priority: z.enum(ISSUE_PRIORITIES), discipline: txt(60).transform(normaliseDiscipline), status: z.enum(ISSUE_STATUSES),
   startDate: isoOpt, dueDate: isoOpt, nextAction: txt(1500), remarks: txt(1500), pics,
+  /** A procurement or expediting package code, and the service subcontract (subcontractor or service package) concerned. */
+  packageCode: txt(60), subcontract: txt(80),
 };
 const issueCreate = z.object({ ...issueFields, priority: issueFields.priority.default('Medium'), status: issueFields.status.default('Not started'), pics: pics.default([]) });
 const issuePatch = z.object(issueFields).partial();
@@ -34,11 +36,11 @@ const subtaskFields = { title: z.string().trim().min(1).max(200), pic: email.nul
 const subtaskCreate = z.object({ ...subtaskFields, done: subtaskFields.done.default(false) });
 const subtaskPatch = z.object(subtaskFields).partial();
 const commentBody = z.object({ note: z.string().trim().min(1).max(1500) });
-const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate', 'startDate', 'updatedAt', 'discipline'] as const).extend({
-  priority: z.string().max(20).optional(), pic: z.string().max(120).optional(), within: z.string().max(10).optional(),
+const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate', 'startDate', 'updatedAt', 'discipline', 'packageCode', 'subcontract'] as const).extend({
+  priority: z.string().max(20).optional(), packageCode: z.string().max(60).optional(), subcontract: z.string().max(80).optional(), active: z.enum(['true', 'false']).optional(), pic: z.string().max(120).optional(), within: z.string().max(10).optional(),
 });
 
-const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks']];
+const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks'], ['packageCode', 'Package'], ['subcontract', 'Service subcontract']];
 
 /**
  * Cells are edited by hand in the spreadsheet, so what is read is tidied before it is used: a status or priority is matched by
@@ -118,12 +120,14 @@ export class IssuesService {
 
   /* ================= read ================= */
   private select(projectId: string, raw: unknown) {
-    const { priority, pic, within, ...f } = parse(issueQuery, raw ?? {});
+    const { priority, pic, within, packageCode, subcontract, active, ...f } = parse(issueQuery, raw ?? {});
     const cutoff = this.cutoff(projectId);
     const all = this.views(projectId);
     const inWindow = within ? withinPredicate(issueDue, issueIsOpen) : null;
-    const kept = all.filter(r => (!priority || r.priority === priority) && (!pic || (pic === 'none' ? r.pics.length === 0 : r.pics.includes(pic.toLowerCase()))) && (!inWindow || inWindow(r, within!, { cutoff })));
-    return { f, all, rows: filterAndSort(kept as unknown as Row[], f as ListParams, ['id', 'title', 'description', 'discipline', 'nextAction', 'remarks', 'pics'], 'dueDate') as unknown as Any[] };
+    const kept = all.filter(r => (!priority || r.priority === priority) && (!pic || (pic === 'none' ? r.pics.length === 0 : r.pics.includes(pic.toLowerCase()))) && (!inWindow || inWindow(r, within!, { cutoff }))
+      && (active !== 'true' || r.status !== 'Completed')
+      && (!packageCode || (packageCode === 'none' ? !r.packageCode : r.packageCode === packageCode)) && (!subcontract || (subcontract === 'none' ? !r.subcontract : r.subcontract === subcontract)));
+    return { f, all, rows: filterAndSort(kept as unknown as Row[], f as ListParams, ['id', 'title', 'description', 'discipline', 'nextAction', 'remarks', 'pics', 'packageCode', 'subcontract'], 'dueDate') as unknown as Any[] };
   }
 
   list(projectId: string, raw: unknown) {
@@ -133,6 +137,7 @@ export class IssuesService {
       facets: {
         disciplines: disciplineFacets(all), statuses: [...ISSUE_STATUSES], priorities: [...ISSUE_PRIORITIES],
         pics: unique(all.flatMap(r => r.pics as string[])),
+        packages: unique(all.map(r => r.packageCode as string).filter(Boolean)), subcontracts: unique(all.map(r => r.subcontract as string).filter(Boolean)),
       },
     };
   }
@@ -141,8 +146,8 @@ export class IssuesService {
     const { rows } = this.select(projectId, raw);
     return {
       filename: 'issues.csv',
-      csv: toCsv([['ID', 'Title', 'Priority', 'Team', 'Status', 'PIC', 'Start', 'Due', 'Overdue', 'Sub-tasks done', 'Sub-tasks', 'Next action', 'Remarks'],
-        ...rows.map(r => [r.id, r.title, r.priority, r.discipline, r.status, r.pics.join('; '), r.startDate, r.dueDate, r.overdue ? 'Yes' : 'No', r.subtasksDone, r.subtasksTotal, r.nextAction, r.remarks])]),
+      csv: toCsv([['ID', 'Title', 'Priority', 'Team', 'Package', 'Service subcontract', 'Status', 'PIC', 'Start', 'Due', 'Overdue', 'Sub-tasks done', 'Sub-tasks', 'Next action', 'Remarks'],
+        ...rows.map(r => [r.id, r.title, r.priority, r.discipline, r.packageCode, r.subcontract, r.status, r.pics.join('; '), r.startDate, r.dueDate, r.overdue ? 'Yes' : 'No', r.subtasksDone, r.subtasksTotal, r.nextAction, r.remarks])]),
     };
   }
 
@@ -154,6 +159,21 @@ export class IssuesService {
       subtasks: subs.filter(s => s.issueId === id).sort((a, b) => Number(a.position) - Number(b.position)).map(s => this.subtaskView(s)),
       log: this.logRows(projectId).filter(l => l.issueId === id).sort((a, b) => String(b.at).localeCompare(String(a.at)) || String(b.id).localeCompare(String(a.id))).map(({ projectId: _p, ...l }) => (/^Loaded from the .*workbook/i.test(String(l.note ?? '')) ? { ...l, note: null } : l)),
     };
+  }
+
+  /**
+   * What an issue can be linked to: procurement and expediting packages (code, what it is, vendor) and service subcontracts,
+   * named from the interface parties and the subcontract areas of the milestones, plus any value already used on an issue.
+   */
+  options(projectId: string) {
+    const packages = new Map<string, { code: string; label: string; vendor: string | null; source: string }>();
+    for (const r of this.svc.rows(SHEET.procurement, COLUMNS.procurement, projectId)) if (r.code) packages.set(String(r.code), { code: String(r.code), label: String(r.description ?? ''), vendor: (r.vendor as string | null) ?? null, source: 'Procurement' });
+    for (const r of this.svc.rows(SHEET.expediting, COLUMNS.expediting, projectId)) if (r.code && !packages.has(String(r.code))) packages.set(String(r.code), { code: String(r.code), label: String(r.name ?? ''), vendor: (r.vendor as string | null) ?? null, source: 'Expediting' });
+    const subs = new Map<string, { code: string; label: string }>();
+    for (const r of this.svc.rows(SHEET.interfaceParties, COLUMNS.interfaceParties, projectId)) if (r.code) subs.set(String(r.code), { code: String(r.code), label: String(r.name ?? r.code) });
+    for (const r of this.svc.rows(SHEET.milestones, COLUMNS.milestones, projectId)) if (r.subName && !subs.has(String(r.subName))) subs.set(String(r.subName), { code: String(r.subName), label: String(r.subName) });
+    for (const r of this.rows(projectId)) if (r.subcontract && !subs.has(String(r.subcontract))) subs.set(String(r.subcontract), { code: String(r.subcontract), label: String(r.subcontract) });
+    return { packages: [...packages.values()].sort((a, b) => a.code.localeCompare(b.code)), subcontracts: [...subs.values()].sort((a, b) => a.code.localeCompare(b.code)) };
   }
 
   insights(projectId: string) {

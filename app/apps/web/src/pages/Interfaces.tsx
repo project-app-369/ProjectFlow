@@ -207,8 +207,8 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
             </div>
           )}
           {point && access.canWrite && point.allowedNext.length > 0 && (
-            <div style={{ margin: '0 0 16px' }}>
-              <div className="tiny muted" style={{ marginBottom: 6 }}>{POINT_HELP[point.status]}. Move to</div>
+            <div className="mb-4">
+              <div className="tiny muted mb-2">{POINT_HELP[point.status]}. Move to</div>
               <div className="actions">
                 {point.status === 'Responded' && !revising && <Btn kind="small" icon="refresh" iconOnly={false} title="The response did not satisfy: issue the next revision of this request. The current one is kept as superseded." onClick={() => { setError(''); setRevising({ description: point.description, targetDate: '', reason: '' }); }}>Revise to Rev {point.rev + 1}</Btn>}
                 {point.allowedNext.map(n => (
@@ -225,7 +225,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
                 <Field label="Why the response was not accepted" full><textarea value={revising.reason} maxLength={1000} rows={2} onChange={e => setRevising(r => r && ({ ...r, reason: e.target.value }))} /></Field>
                 <Field label="New target date" hint="Optional"><DateInput value={revising.targetDate} onChange={e => setRevising(r => r && ({ ...r, targetDate: e.target.value }))} /></Field>
               </div>
-              <div className="actions" style={{ marginTop: 8 }}>
+              <div className="actions mt-2">
                 <Btn kind="primary small" icon="tick" iconOnly={false} disabled={revise.isPending || !revising.description.trim()} onClick={() => { setError(''); revise.mutate(); }}>{revise.isPending ? 'Saving…' : `Issue Rev ${point.rev + 1}`}</Btn>
                 <Btn kind="small" iconOnly={false} onClick={() => setRevising(null)}>Cancel</Btn>
               </div>
@@ -288,7 +288,7 @@ function PointForm({ point, interfaceId, onClose }: { point?: InterfacePoint; in
               </ol>
             </section>
           )}
-          {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+          {error && <p className="negative mt-3" role="alert">{error}</p>}
         </div>
       </Modal>
       {removing && point && (
@@ -354,7 +354,7 @@ function PartyMatrix() {
           ))}</tbody>
         </table>
       </div>
-      <div className="legend" style={{ padding: '0 22px 18px' }}>
+      <div className="legend panel-body">
         <span><span className="dot" style={{ background: 'var(--c-critical)' }} />Has overdue points</span>
         <span><span className="dot" style={{ background: 'var(--c-open)' }} />Open points</span>
         <span><span className="dot" style={{ background: 'var(--c-good)' }} />All settled</span>
@@ -398,7 +398,7 @@ function ResponsibilityView() {
               const head = r.section !== section ? (section = r.section, [<tr key={`s-${r.order}`} className="matrix-section"><th colSpan={d.facilities.length + 1}>{r.section}</th></tr>]) : [];
               return [...head, (
                 <tr key={r.order}>
-                  <th scope="row" style={{ paddingLeft: 12 + (r.level - 1) * 14 }} title={r.remark ?? undefined}>{r.ref && <span className="mono muted">{r.ref} </span>}{r.activity}</th>
+                  <th scope="row" style={{ paddingLeft: `calc(var(--card-px) + ${r.level - 1} * var(--sp-4))` }} title={r.remark ?? undefined}>{r.ref && <span className="mono muted">{r.ref} </span>}{r.activity}</th>
                   {d.facilities.map(f => {
                     const v = r.cells[f.facility];
                     return <td key={f.facility} className={v && party === v ? 'matrix-open' : v ? '' : 'matrix-empty'} title={v ? `${f.facility}: ${partyLabel(d.parties, v)}` : undefined}>{v ?? ''}</td>;
@@ -515,7 +515,7 @@ export function InterfaceRegister() {
       </div>
       <div className="panel">
         {filtered && (
-          <div className="banner" style={{ margin: '14px 22px' }}>
+          <div className="banner">
             Showing {originator || 'any party'} → {receiver || 'any party'}. <button className="btn text" onClick={() => setParams({})}>Clear</button>
           </div>
         )}
@@ -595,8 +595,8 @@ function InterfaceForm({ item, base, onClose, onSaved }: { item: InterfaceRecord
             </select>
           </Field>
         </div>
-        {item && <p className="tiny muted" style={{ marginTop: 14 }}>Status changes happen from the interface detail, not here.</p>}
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {item && <p className="tiny muted mt-3">Status changes happen from the interface detail, not here.</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );
@@ -639,8 +639,8 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
                 <Badge tone={STATUS_TONE[i.status]}>{i.status}</Badge> {i.overdue && <Badge tone="red">Overdue</Badge>} <span className="tiny muted">{i.originator} → {i.receiver}</span>
               </div>
               {access.canWrite && i.allowedNext.length > 0 && (
-                <div style={{ margin: '16px 0' }}>
-                  <div className="tiny muted" style={{ marginBottom: 6 }}>Move to</div>
+                <div className="my-4">
+                  <div className="tiny muted mb-2">Move to</div>
                   <div className="actions">{i.allowedNext.map(n => <Btn key={n} kind="small" disabled={move.isPending} onClick={() => { setError(''); move.mutate(n); }}>{n}</Btn>)}</div>
                 </div>
               )}
@@ -669,7 +669,7 @@ function InterfaceDetail({ id, onClose, onEdit }: { id: string; onClose: () => v
                 </ul>
               ) : <p className="tiny muted">No points yet. All points must be resolved or closed before the interface can close.</p>}
               {access.canWrite && i.status !== 'Closed' && <Btn kind="small" icon="plus" onClick={() => setPoint('new')}>Raise a point</Btn>}
-              {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+              {error && <p className="negative mt-3" role="alert">{error}</p>}
             </>
           )}
         </div>}

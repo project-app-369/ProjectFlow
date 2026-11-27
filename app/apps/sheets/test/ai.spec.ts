@@ -98,6 +98,49 @@ describe('AI helpers', () => {
     expect(JSON.stringify(e)).not.toContain('sk-test-key');
   });
 
+  it('digests minutes of meeting by party, keeping known codes only and proposing entries for registers the user may change', async () => {
+    const sent: { body?: any }[] = [];
+    const links = api.issues.options(P);
+    const pkg = links.packages[0].code, party = links.subcontracts[0].code;
+    const mom = `Weekly progress meeting 12 Nov. ${party}: fabrication 42% against 50% planned, steel late. Package ${pkg}: vendor drawings late.`.repeat(2);
+    const out = data(await handleAi(as('u-admin', { text: mom, filename: 'mom-12.txt' }, 'digest'), run, CFG, answering({
+      meeting: { title: 'Weekly progress', date: '2026-11-12', kind: 'Progress meeting', attendees: ['VSP', 'PMC'] },
+      summary: 'Fabrication is behind.',
+      parties: [
+        { name: 'VSP', code: party, role: 'subcontractor', status: 'delayed', progress: '42% vs 50%', planPct: 50, actualPct: 142, packages: [pkg, 'NOPE-1'], keyDates: [{ what: 'Load-out', date: '2026-12-20', kind: 'forecast' }, { what: 'bad', date: '20 Dec' }], concerns: ['Steel late'], risks: ['Load-out slips'] },
+        { name: 'Ghost Ltd', code: 'GHOST', role: 'wizard', status: 'fine' },
+      ],
+      decisions: ['Add a second shift'], actions: [{ action: 'Send recovery plan', owner: 'VSP', due: '2026-11-19' }, { owner: 'nobody' }],
+      items: [
+        { register: 'issues', title: 'Steel delivery late', priority: 'high', packageCode: pkg, subcontract: party, party: 'VSP', confidence: 0.8 },
+        { register: 'concerns', title: 'Vendor drawings late', type: 'concern', severity: 'high', packageCode: 'NOPE-1' },
+        { register: 'risks', description: 'no title, dropped' },
+        { register: 'tasks', title: 'not a register' },
+      ],
+    }, sent)));
+    expect(out.meeting).toMatchObject({ title: 'Weekly progress', date: '2026-11-12', attendees: ['VSP', 'PMC'] });
+    expect(out.parties[0]).toMatchObject({ code: party, role: 'Subcontractor', status: 'Delayed', planPct: 50, actualPct: 100, packages: [pkg] });
+    expect(out.parties[0].keyDates).toEqual([{ what: 'Load-out', date: '2026-12-20', kind: 'forecast' }]);
+    expect(out.parties[1]).toMatchObject({ code: null, role: 'Other', status: 'Unknown' });
+    expect(out.actions).toHaveLength(1);
+    expect(out.items.map((i: any) => i.register)).toEqual(['issues', 'concerns']);
+    expect(out.items[0]).toMatchObject({ priority: 'High', packageCode: pkg, subcontract: party, party: 'VSP', packageKnown: true });
+    expect(out.items[1]).toMatchObject({ packageKnown: false });
+    expect(out.writable).toEqual(['issues', 'risks', 'concerns']);
+    expect(sent[0].body.messages[1].content).toContain('mom-12.txt');
+    expect(sent[0].body.messages[1].content).toContain(pkg);
+  });
+
+  it('lets a read-only user digest minutes without proposing entries, and refuses short minutes before calling the model', async () => {
+    const sent: { body?: any }[] = [];
+    const model = answering({ summary: 'ok', parties: [], items: [{ register: 'issues', title: 'Should not be proposed' }] }, sent);
+    const out = data(await handleAi(as('u-client', { text: 'Minutes of meeting with the vendor about delivery dates.' }, 'digest'), run, CFG, model));
+    expect(out.writable).toEqual([]);
+    expect(out.items).toEqual([]);
+    expect((await handleAi(as('u-admin', { text: 'short' }, 'digest'), run, CFG, model) as any).status).toBe(400);
+    expect(sent).toHaveLength(1);
+  });
+
   it('builds prompts that name the allowed values and the document', () => {
     const ctx = aiContext(api, P, 'risks');
     expect(extractionPrompt(ctx, 'Some minutes of the meeting', 'mom.txt').user).toContain('mom.txt');

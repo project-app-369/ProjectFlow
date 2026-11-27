@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { errorText, request, type IssueDetail, type IssueLogEntry } from '../api';
+import { errorText, request, type IssueDetail, type IssueLogEntry, type IssueOptions } from '../api';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useToast } from '../state';
@@ -30,7 +30,7 @@ function PicEditor({ value, onChange, suggestions, disabled }: { value: string[]
   };
   return (
     <div>
-      <div className="chips" style={{ marginBottom: 8 }}>
+      <div className="chips mb-2">
         {value.map(e => (
           <span key={e} className="chip pic-chip">{e}{!disabled && <button type="button" aria-label={`Remove ${e}`} title="Remove" onClick={() => onChange(value.filter(x => x !== e))}>×</button>}</span>
         ))}
@@ -50,8 +50,9 @@ function PicEditor({ value, onChange, suggestions, disabled }: { value: string[]
 }
 
 /** One issue in a panel from the right: details, people in charge, sub-tasks, a note box and the history log. */
-export function IssueDrawer({ base, id, canWrite, canManage, suggestions, defaults, onClose }: {
-  base: string; id: string | null; canWrite: boolean; canManage: boolean; suggestions: string[]; defaults?: Partial<Record<string, string>>; onClose: () => void;
+export function IssueDrawer({ base, id, canWrite, canManage, suggestions, defaults, options, defaultPackage, onClose }: {
+  base: string; id: string | null; canWrite: boolean; canManage: boolean; suggestions: string[]; defaults?: Partial<Record<string, string>>;
+  /** Packages and service subcontracts the issue can be linked to. */ options?: IssueOptions; defaultPackage?: string | null; onClose: () => void;
 }) {
   const detail = useQuery({ queryKey: ['issue', base, id], enabled: !!id, queryFn: () => request<IssueDetail>(`${base}/${id}`) });
   const loaded = id ? detail.data : undefined;
@@ -59,11 +60,11 @@ export function IssueDrawer({ base, id, canWrite, canManage, suggestions, defaul
   if (id && !loaded) {
     return <Modal title={id} size="xl" onClose={onClose} actions={<Btn onClick={onClose}>Close</Btn>}>{detail.error ? <div className="dialog-body"><p className="negative">{errorText(detail.error)}</p></div> : <ModalSkeleton />}</Modal>;
   }
-  return <IssueForm key={loaded?.updatedAt ?? 'new'} issue={loaded} base={base} canWrite={canWrite} canManage={canManage} suggestions={suggestions} defaults={defaults} onClose={onClose} />;
+  return <IssueForm key={loaded?.updatedAt ?? 'new'} issue={loaded} base={base} canWrite={canWrite} canManage={canManage} suggestions={suggestions} defaults={{ ...defaults, ...(defaultPackage ? { packageCode: defaultPackage } : {}) }} options={options} onClose={onClose} />;
 }
 
-function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, onClose }: {
-  issue?: IssueDetail; base: string; canWrite: boolean; canManage: boolean; suggestions: string[]; defaults?: Partial<Record<string, string>>; onClose: () => void;
+function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, options, onClose }: {
+  issue?: IssueDetail; base: string; canWrite: boolean; canManage: boolean; suggestions: string[]; defaults?: Partial<Record<string, string>>; options?: IssueOptions; onClose: () => void;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -76,6 +77,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
     const [v, setV] = useState(() => ({
       title: issue?.title ?? '', description: issue?.description ?? '', priority: issue?.priority ?? defaults?.priority ?? 'Medium', discipline: issue?.discipline ?? defaults?.discipline ?? '',
       status: issue?.status ?? 'Not started', startDate: issue?.startDate ?? '', dueDate: issue?.dueDate ?? '', nextAction: issue?.nextAction ?? '', remarks: issue?.remarks ?? '',
+      packageCode: issue?.packageCode ?? defaults?.packageCode ?? '', subcontract: issue?.subcontract ?? defaults?.subcontract ?? '',
     }));
     const [pics, setPics] = useState<string[]>(issue?.pics ?? []);
     const set = (k: keyof typeof v, val: string) => setV(s => ({ ...s, [k]: val }));
@@ -97,7 +99,8 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
       onSuccess: () => { refresh(); toast('Issue deleted.'); onClose(); }, onError: (e: Error) => { setConfirming(false); fail(e); },
     });
     const off = !canWrite;
-    const dirty = !issue || JSON.stringify(body()) !== JSON.stringify({ ...Object.fromEntries(Object.entries({ title: issue.title, description: issue.description, priority: issue.priority, discipline: issue.discipline, status: issue.status, startDate: issue.startDate, dueDate: issue.dueDate, nextAction: issue.nextAction, remarks: issue.remarks }).map(([k, x]) => [k, x == null || x === '' ? null : x])), pics: issue.pics });
+    const pkgInfo = options?.packages.find(p => p.code === v.packageCode.trim());
+    const dirty = !issue || JSON.stringify(body()) !== JSON.stringify({ ...Object.fromEntries(Object.entries({ title: issue.title, description: issue.description, priority: issue.priority, discipline: issue.discipline, status: issue.status, startDate: issue.startDate, dueDate: issue.dueDate, nextAction: issue.nextAction, remarks: issue.remarks, packageCode: issue.packageCode ?? null, subcontract: issue.subcontract ?? null }).map(([k, x]) => [k, x == null || x === '' ? null : x])), pics: issue.pics });
 
     const addSub = () => {
       if (!sub.title.trim()) return;
@@ -132,11 +135,22 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
             )}
             <Field label="Title *" full><input value={v.title} maxLength={200} disabled={off} onChange={e => set('title', e.target.value)} /></Field>
             <div className="gov-meta">
-              <span className="meta-item" title="Priority"><StateSelect label="Priority" disabled={off} value={v.priority} options={ISSUE_PRIORITIES.map(p => ({ value: p, label: p, icon: PRIORITY_ICON[p], tone: ISSUE_PRIORITY_TONE[p] }))} onChange={x => set('priority', x ?? 'Medium')} /></span>
-              <span className="meta-item" title="Status"><StateSelect label="Status" disabled={off} value={v.status} options={ISSUE_STATUSES.map(p => ({ value: p, label: p, icon: STATUS_ICON[p], tone: ISSUE_STATUS_TONE[p] }))} onChange={x => set('status', x ?? 'Not started')} /></span>
-              <span className="meta-item" title="Disciplines (tick one or more)"><Icon name="layers" /><DisciplinePicker value={v.discipline} disabled={off} onChange={x => set('discipline', x)} /></span>
-              <label className="meta-item" title="Start date"><Icon name="flag" /><DateInput className="meta-input" aria-label="Start date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></label>
-              <label className="meta-item" title="Due date: the people in charge are emailed when it is within 3 days or passed"><Icon name="calendar" /><DateInput className="meta-input" aria-label="Due date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></label>
+              <div className="meta-group"><span className="meta-title">Classification</span><div className="meta-row">
+                <span className="meta-item" title="Priority"><StateSelect label="Priority" disabled={off} value={v.priority} options={ISSUE_PRIORITIES.map(p => ({ value: p, label: p, icon: PRIORITY_ICON[p], tone: ISSUE_PRIORITY_TONE[p] }))} onChange={x => set('priority', x ?? 'Medium')} /></span>
+                <span className="meta-item" title="Status"><StateSelect label="Status" disabled={off} value={v.status} options={ISSUE_STATUSES.map(p => ({ value: p, label: p, icon: STATUS_ICON[p], tone: ISSUE_STATUS_TONE[p] }))} onChange={x => set('status', x ?? 'Not started')} /></span>
+                <span className="meta-item" title="Disciplines (tick one or more)"><Icon name="layers" /><DisciplinePicker value={v.discipline} disabled={off} onChange={x => set('discipline', x)} /></span>
+              </div></div>
+              <div className="meta-group"><span className="meta-title">Schedule</span><div className="meta-row">
+                <label className="meta-item" title="Start date"><Icon name="flag" /><DateInput className="meta-input" aria-label="Start date" value={v.startDate} disabled={off} onChange={e => set('startDate', e.target.value)} /></label>
+                <label className="meta-item" title="Due date: the people in charge are emailed when it is within 3 days or passed"><Icon name="calendar" /><DateInput className="meta-input" aria-label="Due date" value={v.dueDate} disabled={off} onChange={e => set('dueDate', e.target.value)} /></label>
+              </div></div>
+              <div className="meta-group"><span className="meta-title">Linked to</span><div className="meta-row">
+                <label className="meta-item meta-wide" title="Procurement or expediting package"><Icon name="box" /><input className="meta-input" list="issue-packages" placeholder="Procurement package" aria-label="Procurement package" value={v.packageCode} maxLength={60} disabled={off} onChange={e => set('packageCode', e.target.value)} /></label>
+                <datalist id="issue-packages">{options?.packages.map(p => <option key={p.code} value={p.code}>{[p.label, p.vendor].filter(Boolean).join(' · ')}</option>)}</datalist>
+                <label className="meta-item meta-wide" title="Service subcontract: the subcontractor or service package"><Icon name="building" /><input className="meta-input" list="issue-subcontracts" placeholder="Service subcontract" aria-label="Service subcontract" value={v.subcontract} maxLength={80} disabled={off} onChange={e => set('subcontract', e.target.value)} /></label>
+                <datalist id="issue-subcontracts">{options?.subcontracts.map(p => <option key={p.code} value={p.code}>{p.label !== p.code ? p.label : ''}</option>)}</datalist>
+                {pkgInfo && <span className="tiny muted meta-note">{[pkgInfo.label, pkgInfo.vendor].filter(Boolean).join(' · ')}</span>}
+              </div></div>
             </div>
             <div className="gov-cols">
               <div>
@@ -146,13 +160,13 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
                 <textarea className="gov-text" rows={3} aria-label="Next action" value={v.nextAction} maxLength={1500} disabled={off} onChange={e => set('nextAction', e.target.value)} />
                 <h3><Icon name="edit" />Remarks</h3>
                 <textarea className="gov-text" rows={3} aria-label="Remarks" value={v.remarks} maxLength={1500} disabled={off} onChange={e => set('remarks', e.target.value)} />
-                <h3><Icon name="people" />Persons in charge <span className="tiny muted">up to 10, each new person is emailed on save</span></h3>
-                <PicEditor value={pics} onChange={setPics} suggestions={suggestions} disabled={off} />
               </div>
               <div>
+                <h3><Icon name="people" />Persons in charge <span className="tiny muted">up to 10, each new person is emailed on save</span></h3>
+                <PicEditor value={pics} onChange={setPics} suggestions={suggestions} disabled={off} />
             {issue && (
               <>
-                <h3 style={{ marginTop: 16 }}><Icon name="status-completed" /> Sub-tasks <span className="tiny muted">{issue.subtasksDone} of {issue.subtasksTotal} done</span></h3>
+                <h3 className="mt-4"><Icon name="status-completed" /> Sub-tasks <span className="tiny muted">{issue.subtasksDone} of {issue.subtasksTotal} done</span></h3>
                 <div className="subtask-list">
                   {issue.subtasks.map(s => editSub?.id === s.id ? (
                     <div key={s.id} className="subtask editing">
@@ -184,7 +198,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
                   </div>
                 )}
 
-                <h3 style={{ marginTop: 16 }}><Icon name="clock" /> History</h3>
+                <h3 className="mt-4"><Icon name="clock" /> History</h3>
                 {canWrite && (
                   <div className="note-add">
                     <input placeholder="Add a note to the history" value={note} maxLength={1500} aria-label="Note" onChange={e => setNote(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && note.trim()) { act.mutate({ path: '/comments', method: 'POST', body: { note: note.trim() }, msg: 'Note added.' }); setNote(''); } }} />
@@ -203,7 +217,7 @@ function IssueForm({ issue, base, canWrite, canManage, suggestions, defaults, on
             )}
               </div>
             </div>
-            {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+            {error && <p className="negative mt-3" role="alert">{error}</p>}
           </div>
         </Modal>
         {confirming && issue && (

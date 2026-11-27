@@ -104,7 +104,7 @@ export default function TaskCalendar() {
         )}
 
         {mode === 'day' && (
-          <div style={{ padding: '0 22px 22px' }}>
+          <div className="panel-body">
             {dayEntries.length ? (
               <div className="table-wrap"><table>
                 <thead><tr><th title="Task number"><Icon name="sheet" /><span className="sr-only">Task number</span></th><th title="Task"><Icon name="doc" /><span className="sr-only">Task</span></th><th title="On this day"><Icon name="calendar" /><span className="sr-only">On this day</span></th><th title="Urgency"><Icon name="flag" /><span className="sr-only">Urgency</span></th><th title="Status"><Icon name="check" /><span className="sr-only">Status</span></th><th title="Effort"><Icon name="chart" /><span className="sr-only">Effort</span></th></tr></thead>

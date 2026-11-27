@@ -23,7 +23,8 @@ export function usePrefetchNext(page: number, total: number | undefined, pageSiz
 export interface ListState { q: string; discipline: string; status: string; sort?: string; order: 'asc' | 'desc'; page: number }
 
 export function useListState(start: Partial<Pick<ListState, 'status' | 'discipline' | 'sort' | 'order'>> = {}) {
-  const [state, setState] = useState<ListState>({ q: '', discipline: start.discipline ?? '', status: start.status ?? '', sort: start.sort, order: start.order ?? 'asc', page: 1 });
+  // a link may open a register already searched for something (?q=…), for example a package code from a concern
+  const [state, setState] = useState<ListState>({ q: typeof location !== 'undefined' ? new URLSearchParams(location.search).get('q') ?? '' : '', discipline: start.discipline ?? '', status: start.status ?? '', sort: start.sort, order: start.order ?? 'asc', page: 1 });
   const debouncedQ = useDebounced(state.q);
   const set = (patch: Partial<ListState>) => setState(s => ({ ...s, ...patch, page: patch.page ?? 1 }));
   const toggleSort = (key: string) => setState(s => ({ ...s, sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc', page: 1 }));

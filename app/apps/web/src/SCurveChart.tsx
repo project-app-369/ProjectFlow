@@ -141,7 +141,7 @@ export default function SCurveChart({ points, milestones = [], cutoff, expanded 
     const milestoneSeries = {
       name: 'Major milestones', type: 'scatter' as const, z: 5, symbol: 'diamond', symbolSize: expanded ? 13 : 10, data: marks,
       label: expanded
-        ? { show: true, position: 'top' as const, fontSize: 11, color: ink, textBorderColor: theme.tooltip.backgroundColor, textBorderWidth: 3, formatter: (p: { data: { m: Milestone } }) => { const t = p.data.m.description.replace(/ \(.*$/, ''); return t.length > 36 ? `${t.slice(0, 35)}…` : t; } }
+        ? { show: true, position: 'top' as const, fontSize: 12, color: ink, textBorderColor: theme.tooltip.backgroundColor, textBorderWidth: 3, formatter: (p: { data: { m: Milestone } }) => { const t = p.data.m.description.replace(/ \(.*$/, ''); return t.length > 36 ? `${t.slice(0, 35)}…` : t; } }
         : { show: false },
       labelLayout: { hideOverlap: true },
       emphasis: { scale: 1.4, label: { show: true } },

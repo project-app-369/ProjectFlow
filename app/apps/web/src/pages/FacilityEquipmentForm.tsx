@@ -35,7 +35,7 @@ export function FacilityEquipmentForm({ item, model = 'topside', decks, base, on
   const ready = v.deck.trim() && (item || v.tag.trim());
 
   return (
-    <Modal title={item ? `${item.tag} · Edit equipment` : 'Add equipment'} onClose={onClose}
+    <Modal title={item ? `${item.tag} · Edit equipment` : 'New equipment'} onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || !ready} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save'}</Btn></>}>
       <div className="dialog-body">
         <div className="form-grid">
@@ -67,7 +67,7 @@ export function FacilityEquipmentForm({ item, model = 'topside', decks, base, on
           <Field label="Remarks" full><textarea value={v.remarks} maxLength={2000} onChange={e => up('remarks', e.target.value)} /></Field>
           <Field label="Comments" full><textarea value={v.comments} maxLength={2000} onChange={e => up('comments', e.target.value)} /></Field>
         </div>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );

@@ -30,7 +30,7 @@ export default function ProcurementSCurveChart({ curve }: { curve: ProcurementCu
     const series = (name: string, data: (number | null)[], color: string, dashed = false, width = 2, mark = false) => ({
       name, type: 'line' as const, showSymbol: false, smooth: false, connectNulls: false, data,
       lineStyle: { color, width, type: dashed ? ('dashed' as const) : ('solid' as const) }, itemStyle: { color },
-      ...(mark ? { markLine: { symbol: 'none', silent: true, label: { formatter: 'Cut-off', color: muted, fontSize: 11 }, lineStyle: { color: muted, type: 'dotted' as const }, data: [{ xAxis: cutIndex }] } } : {}),
+      ...(mark ? { markLine: { symbol: 'none', silent: true, label: { formatter: 'Cut-off', color: muted, fontSize: 12 }, lineStyle: { color: muted, type: 'dotted' as const }, data: [{ xAxis: cutIndex }] } } : {}),
     });
     chart.setOption({
       animation: false,

@@ -45,6 +45,8 @@ export const COLUMNS = {
   issues: [
     ...text('projectId', 'id', 'title', 'description', 'priority', 'discipline', 'status'), ...date('startDate', 'dueDate', 'completedDate'), ...text('nextAction', 'remarks', 'pics', 'source'),
     ...date('lastRemindedOn'), ...stamp('createdAt', 'updatedAt'), ...text('createdBy'),
+    // the procurement package and the service subcontract the issue belongs to (added later, after the existing columns)
+    ...text('packageCode', 'subcontract'),
   ],
   issueSubtasks: [...text('projectId', 'id', 'issueId', 'title', 'pic'), ...date('dueDate'), ...text('done'), ...num('position'), ...date('lastRemindedOn'), ...stamp('updatedAt')],
   issueLog: [...text('projectId', 'id', 'issueId'), ...stamp('at'), ...text('actor', 'action', 'field', 'fromValue', 'toValue', 'note')],

@@ -250,7 +250,7 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
 
           <section className="task-editor-section" aria-label="Remarks"><TaskField icon="edit" label="Remarks"><textarea rows={3} value={v.remarks} maxLength={2000} onChange={e => up('remarks', e.target.value)} /></TaskField></section>
           </div>
-          {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+          {error && <p className="negative mt-3" role="alert">{error}</p>}
         </div>
       </Modal>
       {confirming && task && (

@@ -170,7 +170,7 @@ export default function Milestones() {
           {card.location && row('Location', card.location)}
           {card.deck && row('Deck', card.deck)}
         </div>
-        {card.comment && <p className="tiny muted" style={{ whiteSpace: 'pre-line', margin: 'var(--sp-3) 0 0' }}>{card.comment}</p>}
+        {card.comment && <p className="tiny muted mt-3" style={{ whiteSpace: 'pre-line' }}>{card.comment}</p>}
       </div>
     );
   };
@@ -239,7 +239,7 @@ export default function Milestones() {
               {GROUPS.map(g => <button key={g.key} type="button" aria-pressed={group === g.key} onClick={() => setGroup(g.key)}>{g.label}</button>)}
             </div>
             <span className="tiny muted">{page.data?.total ?? '…'} milestones</span>
-            {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>Add milestone</Btn>}
+            {canEdit && <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New milestone</Btn>}
           </div>
         </div>
         <Toolbar list={list} facets={page.data?.facets} placeholder="Search id, key date, facility or comment…" label="Search milestones" disciplineLabel="subcontract areas" defaultSort="planSub" sorts={[['planSub', 'Working schedule'], ['id', 'ID'], ['planBaseline', 'Baseline date'], ['forecast', 'Forecast date'], ['actual', 'Actual date'], ['variance', 'Variance'], ['subName', 'Sub-contractor'], ['description', 'Key date']]} />

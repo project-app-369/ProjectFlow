@@ -38,17 +38,17 @@ export function ProgressOverall() {
       </div>
       <SCurvePanel points={data.scurveWeekly?.length ? data.scurveWeekly : data.scurve} monthly={data.scurve} defaultCut="monthly" sub="Cumulative weighted progress by weekly or monthly cut-off, with the major milestones" />
       {data.phases?.length ? (
-        <div className="panel" style={{ marginTop: 'var(--gap)' }}>
+        <div className="panel">
           <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick)</p></div></div>
           <div className="phase-row">
             {data.phases.map(p => <ActualPlanBar key={p.id} label={p.phase} actual={p.actual} plan={p.plan} />)}
           </div>
         </div>
       ) : null}
-      <div style={{ marginTop: 'var(--gap)' }}>
+      <div className="mt-4">
         <Deferred height="14rem"><WorkPackagesPanel /></Deferred>
       </div>
-      <div style={{ marginTop: 'var(--gap)' }}>
+      <div className="mt-4">
         <Deferred height="20rem"><SectionRisks section="planning" /></Deferred>
       </div>
     </>

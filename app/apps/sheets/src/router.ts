@@ -1,4 +1,4 @@
-import { aiContext } from './ai';
+import { aiContext, meetingContext, AI_KINDS } from './ai';
 import type { Api } from './api';
 import { readSession, requireConfigure, requireMember, requireWrite, resolveActor, type Actor } from './auth';
 import type { Resource } from './crud';
@@ -156,6 +156,21 @@ const ROUTES: Route[] = [
       route('POST', `${PID}/ai/context/${kind}`, c => { requireWrite(c.actor, c.p.pid); return aiContext(c.api, c.p.pid, kind); }, { module }),
     ];
   }),
+  // the meeting-minutes digest reads the registers the user may open; it may propose entries only for those the user may change
+  route('GET', `${PID}/ai/context/meeting`, c => {
+    const key = { issues: ISSUES, risks: RISKS, concerns: CONCERNS } as const;
+    const may = (kind: keyof typeof key, write: boolean) => {
+      try {
+        c.api.admin.assertParty(c.actor, key[kind]); c.api.svc.assertAccess(c.p.pid, key[kind], write); c.api.access.assert(c.actor, c.p.pid, key[kind], write);
+        if (write) requireWrite(c.actor, c.p.pid);
+        return true;
+      } catch { return false; }
+    };
+    const readable = AI_KINDS.filter(k => may(k, false));
+    if (!readable.length) throw new HttpError(403, { code: 'FORBIDDEN', message: 'Reading minutes needs access to Issues, Risks or Risks & Concerns.' });
+    return meetingContext(c.api, c.p.pid, readable, readable.filter(k => may(k, true)));
+  }),
+  route('GET', `${PID}/issues/options`, c => c.api.issues.options(c.p.pid), { module: ISSUES }),
   route('GET', `${PID}/issues/insights`, c => c.api.issues.insights(c.p.pid), { module: ISSUES }),
   route('GET', `${PID}/issues[.]csv`, c => c.api.issues.csv(c.p.pid, c.q), { module: ISSUES }),
   route('GET', `${PID}/issues`, c => c.api.issues.list(c.p.pid, c.q), { module: ISSUES }),

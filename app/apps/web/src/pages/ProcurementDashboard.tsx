@@ -74,14 +74,14 @@ export default function ProcurementDashboard() {
   });
   const overall = useQuery(curveQuery('OVERALL', 'OVR'));
   const curveQ = useQuery({ ...curveQuery(pick.facility, pick.scope), placeholderData: keepPreviousData });
+  const [cut, setCut] = useState<Cutoffs>('weekly');
+  const weeklyCurve = curveQ.data;
+  const curve = useMemo(() => (weeklyCurve && cut === 'monthly' ? monthlyCurve(weeklyCurve) : weeklyCurve), [weeklyCurve, cut]);
   if (q.isPending) return <PageSkeleton />;
   if (q.error) return <ErrorBox error={q.error} />;
   const d = q.data;
   const { pipeline: pl, expediting: ex, logistics: lg, materials: mt, concerns: cn, workPackages: wp } = d;
   const flags = ex ? ex.health.delay + ex.health.highRisk + ex.health.atRisk : null;
-  const [cut, setCut] = useState<Cutoffs>('weekly');
-  const weeklyCurve = curveQ.data;
-  const curve = useMemo(() => (weeklyCurve && cut === 'monthly' ? monthlyCurve(weeklyCurve) : weeklyCurve), [weeklyCurve, cut]);
   const ov = overall.data?.latest ?? null;
 
   return (
@@ -103,10 +103,10 @@ export default function ProcurementDashboard() {
           foot={mt ? <>PTSC MC · Client {mt.totals[1]?.arrivedPct != null ? `${mt.totals[1].arrivedPct}%` : '—'} · {mt.stockLines} lines</> : 'Materials is off'} />
       </div>
 
-      <div className="dash-grid" style={{ marginTop: 0, marginBottom: 'var(--sp-5)' }}>
+      <div className="dash-grid">
         <Panel title="Procurement S-curve" wide
           sub={curve?.latest ? <>Cumulative progress by {cut === 'monthly' ? 'month' : 'week'} · at {fmtDate(curve.latest.date)} actual {(curve.latest.actual ?? 0).toFixed(1)}% against {(curve.latest.plan ?? 0).toFixed(1)}% plan{curve.latest.forecast != null ? ` · forecast ${curve.latest.forecast.toFixed(1)}%` : ''}</> : 'Cumulative progress by week'}>
-          <div className="toolbar" style={{ paddingTop: 0 }}>
+          <div className="toolbar toolbar-follow">
             <div className="curve-controls">
               <select className="filter" aria-label="Facility" value={curve?.facility ?? pick.facility} onChange={e => setPick({ facility: e.target.value, scope: 'OVR' })}>
                 {(curve?.facilities ?? ['OVERALL']).map(f => <option key={f} value={f}>{FACILITY_LABEL(f)}</option>)}
@@ -165,7 +165,7 @@ export default function ProcurementDashboard() {
                   <Bar total={pl.byDiscipline.reduce((m, x) => Math.max(m, x.total), 1)} parts={Object.entries(STAGE_COLOR).map(([label, color]) => ({ label, color, value: Number(r[label] ?? 0) }))} />
                 </div>
               ))}
-              {pl.slowAwardCount > 0 && <p className="tiny warning" style={{ marginTop: 12 }}>{pl.slowAwardCount} package{pl.slowAwardCount === 1 ? '' : 's'} still without a PO more than 30 days after the LOA (oldest: {pl.slowAward[0].code}, {pl.slowAward[0].days} days).</p>}
+              {pl.slowAwardCount > 0 && <p className="tiny warning mt-3">{pl.slowAwardCount} package{pl.slowAwardCount === 1 ? '' : 's'} still without a PO more than 30 days after the LOA (oldest: {pl.slowAward[0].code}, {pl.slowAward[0].days} days).</p>}
             </div>
           </Panel>
         ) : <Off label="Procurement Plan" />}
@@ -189,11 +189,11 @@ export default function ProcurementDashboard() {
             <div className="panel-content">
               {(['Critical', 'High', 'Medium', 'Low'] as const).map(s => (
                 <div className="bar-row" key={s}>
-                  <div className="bar-row-label"><span><span className="dot" style={{ background: SEV_COLOR[s], marginRight: 6 }} />{s}</span><span className="muted">{cn.bySeverity[s]}</span></div>
+                  <div className="bar-row-label"><span><span className="dot" style={{ background: SEV_COLOR[s] }} />{s}</span><span className="muted">{cn.bySeverity[s]}</span></div>
                   <Bar total={Math.max(1, cn.open)} parts={[{ label: s, color: SEV_COLOR[s], value: cn.bySeverity[s] }]} />
                 </div>
               ))}
-              <p className="tiny muted" style={{ marginTop: 10 }}>{Object.entries(cn.byType).map(([k, n]) => `${n} ${k.toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ') || 'Nothing open'}</p>
+              <p className="tiny muted mt-2">{Object.entries(cn.byType).map(([k, n]) => `${n} ${k.toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ') || 'Nothing open'}</p>
             </div>
             {cn.top.slice(0, 5).map(c => (
               <div className="list-card" key={c.id}>
@@ -240,12 +240,12 @@ export default function ProcurementDashboard() {
                   <Bar height={12} total={Math.max(t.mtoKg, t.arrivedKg, 1)} parts={[{ label: 'Arrived', color: t.arrivedPct != null && t.arrivedPct >= 100 ? 'var(--c-good)' : 'var(--c-warn)', value: t.arrivedKg }]} />
                 </div>
               ))}
-              <div className="detail-grid" style={{ marginBottom: 0 }}>
+              <div className="detail-grid mb-0">
                 {mt.rows.filter(r => r.mtoKg).map(r => (
                   <div key={r.id}><small>{r.supply} · {r.facility}</small><strong className={r.arrivedPct != null && r.arrivedPct < 100 ? 'warning' : ''}>{r.arrivedPct != null ? `${r.arrivedPct}%` : '—'}</strong></div>
                 ))}
               </div>
-              <p className="tiny muted" style={{ marginTop: 12 }}>{mt.stockLines} stock lines on hand.</p>
+              <p className="tiny muted mt-3">{mt.stockLines} stock lines on hand.</p>
             </div>
           </Panel>
         ) : <Off label="Materials" />}

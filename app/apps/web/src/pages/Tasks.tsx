@@ -63,7 +63,7 @@ export default function Tasks() {
                     <span className="tiny muted">Due {fmtDate(t.due)}</span>
                     {col !== 'Done' && <Btn kind="small" onClick={() => patch.mutate({ id: t.id, status: col === 'To do' ? 'In progress' : 'Done' })}>{col === 'To do' ? 'Start' : 'Complete'}</Btn>}
                   </div>
-                  <div style={{ marginTop: 10 }}><Btn kind="text" icon="close" onClick={() => remove.mutate(t.id)}>Remove</Btn></div>
+                  <div className="mt-2"><Btn kind="text" icon="close" onClick={() => remove.mutate(t.id)}>Remove</Btn></div>
                 </article>
               ))}
               {!cards.length && <div className="tiny muted">No tasks in this column.</div>}
@@ -72,7 +72,7 @@ export default function Tasks() {
         })}
       </div>
       {creating && (
-        <Modal title="Create task" onClose={() => setCreating(false)}>
+        <Modal title="New task" onClose={() => setCreating(false)}>
           <form onSubmit={e => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -86,7 +86,7 @@ export default function Tasks() {
                 <label className="field full">Notes<textarea name="note" placeholder="Optional context" maxLength={500} /></label>
               </div>
             </div>
-            <div className="dialog-actions"><Btn onClick={() => setCreating(false)}>Cancel</Btn><button className="btn primary" type="submit" disabled={create.isPending}>Create task</button></div>
+            <div className="dialog-actions"><Btn onClick={() => setCreating(false)}>Cancel</Btn><Btn kind="primary" type="submit" disabled={create.isPending}>{create.isPending ? 'Saving…' : 'Save'}</Btn></div>
           </form>
         </Modal>
       )}

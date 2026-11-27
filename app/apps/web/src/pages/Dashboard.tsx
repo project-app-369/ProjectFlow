@@ -66,9 +66,9 @@ export default function Dashboard() {
         {wp ? (
           <div className="panel">
             <div className="panel-head"><div><h2>Work package progress</h2><p>This week · planned vs. actual</p></div></div>
-            <div style={{ padding: '5px 24px 22px' }}>
+            <div className="panel-body bar-stack">
               {wp.items.map(w => (
-                <div style={{ margin: '14px 0' }} key={w.code}>
+                <div key={w.code}>
                   <ActualPlanBar animate label={w.name} actual={w.thisWeekActual} plan={w.thisWeekPlan} />
                 </div>
               ))}
@@ -80,8 +80,8 @@ export default function Dashboard() {
         {op?.phases?.length ? (
           <div className="panel">
             <div className="panel-head"><div><h2>Progress by phase</h2><p>Actual (bar) against plan (tick){op.reportDate ? ` · ${fmtDate(op.reportDate)}` : ''}</p></div></div>
-            <div style={{ padding: '5px 24px 22px' }}>
-              {op.phases.map(p => <div style={{ margin: '14px 0' }} key={p.id}><ActualPlanBar animate label={p.phase} actual={p.actual} plan={p.plan} /></div>)}
+            <div className="panel-body bar-stack">
+              {op.phases.map(p => <div key={p.id}><ActualPlanBar animate label={p.phase} actual={p.actual} plan={p.plan} /></div>)}
             </div>
             <div className="panel-foot"><Link className="btn text" to="/m/planning.overall-progress">Open overall progress →</Link></div>
           </div>

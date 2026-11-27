@@ -69,11 +69,11 @@ function ModulesTab() {
 
   return (
     <>
-      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+      <p className="page-sub">
         Enable or disable each module and submodule. A disabled module hides its submodules and rejects data requests; later-phase modules can be switched on
         early and show a placeholder until they ship.{!access.canConfigure && ' Only an administrator or the Project Manager can change modules.'}
       </p>
-      <div className="actions" style={{ marginBottom: 18 }}>
+      <div className="actions mb-4">
         {modules.workspaces.map(w => (
           <Btn key={w.id} kind={w.id === ws ? 'primary' : ''} onClick={() => setWs(w.id)}>{w.label} <span className="tiny">{count(w.id)}</span></Btn>
         ))}
@@ -83,7 +83,7 @@ function ModulesTab() {
         {wsModules.map(m => {
           const parentOn = !m.parent || !!byKey.get(m.parent)?.effective;
           return (
-            <div key={m.key} className={`setting-row ${parentOn ? '' : 'is-off'}`} style={{ paddingLeft: 22 + m.depth * 28 }}>
+            <div key={m.key} className={`setting-row ${parentOn ? '' : 'is-off'}`} style={{ paddingLeft: `calc(var(--card-px) + ${m.depth} * var(--sp-6))` }}>
               <div>
                 <Breadcrumb parts={pathOf(modules, m.key)} />
                 <small>

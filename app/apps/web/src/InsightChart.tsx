@@ -31,12 +31,12 @@ export default function InsightChartView({ chart, onPick, compact }: { chart: In
     const stacked = !!chart.stacked;
     const series: echarts.EChartsCoreOption['series'] = chart.series.map(s => ({
       name: s.name, type: 'bar', stack: stacked ? 'total' : undefined, data: s.data, itemStyle: { color: theme.seriesColor(s.color) }, barMaxWidth: horizontal ? 18 : 38, emphasis: { focus: 'series' },
-      label: stacked ? { show: false } : { show: chart.categories.length <= 14, position: horizontal ? 'right' : 'top', color: muted, fontSize: 11, formatter: (p: { value: number }) => (p.value ? fmt(p.value) : '') },
+      label: stacked ? { show: false } : { show: chart.categories.length <= 14, position: horizontal ? 'right' : 'top', color: muted, fontSize: 12, formatter: (p: { value: number }) => (p.value ? fmt(p.value) : '') },
     }));
     if (stacked) {
       (series as unknown[]).push({
         name: 'Total', type: 'bar', stack: 'total', data: chart.categories.map(() => 0), silent: true, tooltip: { show: false },
-        label: { show: true, position: horizontal ? 'right' : 'top', color: muted, fontSize: 11, formatter: (p: { dataIndex: number }) => (totals[p.dataIndex] ? fmt(totals[p.dataIndex]) : '') },
+        label: { show: true, position: horizontal ? 'right' : 'top', color: muted, fontSize: 12, formatter: (p: { dataIndex: number }) => (totals[p.dataIndex] ? fmt(totals[p.dataIndex]) : '') },
       });
     }
     const cat = { type: 'category' as const, data: names, inverse: horizontal, axisLabel: { color: muted, fontSize: 12, hideOverlap: !horizontal, width: horizontal ? 150 : undefined, overflow: 'truncate' as const }, axisLine: { lineStyle: { color: line } }, axisTick: { show: false } };

@@ -92,8 +92,8 @@ function Sidebar({ current, open, close }: { current?: string; open: boolean; cl
         ))}
       </div>}
       <nav className="side-nav" aria-label={`${wsLabel} modules`}>
-        {noProject ? <div className="tiny muted" style={{ padding: 14 }}>No project selected. Choose or create one in Settings.</div> : items.length ? items : (
-          <div className="tiny muted" style={{ padding: 14 }}>
+        {noProject ? <div className="tiny muted side-empty">No project selected. Choose or create one in Settings.</div> : items.length ? items : (
+          <div className="tiny muted side-empty">
             No {wsLabel} modules enabled. <button className="btn text" onClick={() => { navigate('/settings/modules'); close(); }}>Open module settings</button>
           </div>
         )}
@@ -120,13 +120,13 @@ function Header({ toggleMenu, menuOpen }: { toggleMenu: () => void; menuOpen: bo
           aria-label={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} title={prefs.navCollapsed ? 'Expand the navigation bar' : 'Collapse the navigation bar'} onClick={toggleMenu}><Icon name="panel" /></button>
         <span className="mini-icon"><Icon name="brief" /></span>
         <div>
-          <div className="tiny muted" style={{ paddingLeft: 4 }}>PROJECT{project.lifecycle && project.lifecycle !== 'Active' ? ` · ${project.lifecycle.toUpperCase()}` : ''}</div>
+          <div className="tiny muted proj-label">PROJECT{project.lifecycle && project.lifecycle !== 'Active' ? ` · ${project.lifecycle.toUpperCase()}` : ''}</div>
           {projects.length > 1 || (projects.length === 1 && !project.id) ? (
             <select aria-label="Select project" value={project.id} onChange={e => selectProject(e.target.value)}>
               {!project.id && <option value="">Select a project…</option>}
               {projects.map(p => <option key={p.id} value={p.id} title={p.name}>{p.shortName || p.code}</option>)}
             </select>
-          ) : <strong style={{ paddingLeft: 4 }} title={project.name}>{project.shortName || project.code}</strong>}
+          ) : <strong className="proj-label" title={project.name}>{project.shortName || project.code}</strong>}
         </div>
       </div>
       <CutoffControl />

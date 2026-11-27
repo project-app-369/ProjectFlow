@@ -70,7 +70,7 @@ export default function Materials() {
         actions={<Btn kind="small" icon="down" onClick={() => downloadCsv(`${base}/balance.csv${list.query(filters)}`, 'material-balance.csv').catch(e => toast(e.message))}>Export CSV</Btn>} />
       <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
 
-      <div className="panel" style={{ marginBottom: 22 }}>
+      <div className="panel">
         <div className="panel-head">
           <div><h2>Weights by facility</h2><p>Needed for purchase, arrived and on the yards</p></div>
           {access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setWeight('new')}>Add line</Btn>}
@@ -99,7 +99,7 @@ export default function Materials() {
       <div className="panel">
         <div className="panel-head">
           <div><h2>Stock on hand</h2><p>Material still in the yards and warehouses</p></div>
-          <div className="actions"><span className="tiny muted">{page.data?.total ?? '…'} lines</span>{access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setStock('new')}>Add stock line</Btn>}</div>
+          <div className="actions"><span className="tiny muted">{page.data?.total ?? '…'} lines</span>{access.canWrite && <Btn kind="small primary" icon="plus" onClick={() => setStock('new')}>New stock line</Btn>}</div>
         </div>
         <div className="toolbar">
           <label className="search"><Icon name="search" /><input placeholder="Search code, description, PO, supplier, MRIR or heat no…" value={list.state.q} onChange={e => list.set({ q: e.target.value })} aria-label="Search stock" /></label>

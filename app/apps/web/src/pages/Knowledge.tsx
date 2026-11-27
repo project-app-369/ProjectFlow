@@ -50,8 +50,8 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
         desc={domain ? `What the project documents say about ${area?.label ?? 'this area'}, in short articles that point back to their source documents.` : 'What the project documents say, organized by discipline and topic. Search everything, or open an area.'}
         actions={access.canWrite ? <Btn kind="small primary" icon="plus" onClick={() => setEditing('new')}>New article</Btn> : undefined} />
 
-      <div className="panel" style={{ marginBottom: 22 }}>
-        <div className="toolbar" style={{ paddingTop: 'var(--sp-5)' }}>
+      <div className="panel">
+        <div className="toolbar">
           <label className="search" style={{ flex: '1 1 20rem' }}>
             <Icon name="search" />
             <input placeholder={domain ? `Search ${area?.label ?? 'this area'}…` : 'Search all articles, topics and tags…'} value={q} onChange={e => reset({ q: e.target.value })} aria-label="Search knowledge" />
@@ -92,10 +92,10 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
           ) : (
             <div className="panel empty">
               {searching ? 'No article matches. Change the search or filters.' : `No articles in ${area?.label ?? 'this area'} yet.`}
-              {!searching && access.canWrite && <div style={{ marginTop: 12 }}><Btn kind="small primary" onClick={() => setEditing('new')}>Write the first article</Btn></div>}
+              {!searching && access.canWrite && <div className="mt-3"><Btn kind="small primary" onClick={() => setEditing('new')}>Write the first article</Btn></div>}
             </div>
           )}
-          {list.data.total > PAGE_SIZE && <div className="panel" style={{ marginTop: 16 }}><Pager page={page} pageSize={PAGE_SIZE} total={list.data.total} onPage={setPage} /></div>}
+          {list.data.total > PAGE_SIZE && <div className="panel"><Pager page={page} pageSize={PAGE_SIZE} total={list.data.total} onPage={setPage} /></div>}
         </>
       )}
 
@@ -138,7 +138,7 @@ function Overview({ summary, canWrite, onOpen, onNew }: { summary?: KnowledgeSum
         })}
         {!enabled.length && <div className="panel empty">All knowledge areas are switched off. <Link className="btn small" to="/settings/modules">Open module settings</Link></div>}
       </div>
-      <div className="panel" style={{ marginTop: 22 }}>
+      <div className="panel">
         <div className="panel-head"><div><h2>Recently updated</h2><p>{summary.total} articles{summary.drafts ? ` · ${summary.drafts} draft${summary.drafts === 1 ? '' : 's'}` : ''}</p></div></div>
         {summary.recent.length ? summary.recent.map(a => (
           <div className="list-card" key={a.id}>
@@ -146,7 +146,7 @@ function Overview({ summary, canWrite, onOpen, onNew }: { summary?: KnowledgeSum
             <div className="grow"><p><button className="link-button" onClick={() => onOpen(a.id)}><strong>{a.title}</strong></button></p><small>{a.domainLabel} · {a.category} · {fmtDate(a.updatedAt.slice(0, 10))}</small></div>
             {a.status === 'Draft' && <Badge tone="amber">Draft</Badge>}
           </div>
-        )) : <div className="empty">No articles yet.{canWrite && <div style={{ marginTop: 12 }}><Btn kind="small primary" onClick={onNew}>Write the first article</Btn></div>}</div>}
+        )) : <div className="empty">No articles yet.{canWrite && <div className="mt-3"><Btn kind="small primary" onClick={onNew}>Write the first article</Btn></div>}</div>}
       </div>
     </>
   );
@@ -177,12 +177,12 @@ function Reader({ id, base, onClose, onEdit }: { id: string; base: string; onClo
             <>
               <div className="eyebrow">{a.domainLabel} · {a.category}</div>
               <p className="lead">{a.summary}</p>
-              <div className="tiny muted" style={{ margin: '4px 0 14px' }}>
+              <div className="tiny muted mt-1 mb-3">
                 {a.status === 'Draft' && <><Badge tone="amber">Draft</Badge> </>}Updated {fmtDate(a.updatedAt.slice(0, 10))} by {a.updatedBy}
               </div>
               <ArticleBody text={a.body ?? ''} />
-              {a.tags.length > 0 && <div className="chips" style={{ marginTop: 16 }}>{a.tags.map(t => <span key={t} className="chip">{t}</span>)}</div>}
-              <h3 style={{ marginTop: 22 }}>Source documents</h3>
+              {a.tags.length > 0 && <div className="chips mt-4">{a.tags.map(t => <span key={t} className="chip">{t}</span>)}</div>}
+              <h3 className="mt-5">Source documents</h3>
               {a.sources.length ? (
                 <ul className="source-list">
                   {a.sources.map((s, i) => (
@@ -269,7 +269,7 @@ function ArticleForm({ article, taxonomy, domain, base, onClose }: { article: Kn
             </div>
           </div>
         </div>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );

@@ -36,7 +36,7 @@ export default function ProjectsTab() {
 
   return (
     <>
-      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+      <p className="page-sub">
         Pick the project you are working in. Records, modules and dashboards always belong to one project. {isAdmin ? 'As an administrator you can also create and manage projects.' : 'Only an administrator can create projects.'}
       </p>
       <section className="panel">
@@ -84,7 +84,7 @@ export default function ProjectsTab() {
       {removing && (
         <Confirm title={`Delete ${removing.code}?`} busy={remove.isPending} onConfirm={() => remove.mutate(removing.id)} onClose={() => setRemoving(null)}>
           <p>Only an empty project that has never been activated can be deleted. Anything else must be archived instead. This cannot be undone.</p>
-          {removeError && <p className="negative" role="alert" style={{ marginTop: 12 }}>{removeError}</p>}
+          {removeError && <p className="negative mt-3" role="alert">{removeError}</p>}
         </Confirm>
       )}
     </>
@@ -121,8 +121,8 @@ function ProjectForm({ project, isAdmin, onClose, onSaved }: { project: Project 
           <Field label="Contract" full><input value={v.contract} maxLength={160} onChange={e => up('contract', e.target.value)} /></Field>
           <Field label="Reporting cut-off" hint="Treated as “today” for overdue and due-soon statuses"><DateInput value={v.cutoff} onChange={e => up('cutoff', e.target.value)} /></Field>
         </div>
-        {!project && <p className="tiny muted" style={{ marginTop: 14 }}>The new project starts in Setup with you as Project Manager and the default modules switched on.</p>}
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {!project && <p className="tiny muted mt-3">The new project starts in Setup with you as Project Manager and the default modules switched on.</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );
@@ -144,13 +144,13 @@ function LifecycleModal({ project, onClose, onDone }: { project: Project; onClos
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={go.isPending || (needsReason && !reason.trim())} onClick={() => { setError(''); go.mutate(); }}>{go.isPending ? 'Saving…' : 'Change status'}</Btn></>}>
       <div className="dialog-body">
         <p>Currently <Badge tone={LIFE_TONE[from]}>{from}</Badge> <span className="tiny muted">{LIFE_HELP[from]}</span></p>
-        <div className="form-grid" style={{ marginTop: 16 }}>
+        <div className="form-grid mt-4">
           <Field label="Move to" full>
             <select value={to} onChange={e => setTo(e.target.value as Lifecycle)}>{options.map(o => <option key={o} value={o}>{o} — {LIFE_HELP[o]}</option>)}</select>
           </Field>
           <Field label={needsReason ? 'Reason for restoring (required)' : 'Reason (optional)'} full><textarea value={reason} maxLength={300} onChange={e => setReason(e.target.value)} /></Field>
         </div>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );
@@ -195,7 +195,7 @@ function MembersModal({ project, canEdit, onClose }: { project: Project; canEdit
           </table></div>
         )}
         {canEdit && (
-          <form className="form-grid" style={{ marginTop: 18 }} onSubmit={e => { e.preventDefault(); setError(''); put.mutate({ userId: add.userId, role: add.role, title: add.title.trim() || null }); }}>
+          <form className="form-grid mt-4" onSubmit={e => { e.preventDefault(); setError(''); put.mutate({ userId: add.userId, role: add.role, title: add.title.trim() || null }); }}>
             <Field label="Add a person" full>
               <select value={add.userId} onChange={e => setAdd(a => ({ ...a, userId: e.target.value }))}>
                 <option value="">Choose…</option>
@@ -207,8 +207,8 @@ function MembersModal({ project, canEdit, onClose }: { project: Project; canEdit
             <div className="field full"><button className="btn small primary" type="submit" disabled={!add.userId || put.isPending}>Add member</button></div>
           </form>
         )}
-        {!canEdit && <p className="tiny muted" style={{ marginTop: 14 }}>Only an administrator or the project's Project Manager can change members.</p>}
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {!canEdit && <p className="tiny muted mt-3">Only an administrator or the project's Project Manager can change members.</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>}
     </Modal>
   );

@@ -62,7 +62,7 @@ export default function TaskWorkload() {
         </div>
         {noData ? <div className="empty">No dated tasks in this range.</div> : (
           <>
-            <div className="legend" style={{ padding: '0 22px 12px', flexWrap: 'wrap' }}>
+            <div className="legend panel-body">
               {w.projects.map(id => <span key={id}><span className="dot" style={{ background: colour(id) }} />{label(id)}</span>)}
             </div>
             <div className="table-wrap">
@@ -98,7 +98,7 @@ export default function TaskWorkload() {
                 </tbody>
               </table>
             </div>
-            <p className="tiny muted" style={{ padding: '12px 22px 18px' }}>
+            <p className="tiny muted panel-body">
               A task linked to several projects counts in each of them, so project columns can add up to more than the total, which counts each task once.
               {w.projects.includes(PERSONAL_KEY) && ' “No project” holds tasks that are not linked to any project.'}
             </p>

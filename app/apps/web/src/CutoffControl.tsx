@@ -64,7 +64,7 @@ function SnapshotDialog({ existing, onClose }: { existing: Snapshot[]; onClose: 
     <Modal popout={false} title="Save cut-off report" onClose={onClose}
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || !cutoff} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : exists ? 'Replace report' : 'Save report'}</Btn></>}>
       <div className="dialog-body">
-        <p style={{ marginBottom: 16 }}>Stores a copy of the project's current data (schedule, milestones, procurement, expediting, risks and interfaces) so it can be opened later from the cut-off dropdown. Saved reports are read-only.</p>
+        <p className="mb-4">Stores a copy of the project's current data (schedule, milestones, procurement, expediting, risks and interfaces) so it can be opened later from the cut-off dropdown. Saved reports are read-only.</p>
         <div className="form-grid">
           <Field label="Cut-off date" hint={cutoff && !isFriday(cutoff) ? 'Reports are usually dated the Friday the data was imported.' : undefined}>
             <DateInput value={cutoff} max={addDays(localToday(), 1)} onChange={e => setCutoff(e.target.value)} />
@@ -74,8 +74,8 @@ function SnapshotDialog({ existing, onClose }: { existing: Snapshot[]; onClose: 
           </div>
           <Field label="Note (optional)" full><input value={note} maxLength={200} placeholder="e.g. Weekly progress report, week 45" onChange={e => setNote(e.target.value)} /></Field>
         </div>
-        {exists && <p className="warning" style={{ marginTop: 14 }}>A report for {fmtDate(cutoff)} already exists. Saving replaces it with the current data.</p>}
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {exists && <p className="warning mt-3">A report for {fmtDate(cutoff)} already exists. Saving replaces it with the current data.</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );

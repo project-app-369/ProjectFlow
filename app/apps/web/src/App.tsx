@@ -125,9 +125,9 @@ function SignIn({ onSignIn }: { onSignIn: (id: string) => void }) {
   return (
     <div className="signin">
       <div className="panel signin-card">
-        <div className="brand" style={{ padding: '0 0 18px' }}><span className="brandmark" />Project Flow</div>
+        <div className="brand mb-4"><span className="brandmark" />Project Flow</div>
         <h1>Who are you?</h1>
-        <p className="page-sub" style={{ marginBottom: 18 }}>Pre-build demo: pick a person to act as. This is not authentication — roles are enforced, but anyone can choose any name.</p>
+        <p className="page-sub mb-4">Pre-build demo: pick a person to act as. This is not authentication — roles are enforced, but anyone can choose any name.</p>
         {dir.isPending ? <Loading /> : dir.error ? <ErrorBox error={dir.error} /> : (
           <div className="signin-list">
             {dir.data.map(u => (
@@ -160,15 +160,15 @@ function Login({ onSignIn, config }: { onSignIn: (id: string) => void; config?: 
   return (
     <div className="signin">
       <form className="panel signin-card" onSubmit={e => { e.preventDefault(); if (email && password && !busy) void submit(); }}>
-        <div className="brand" style={{ padding: '0 0 18px' }}><span className="brandmark" />Project Flow</div>
+        <div className="brand mb-4"><span className="brandmark" />Project Flow</div>
         <h1>Sign in</h1>
-        <p className="page-sub" style={{ marginBottom: 18 }}>Use your work e-mail and your password. Ask an administrator if you do not have one yet.</p>
+        <p className="page-sub mb-4">Use your work e-mail and your password. Ask an administrator if you do not have one yet.</p>
         <div className="form-grid">
           <Field label="E-mail" full><input type="email" value={email} autoComplete="username" autoFocus onChange={e => setEmail(e.target.value)} /></Field>
           <Field label="Password" full hint={config ? `${config.lockAfter} wrong attempts lock the account for ${config.lockMinutes} minutes.` : undefined}><input type="password" value={password} autoComplete="current-password" onChange={e => setPassword(e.target.value)} /></Field>
         </div>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
-        <div style={{ marginTop: 18 }}><Btn kind="primary" type="submit" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</Btn></div>
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
+        <div className="mt-4"><Btn kind="primary" type="submit" disabled={busy || !email || !password}>{busy ? 'Signing in…' : 'Sign in'}</Btn></div>
       </form>
     </div>
   );
@@ -224,10 +224,10 @@ function Session({ userId, signOut, switchUser }: { userId: string | null; signO
     me: meData, projects: list ?? [], selectProject, signOut, switchUser, asOf, setAsOf,
   }), [project, visibleModules, meData, list, selectProject, signOut, switchUser, asOf, setAsOf]);
 
-  if (bootstrap.error) return <div style={{ padding: 40 }}><ErrorBox error={bootstrap.error} />{apiMode === 'sheets' && <button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button>}</div>;
-  if (!list || (apiMode === 'sheets' && !meData)) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
-  if (project && modules.error) return <div style={{ padding: 40 }}><ErrorBox error={modules.error} /><button className="btn" style={{ margin: 16 }} onClick={signOut}>Choose another user</button></div>;
-  if (project && !modules.data) return <div style={{ padding: 40 }}><Loading label="Loading project…" /></div>;
+  if (bootstrap.error) return <div className="boot-state"><ErrorBox error={bootstrap.error} />{apiMode === 'sheets' && <button className="btn mt-4" onClick={signOut}>Choose another user</button>}</div>;
+  if (!list || (apiMode === 'sheets' && !meData)) return <div className="boot-state"><Loading label="Loading…" /></div>;
+  if (project && modules.error) return <div className="boot-state"><ErrorBox error={modules.error} /><button className="btn mt-4" onClick={signOut}>Choose another user</button></div>;
+  if (project && !modules.data) return <div className="boot-state"><Loading label="Loading project…" /></div>;
 
   const home = apiMode === 'sheets' ? 'projects' : 'modules';
   return (
@@ -264,7 +264,7 @@ export function App() {
     return () => window.removeEventListener('projectflow:signed-out', signOut);
   }, [signOut]);
 
-  if (apiMode === 'sheets' && auth.isPlaceholderData && auth.isFetching) return <div style={{ padding: 40 }}><Loading label="Loading…" /></div>;
+  if (apiMode === 'sheets' && auth.isPlaceholderData && auth.isFetching) return <div className="boot-state"><Loading label="Loading…" /></div>;
   if (apiMode === 'sheets' && mode === 'password' && (!userId || !getSession())) return <Login onSignIn={signIn} config={auth.data} />;
   if (apiMode === 'sheets' && !userId) return <SignIn onSignIn={signIn} />;
   return <Session key={userId ?? 'none'} userId={userId} signOut={signOut} switchUser={signIn} />;

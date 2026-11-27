@@ -62,7 +62,7 @@ export default function AccessTab() {
 
   return (
     <>
-      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+      <p className="page-sub">
         Tick the screens each party can see. Someone with no party set sees everything their project role allows; administrators always do.
       </p>
       <section className="panel access-panel">

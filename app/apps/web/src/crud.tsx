@@ -94,7 +94,7 @@ export function RecordDrawer({ title, fields, record, defaults, base, id, canDel
               </Field>
             ))}
           </div>
-          {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+          {error && <p className="negative mt-3" role="alert">{error}</p>}
         </div>
       </Modal>
       {confirming && (

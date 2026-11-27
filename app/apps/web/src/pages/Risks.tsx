@@ -179,7 +179,7 @@ function Heatmap({ data, basis, active, onPick }: { data: RiskHeatmap; basis: 'c
           {m.severityLabels.map((l, i) => <div key={l} className="heat-axis heat-col">{i + 1} · {l}</div>)}
         </div>
       </div>
-      <div className="legend" style={{ marginTop: 8 }}>
+      <div className="legend mt-2">
         {[...m.levels].reverse().map(l => <span key={l}><span className={`dot level-${l.toLowerCase()}`} />{l}</span>)}
         <span className="tiny muted">Probability ↑ · worst impact →{data.unrated ? ` · ${data.unrated} active not rated` : ''}</span>
       </div>
@@ -266,8 +266,12 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
           <fieldset disabled={readOnly} className="plain-fieldset gov">
             <Field label="Title" full><input value={String(v.title)} maxLength={200} onChange={e => up('title', e.target.value)} autoFocus={!risk} /></Field>
             <div className="gov-meta">
+              <div className="meta-group"><span className="meta-title">State</span><div className="meta-row">
               <span className="meta-item" title="Status"><StateSelect label="Status" value={String(v.status)} options={RISK_STATUSES.map(s => ({ value: s, label: s, icon: STATUS_ICON[s], tone: STATUS_TONE[s] ?? 'neutral' }))} onChange={x => up('status', x ?? 'New')} /></span>
               <span className="meta-item" title="Response strategy"><StateSelect label="Response strategy" clearable empty="No strategy" value={String(v.strategy ?? '') || null} options={(opts.data?.strategies ?? []).map(s => ({ value: s, label: s, icon: STRATEGY_ICON[s] ?? 'shield', tone: STRATEGY_TONE[s] ?? 'info' }))} onChange={x => up('strategy', x ?? '')} /></span>
+              <button type="button" className={`icon-toggle ${v.external ? 'on' : ''}`} aria-pressed={!!v.external} title="External risk (raised to the client)" aria-label="External risk" onClick={() => up('external', !v.external)}><Icon name="building" /></button>
+              </div></div>
+              <div className="meta-group"><span className="meta-title">Ownership</span><div className="meta-row">
               <IconSelect icon="layers" label="RBS discipline" value={String(v.rbs)} onChange={x => up('rbs', x)}>
                 <option value="">RBS discipline…</option>
                 {groups.map(([cat, items]) => <optgroup key={cat} label={cat}>{items.map(b => <option key={b.code} value={b.code}>{b.code} · {b.disciplineName}</option>)}</optgroup>)}
@@ -278,10 +282,12 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
               <IconSelect icon="flag" label="Linked milestone" value={String(v.milestoneId ?? '')} onChange={x => up('milestoneId', x)}>
                 <option value="">No milestone</option>{milestones.data?.items.map(ms => <option key={ms.id} value={ms.id}>{ms.id} · {ms.description}</option>)}
               </IconSelect>
-              <button type="button" className={`icon-toggle ${v.external ? 'on' : ''}`} aria-pressed={!!v.external} title="External risk (raised to the client)" aria-label="External risk" onClick={() => up('external', !v.external)}><Icon name="building" /></button>
+              </div></div>
+              <div className="meta-group"><span className="meta-title">Dates</span><div className="meta-row">
               {([['recordDate', 'Record date', 'doc'], ['planDate', 'Plan action date', 'flag'], ['actualDate', 'Actual action date', 'tick'], ['reviewDate', 'Next review', 'clock']] as const).map(([k, label, icon]) => (
                 <label key={k} className="meta-item" title={label}><Icon name={icon} /><DateInput className="meta-input" aria-label={label} value={String(v[k] ?? '')} onChange={e => up(k, e.target.value)} /></label>
               ))}
+              </div></div>
             </div>
 
             <div className="gov-cols">
@@ -324,7 +330,7 @@ function RiskForm({ risk, base, onClose }: { risk?: Risk; base: string; onClose:
             <h3><Icon name="status-completed" />Actual actions taken</h3>
             <textarea className="gov-text" rows={2} aria-label="Actual actions" value={String(v.actualActions)} maxLength={3000} onChange={e => up('actualActions', e.target.value)} />
           </fieldset>
-          {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+          {error && <p className="negative mt-3" role="alert">{error}</p>}
           {risk && <RiskActions risk={risk} base={base} canWrite={access.canWrite} onChange={refresh} />}
           {risk && readOnly && <div className="detail-grid"><Detail label="Created by">{risk.createdBy}</Detail><Detail label="Milestone">{risk.milestone}</Detail></div>}
         </div>
@@ -349,7 +355,7 @@ function RiskActions({ risk, base, canWrite, onChange }: { risk: Risk; base: str
   });
   const actions = risk.actions ?? [];
   return (
-    <section style={{ marginTop: 18 }}>
+    <section className="mt-4">
       <h3>Actions <span className="count">{risk.actionsDone}/{risk.actionsTotal} done</span></h3>
       {actions.length ? (
         <ul className="subtask-list">

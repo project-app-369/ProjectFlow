@@ -590,7 +590,11 @@ export interface Issue {
   id: string; title: string; description: string | null; priority: IssuePriority; discipline: string | null; status: IssueStatus;
   startDate: string | null; dueDate: string | null; completedDate: string | null; nextAction: string | null; remarks: string | null;
   pics: string[]; source: string | null; createdAt: string; updatedAt: string; overdue: boolean; daysToDue: number | null; subtasksTotal: number; subtasksDone: number;
+  /** The procurement or expediting package, and the service subcontract, the issue belongs to. */
+  packageCode?: string | null; subcontract?: string | null;
 }
+/** What an issue can be linked to (GET /issues/options). */
+export interface IssueOptions { packages: { code: string; label: string; vendor: string | null; source: string }[]; subcontracts: { code: string; label: string }[] }
 export interface IssueSubtask { id: string; issueId: string; title: string; pic: string | null; dueDate: string | null; done: boolean; position: number }
 export interface IssueLogEntry { id: string; issueId: string; at: string; actor: string; action: string; field: string | null; fromValue: string | null; toValue: string | null; note: string | null }
 export interface IssueDetail extends Issue { subtasks: IssueSubtask[]; log: IssueLogEntry[] }

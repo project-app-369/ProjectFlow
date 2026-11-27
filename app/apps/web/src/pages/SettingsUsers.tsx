@@ -33,7 +33,7 @@ export default function UsersTab() {
 
   return (
     <>
-      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+      <p className="page-sub">
         Accounts for everyone who can sign in. An administrator manages users and projects but sees a project's business data only after being added to it as a member.
         Each person belongs to a party (Contractor, Client or Subcontractor); what each party sees is set under Party access, and what each person may do in a project under Project access.
         Where the deployment requires passwords, set or reset a person's password here; where it does not, sign-in is still choosing a name.
@@ -77,7 +77,7 @@ export default function UsersTab() {
                         <button type="button" className="link-button" onClick={() => setReset(u)}>{u.hasPassword ? 'Reset password' : 'Set password'}</button>
                       </span>
                     </td>
-                    <td style={{ whiteSpace: 'normal' }}>{u.memberships.length ? u.memberships.map(m => <span key={m.projectId} style={{ marginRight: 6 }}><Badge tone="indigo">{m.projectCode} · {m.role}</Badge></span>) : <span className="tiny muted">None</span>}</td>
+                    <td style={{ whiteSpace: 'normal' }}>{u.memberships.length ? u.memberships.map(m => <span key={m.projectId} className="badge-gap"><Badge tone="indigo">{m.projectCode} · {m.role}</Badge></span>) : <span className="tiny muted">None</span>}</td>
                     <td><div className="actions">{u.party && <Badge tone={PARTY_TONE[u.party]}>{u.party}</Badge>}<Badge tone={STATE_TONE[u.status]}>{u.status}</Badge><Btn kind="small" onClick={() => setForm(u)}>Edit</Btn></div></td>
                   </tr>
                 ))}
@@ -104,7 +104,7 @@ function PasswordForm({ user, onClose, onSaved }: { user: UserRow; onClose: () =
       actions={<><Btn onClick={onClose}>Cancel</Btn><Btn kind="primary" disabled={save.isPending || password.length < 8} onClick={() => { setError(''); save.mutate(); }}>{save.isPending ? 'Saving…' : 'Save password'}</Btn></>}>
       <div className="dialog-body">
         <Field label="New password" hint="At least 8 characters. Tell the person in person or by phone, not in a shared channel; they can change it in their profile."><input type="password" value={password} autoComplete="new-password" autoFocus onChange={e => setPassword(e.target.value)} /></Field>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );
@@ -139,8 +139,8 @@ function UserForm({ user, onClose, onSaved }: { user: UserRow | null; onClose: (
             <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input className="switch" type="checkbox" checked={v.isAdmin} onChange={e => setV(s => ({ ...s, isAdmin: e.target.checked }))} />Organization administrator</span>
           </label>
         </div>
-        <p className="tiny muted" style={{ marginTop: 14 }}>Only Active accounts can be chosen at sign-in. Assign project roles under Projects → Members.</p>
-        {error && <p className="negative" role="alert" style={{ marginTop: 14 }}>{error}</p>}
+        <p className="tiny muted mt-3">Only Active accounts can be chosen at sign-in. Assign project roles under Projects → Members.</p>
+        {error && <p className="negative mt-3" role="alert">{error}</p>}
       </div>
     </Modal>
   );

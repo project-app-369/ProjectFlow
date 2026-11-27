@@ -10,6 +10,7 @@
  * The hosts that can make an outgoing call (the local simulator and the Supabase function) mount `handleAi`; Apps Script does not.
  */
 import type { Api } from './api';
+import { COLUMNS, SHEET } from './datasets';
 import { ISSUE_PRIORITIES, ISSUE_STATUSES, normPriority, normStatus } from './issues-service';
 import { CONCERN_AREAS, CONCERN_STATUSES, CONCERN_TYPES, SEVERITIES } from './procurement-ops';
 import { RISK_STATUSES, RISK_STRATEGIES, normRiskStatus, normStrategy } from './risk-matrix';
@@ -76,7 +77,8 @@ export function analysisPrompt(ctx: Any): { system: string; user: string } {
 const FIELDS: Record<AiKind, string> = {
   issues: [
     '"title" (short, at most 120 characters), "description", "priority" (one of Critical, High, Medium, Low), "discipline" (the team named, if any),',
-    '"status" (one of Not started, In progress, Pending, Completed), "startDate" and "dueDate" (YYYY-MM-DD), "nextAction", "remarks", "pics" (e-mail addresses, only if they are written in the text)',
+    '"status" (one of Not started, In progress, Pending, Completed), "startDate" and "dueDate" (YYYY-MM-DD), "nextAction", "remarks", "pics" (e-mail addresses, only if they are written in the text),',
+    '"packageCode" (the procurement package code if one is named), "subcontract" (the subcontractor or service subcontract concerned, as a code from the list of parties when it fits)',
   ].join(' '),
   risks: [
     '"title" (short), "description", "cause", "effect", "owner" (the person or team named, as written), "status" (one of New, Firmed, Under assessment, Under resolving, Monitor, Closed),',
@@ -127,7 +129,8 @@ export function cleanCandidates(kind: AiKind, raw: unknown, ctx: Any): Any[] {
       out.push({
         title, description: text(e.description, 2000), priority: normPriority(e.priority), discipline: text(e.discipline, 60), status: normStatus(e.status),
         startDate: date(e.startDate), dueDate: date(e.dueDate), nextAction: text(e.nextAction, 1500), remarks: text(e.remarks, 1500),
-        pics: [...new Set((Array.isArray(e.pics) ? e.pics : []).map((p: unknown) => String(p).trim().toLowerCase()).filter((p: string) => EMAIL.test(p)))].slice(0, 10), ...extra,
+        pics: [...new Set((Array.isArray(e.pics) ? e.pics : []).map((p: unknown) => String(p).trim().toLowerCase()).filter((p: string) => EMAIL.test(p)))].slice(0, 10),
+        packageCode: text(e.packageCode, 60), subcontract: text(e.subcontract, 80), ...extra,
       });
     } else if (kind === 'risks') {
       const code = typeof e.rbs === 'string' && rbs.has(e.rbs.trim()) ? e.rbs.trim() : null;
@@ -160,6 +163,117 @@ export function cleanAnalysis(raw: unknown, ctx: Any): Any {
   };
 }
 
+/* ============================== meeting minutes digest ============================== */
+
+export const PARTY_ROLES = ['Subcontractor', 'Vendor', 'Client', 'EPCIC contractor', 'Other'] as const;
+export const PARTY_STATUSES = ['On track', 'Minor delay', 'Delayed', 'Critical', 'Unknown'] as const;
+
+/**
+ * What the model is shown to digest minutes of meeting: the project's parties (interface parties and subcontract areas),
+ * its packages (code, scope, vendor, status), the key dates around the cut-off, and the items already in the registers
+ * the user may read (to spot duplicates), with the values a new item may take.
+ */
+export function meetingContext(api: Api, projectId: string, readable: AiKind[], writable: AiKind[]): Any {
+  const project = api.svc.project(projectId);
+  const today = api.svc.clock().toISOString().slice(0, 10);
+  const cutoff = String(project.cutoff ?? today).slice(0, 10);
+  const links = api.issues.options(projectId);
+  const parties = links.subcontracts.map(p => ({ code: p.code, name: clip(p.label, 80) }));
+  const packages = links.packages.map(p => ({ code: p.code, scope: clip(p.label, 70), vendor: clip(p.vendor, 50) }));
+  const day = (d: string, n: number) => new Date(new Date(`${d}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  const from = day(cutoff, -45), to = day(cutoff, 90);
+  const keyDates = api.svc.rows(SHEET.milestones, COLUMNS.milestones, projectId)
+    .filter(r => { const d = String(r.forecast ?? r.planSub ?? r.planBaseline ?? '').slice(0, 10); return d >= from && d <= to; })
+    .slice(0, 60).map(r => ({ id: r.id, what: clip(r.description, 90), sub: r.subName ?? null, plan: r.planSub ?? r.planBaseline ?? null, forecast: r.forecast ?? null, actual: r.actual ?? null }));
+  const registers: Any = {};
+  const options: Any = {};
+  for (const kind of readable) {
+    const c = aiContext(api, projectId, kind);
+    registers[kind] = (c.items as Any[]).map(i => ({ id: i.id, title: i.title, ...(i.packageCode ? { packageCode: i.packageCode } : {}) }));
+    options[kind] = c.options;
+  }
+  return {
+    project: { id: project.id, name: project.name, cutoff }, today,
+    parties, packages: packages.slice(0, 400), keyDates, registers, options, readable, writable,
+  };
+}
+
+export function digestPrompt(ctx: Any, text: string, filename?: string): { system: string; user: string } {
+  const wanted = (ctx.writable as AiKind[]).length ? (ctx.writable as AiKind[]).join(', ') : 'none';
+  const system = [
+    'You read minutes of meeting (MOM) of an EPCIC offshore oil-and-gas project: progress meetings with subcontractors, vendor meetings, client meetings and internal EPCIC meetings.',
+    'You summarise, for the project manager, the progress, concerns and risks of every party that the minutes talk about, and you pick out the items that belong in the project registers.',
+    'Rules: use only what the minutes say, never invent numbers, dates or names; keep the minutes\' wording, shortened; dates as YYYY-MM-DD (a date without a year is the nearest to today); match a party to a code from the list of parties and a package to a code from the list of packages when the minutes clearly mean it, else leave the code null; one entry per distinct item.',
+    'Reply with one JSON object and nothing else, in this shape:',
+    '{"meeting": {"title": string, "date": "YYYY-MM-DD" or null, "kind": string (for example "Weekly progress meeting with VSP"), "attendees": [string] (companies or people present)},',
+    ' "summary": string (at most 150 words: overall progress, the main concerns and what was decided),',
+    ' "parties": [{"name": string (as written), "code": string or null, "role": one of Subcontractor, Vendor, Client, EPCIC contractor, Other, "packages": [package code],',
+    '   "status": one of On track, Minor delay, Delayed, Critical, Unknown, "progress": string (at most 60 words: planned against actual, what was done, what is next),',
+    '   "planPct": number or null, "actualPct": number or null (percent complete when the minutes give it),',
+    '   "keyDates": [{"what": string, "date": "YYYY-MM-DD", "kind": one of planned, forecast, actual, required}],',
+    '   "concerns": [string] (problems already affecting the work), "risks": [string] (what may go wrong)}],',
+    ' "decisions": [string],',
+    ' "actions": [{"action": string, "owner": string or null, "party": string or null, "due": "YYYY-MM-DD" or null}],',
+    ` "items": [entry] (only for these registers: ${wanted}; leave empty for the others),`,
+    ' "notes": string (anything the reviewer should know, such as unreadable parts; at most 80 words)}',
+    'Each entry of "items" has "register" (issues, risks or concerns) and the fields of that register:',
+    `  issues: ${FIELDS.issues}`,
+    `  risks: ${FIELDS.risks}`,
+    `  concerns: ${FIELDS.concerns}`,
+    '  plus "party" (the party name), "source" (the line of the minutes it came from, at most 200 characters), "confidence" (0 to 1) and "duplicateOf" (the id of an item already in that register that says the same thing, else null).',
+    'An issue is a problem already happening that needs follow-up; a risk is something that may happen and needs a response; a concern belongs to a procurement package (late vendor documents, delivery, quality of supply).',
+  ].join('\n')
+  const user = [
+    `Project: ${ctx.project?.name}. Reporting cut-off: ${ctx.project?.cutoff}. Today: ${ctx.today}.`,
+    `Parties: ${JSON.stringify(ctx.parties)}`,
+    `Packages: ${JSON.stringify(ctx.packages)}`,
+    `Key dates around the cut-off: ${JSON.stringify(ctx.keyDates)}`,
+    ...(ctx.options?.risks ? [`Risk breakdown codes: ${JSON.stringify(ctx.options.risks.rbs)}`] : []),
+    `Items already in the registers (to spot duplicates): ${JSON.stringify(ctx.registers)}`,
+    '',
+    `Minutes${filename ? ` "${filename}"` : ''}:`, '"""', text, '"""',
+  ].join('\n');
+  return { system, user };
+}
+
+/** The digest cut to known values: parties and packages matched to codes that exist, statuses from the lists, register entries cleaned like an import. */
+export function cleanDigest(raw: unknown, ctx: Any): Any {
+  const a = (raw ?? {}) as Any;
+  const rows = (v: unknown) => (Array.isArray(v) ? (v as Any[]).filter(x => x && typeof x === 'object') : []);
+  const strings = (v: unknown, n: number, len = 300) => (Array.isArray(v) ? v.map(x => text(x, len)).filter((x): x is string => !!x).slice(0, n) : []);
+  const pct = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(100, Math.max(0, Math.round(v * 10) / 10)) : null);
+  const partyCodes = new Set((ctx.parties as Any[]).map(p => String(p.code)));
+  const pkgCodes = new Set((ctx.packages as Any[]).map(p => String(p.code)));
+  const KINDS = ['planned', 'forecast', 'actual', 'required'] as const;
+  const meeting = (a.meeting ?? {}) as Any;
+  const parties = rows(a.parties).slice(0, 30).map(p => ({
+    name: text(p.name, 100) ?? 'Unnamed', code: typeof p.code === 'string' && partyCodes.has(p.code.trim()) ? p.code.trim() : null,
+    role: oneOf(p.role, PARTY_ROLES, 'Other'), status: oneOf(p.status, PARTY_STATUSES, 'Unknown'), progress: text(p.progress, 600),
+    planPct: pct(p.planPct), actualPct: pct(p.actualPct),
+    packages: (Array.isArray(p.packages) ? p.packages.map((c: unknown) => String(c).trim()).filter((c: string) => pkgCodes.has(c)) : []).slice(0, 12),
+    keyDates: rows(p.keyDates).slice(0, 12).map(d => ({ what: text(d.what, 160), date: date(d.date), kind: oneOf(d.kind, KINDS, 'planned') })).filter(d => d.what && d.date),
+    concerns: strings(p.concerns, 12), risks: strings(p.risks, 12),
+  }));
+  const writable = new Set(ctx.writable as AiKind[]);
+  const items: Any[] = [];
+  for (const kind of AI_KINDS) {
+    if (!writable.has(kind)) continue;
+    const mine = rows(a.items).filter(e => String(e.register ?? '').toLowerCase() === kind);
+    const sub = { items: ctx.registers?.[kind] ?? [], options: ctx.options?.[kind] ?? {} };
+    for (const e of mine.slice(0, 60)) {
+      const [c] = cleanCandidates(kind, { items: [e] }, sub);
+      if (!c) continue;
+      items.push({ register: kind, ...c, party: text(e.party, 100), packageKnown: c.packageCode ? pkgCodes.has(String(c.packageCode)) : null });
+    }
+  }
+  return {
+    meeting: { title: text(meeting.title, 200), date: date(meeting.date), kind: text(meeting.kind, 160), attendees: strings(meeting.attendees, 30, 120) },
+    summary: text(a.summary, 1500) ?? '', parties, decisions: strings(a.decisions, 20, 400),
+    actions: rows(a.actions).slice(0, 40).map(x => ({ action: text(x.action, 400), owner: text(x.owner, 120), party: text(x.party, 100), due: date(x.due) })).filter(x => x.action),
+    items,
+  };
+}
+
 const fail = (status: number, code: string, message: string): Envelope => ({ ok: false, status, error: { code, message } });
 
 /** One chat completion that must answer with a JSON object. */
@@ -181,7 +295,7 @@ export async function askModel(cfg: AiConfig, system: string, user: string, fetc
   return JSON.parse(content);
 }
 
-const PATH = /^\/projects\/([^/?]+)\/ai\/(analyse|extract)$/;
+const PATH = /^\/projects\/([^/?]+)\/ai\/(analyse|extract|digest)$/;
 
 /**
  * Answers the AI routes, or returns null for any other request. `run` sends a request through the router (and its access rules) of the host.
@@ -194,6 +308,7 @@ export async function handleAi(payload: Partial<ApiRequest>, run: (r: ApiRequest
   if (!m) return null;
   if ((payload.method ?? 'GET') !== 'POST') return fail(405, 'METHOD_NOT_ALLOWED', 'Use POST.');
   const body = (payload.body ?? {}) as Any;
+  if (m[2] === 'digest') return digest(m[1], body, payload, run, cfg, fetchImpl);
   const kind = body.kind as AiKind;
   if (!AI_KINDS.includes(kind)) return fail(400, 'BAD_REQUEST', 'kind must be issues, risks or concerns.');
   const extract = m[2] === 'extract';
@@ -222,3 +337,25 @@ export async function handleAi(payload: Partial<ApiRequest>, run: (r: ApiRequest
   }
 }
 
+
+/** Minutes of meeting → a digest by party, plus register entries to review. Reads the meeting context first, so access is checked before the model is asked. */
+async function digest(pid: string, body: Any, payload: Partial<ApiRequest>, run: (r: ApiRequest) => Promise<Envelope>, cfg: AiConfig, fetchImpl: typeof fetch): Promise<Envelope> {
+  const doc = typeof body.text === 'string' ? body.text.trim() : '';
+  if (doc.length < 20) return fail(400, 'BAD_REQUEST', 'The minutes have no text to read.');
+  const context = await run({ method: 'GET', path: `/projects/${pid}/ai/context/meeting`, user: payload.user, session: payload.session });
+  if (!context.ok) return context;
+  if (!cfg.apiKey || !cfg.model) return fail(503, 'AI_NOT_CONFIGURED', 'The AI service is not set up on this server (OPENAI_API_KEY and OPENAI_MODEL).');
+  const ctx = context.data as Any;
+  try {
+    const cut = doc.length > MAX_TEXT;
+    const p = digestPrompt(ctx, cut ? doc.slice(0, MAX_TEXT) : doc, typeof body.filename === 'string' ? body.filename.slice(0, 120) : undefined);
+    const answer = await askModel(cfg, p.system, p.user, fetchImpl);
+    const notes = [text(answer?.notes, 600), cut ? `The minutes are longer than ${MAX_TEXT.toLocaleString('en-US')} characters: only the beginning was read.` : null].filter(Boolean).join(' ');
+    return { ok: true, status: 200, data: { model: cfg.model, ...cleanDigest(answer, ctx), writable: ctx.writable, notes: notes || null, truncated: cut } };
+  } catch (e) {
+    const upstream = (e as { upstream?: number }).upstream;
+    const msg = e instanceof Error ? e.message : 'The AI service failed.';
+    if (upstream === 429) return fail(502, 'AI_QUOTA', `The AI service refused the request (quota or rate limit): ${msg}`);
+    return fail(502, 'AI_ERROR', upstream ? `The AI service refused the request: ${msg}` : msg);
+  }
+}

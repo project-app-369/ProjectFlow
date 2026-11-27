@@ -379,6 +379,8 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
   const team = tally(open, r => String(r.discipline ?? 'Unassigned'));
   const teamKeys = [...team.keys].sort((a, b) => team.get(b).length - team.get(a).length).slice(0, 12);
   const series = (keys: string[], get: (k: string) => AnyRow[]) => PRI.map((p, i) => ({ name: p, color: PRI_COLOR[i], data: keys.map(k => get(k).filter(r => r.priority === p).length) }));
+  const linked = (key: 'packageCode' | 'subcontract') => { const t = tally(open.filter(r => r[key]), r => String(r[key])); return { t, keys: [...t.keys].sort((a, b) => t.get(b).length - t.get(a).length).slice(0, 12) }; };
+  const pkg = linked('packageCode'), sub = linked('subcontract');
 
   return {
     cards: [
@@ -400,6 +402,8 @@ export function issuesInsights(rows: AnyRow[], subtasks: AnyRow[], cutoff: strin
     charts: [
       { title: 'Open issues by person in charge', sub: 'The ten people with most open issues. An issue with several PICs counts for each. Select a person to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: picKeys, filterKey: 'pic', series: series(picKeys, k => byPic.get(k)!) },
       { title: 'Open issues by team', sub: 'The responsible team named on the issue. Select a team to filter.', layout: 'bar', stacked: true, unit: 'issues', categories: teamKeys, filterKey: 'discipline', series: series(teamKeys, team.get) },
+      ...(pkg.keys.length ? [{ title: 'Open issues by procurement package', sub: 'Issues linked to a procurement or expediting package. Select a package to filter.', layout: 'bar' as const, stacked: true, unit: 'issues', categories: pkg.keys, filterKey: 'packageCode', series: series(pkg.keys, pkg.t.get) }] : []),
+      ...(sub.keys.length ? [{ title: 'Open issues by service subcontract', sub: 'Issues linked to a subcontractor or service package. Select one to filter.', layout: 'bar' as const, stacked: true, unit: 'issues', categories: sub.keys, filterKey: 'subcontract', series: series(sub.keys, sub.t.get) }] : []),
     ],
   };
 }

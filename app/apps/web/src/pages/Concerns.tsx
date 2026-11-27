@@ -3,7 +3,6 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CONCERN_AREAS, CONCERN_STATUSES, CONCERN_TYPES, downloadCsv, request, SEVERITIES, type Concern, type ConcernSummary, type Page } from '../api';
-import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
 import { AiTools } from '../AiTools';
 import { fmtDate, type Tone } from '../format';
@@ -12,7 +11,7 @@ import { SortBy, useListState, usePrefetchNext } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
 import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
-import { concernFields } from './procFields';
+import { ConcernDrawer } from './ConcernDrawer';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 25;
@@ -36,22 +35,14 @@ export default function Concerns() {
   const page = useQuery({ queryKey: ['concerns', project.id, query], queryFn: () => request<Page<Concern>>(`${base}${query}`), placeholderData: keepPreviousData });
   usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['concerns', project.id, q], q => request<Page<Concern>>(`${base}${q}`));
   const editing: Concern | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
-  // codes for the package picker come from the registers themselves
-  const codes = useQuery({ queryKey: ['package-codes', project.id], staleTime: 60_000, enabled: editing !== null, queryFn: async () => {
-    const [a, b] = await Promise.all([
-      request<Page<{ code: string }>>(`/projects/${project.id}/procurement/packages?pageSize=200`).catch(() => null),
-      request<Page<{ code: string }>>(`/projects/${project.id}/expediting/packages?pageSize=200`).catch(() => null),
-    ]);
-    return suggest([...(a?.items ?? []), ...(b?.items ?? [])], 'code');
-  } });
 
   const columns = useMemo<ColumnDef<Concern>[]>(() => [
     { id: 'id', header: 'ID', meta: { sortKey: 'id' }, cell: ({ row: { original: c } }) => <span className="mono">{c.id}</span> },
     {
       id: 'title', header: 'CONCERN',
       cell: ({ row: { original: c } }) => (
-        <button className="link-button" onClick={() => setEditing(c)}>
-          <strong style={{ whiteSpace: 'normal', display: 'block', maxWidth: 360 }}>{c.title}</strong>
+        <button className="link-button register-title" onClick={() => setEditing(c)}>
+          <strong>{c.title}</strong>
           <small className="muted">{c.packageCode ?? 'No package'} · {c.type} · {c.area}</small>
         </button>
       ),
@@ -86,7 +77,7 @@ export default function Concerns() {
       <InsightsView data={insights.data} error={insights.error} onFilter={pick} active={isOn} pair twoCol />
       <div className="panel">
         <div className="panel-head"><div><h2>Register</h2><p>Select a row to review or update it</p></div><span className="tiny muted">{page.data?.total ?? '…'} records</span></div>
-        {pkg && <div className="banner" style={{ margin: '0 22px 14px' }}>Showing concerns for <strong>{pkg}</strong>. <button className="btn text" onClick={() => setParams({})}>Show all</button></div>}
+        {pkg && <div className="banner">Showing concerns for <strong>{pkg}</strong>. <button className="btn text" onClick={() => setParams({})}>Show all</button></div>}
         <div className="toolbar">
           <label className="search"><Icon name="search" /><input placeholder="Search title, package, owner or action…" value={list.state.q} onChange={e => list.set({ q: e.target.value })} aria-label="Search concerns" /></label>
           <div className="filter-group">
@@ -94,7 +85,7 @@ export default function Concerns() {
             <select className="filter" aria-label="Filter by severity" value={filters.severity} onChange={e => set({ severity: e.target.value })}><option value="">All severities</option>{[...SEVERITIES].reverse().map(t => <option key={t}>{t}</option>)}</select>
             <select className="filter" aria-label="Filter by area" value={filters.area} onChange={e => set({ area: e.target.value })}><option value="">All areas</option>{CONCERN_AREAS.map(t => <option key={t}>{t}</option>)}</select>
             <select className="filter" aria-label="Filter by status" value={list.state.status} onChange={e => list.set({ status: e.target.value })}><option value="">All statuses</option>{CONCERN_STATUSES.map(t => <option key={t}>{t}</option>)}</select>
-            <label className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={filters.activeOnly && !list.state.status} disabled={!!list.state.status} onChange={e => set({ activeOnly: e.target.checked })} />Open only</label>
+            <label className="check-inline tiny"><input type="checkbox" checked={filters.activeOnly && !list.state.status} disabled={!!list.state.status} onChange={e => set({ activeOnly: e.target.checked })} />Open only</label>
             <SortBy options={[['id', 'ID'], ['dueDate', 'Action due'], ['raisedDate', 'Date raised'], ['severity', 'Severity'], ['status', 'Status'], ['owner', 'Owner'], ['packageCode', 'Package']]} sort={list.state.sort} order={list.state.order} fallback="id" onChange={list.setSort} />
             <Btn kind="small" onClick={() => { list.clear(); setFilters({ type: '', severity: '', area: '', owner: '', within: '', activeOnly: true }); setParams({}); }}>Clear</Btn>
           </div>
@@ -108,11 +99,9 @@ export default function Concerns() {
         )}
       </div>
       {editing && (
-        <RecordDrawer title={editing === 'new' ? 'New risk, concern or issue' : `${editing.id} · ${editing.type}`} fields={concernFields(codes.data ?? [])} record={editing === 'new' ? null : editing as never}
+        <ConcernDrawer key={editing === 'new' ? 'new' : `${editing.id}-${editing.updatedAt ?? ''}`} base={base} concern={editing === 'new' ? null : editing}
           defaults={editing === 'new' ? { packageCode: pkg || null, type: 'Risk', severity: 'Medium', area: 'Delivery', status: 'Open' } : undefined}
-          base={base} id={editing === 'new' ? undefined : editing.id} canDelete={access.canManage} invalidate={['concerns', 'concern-summary', 'procurement-dashboard', 'insights']} onClose={() => setEditing(null)}>
-          {editing !== 'new' && (editing.source !== 'Manual') && <p className="banner">Raised from {editing.source === 'Expediting' ? 'the expediting register' : 'the weekly logistics report'}{editing.sourceRef ? ` (${editing.sourceRef})` : ''}. Change it here as the situation changes.</p>}
-        </RecordDrawer>
+          canWrite={access.canWrite} canManage={access.canManage} onClose={() => setEditing(null)} />
       )}
     </>
   );

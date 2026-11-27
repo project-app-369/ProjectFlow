@@ -214,7 +214,7 @@ export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
           ))}
         </div>
       </div>
-      <div className="legend" style={{ padding: '10px 22px 16px' }}>
+      <div className="legend panel-body">
         <span><span className="dot" style={{ background: 'var(--teal)' }} />Plan start → finish</span>
         <span><span className="gantt-due-key" />Deadline</span>
         <span><span className="gantt-today-key" />Today</span>

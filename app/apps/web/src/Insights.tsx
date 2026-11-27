@@ -13,7 +13,7 @@ export function useInsights(key: string, projectId: string, url: string) {
 }
 
 const LIST_KEYS = ['status', 'discipline'] as const;
-const LABEL: Record<string, string> = { within: 'Due', month: 'Month', yard: 'Yard', workPackage: 'Work package', buyer: 'Buyer', category: 'Category', area: 'Area', owner: 'Owner', packageCode: 'Package', severity: 'Severity', facility: 'Facility', level: 'Level', target: 'Target party', age: 'Age (days)', flag: 'Showing', strategy: 'Strategy', cell: 'Heatmap cell', sub: 'Subcontract area', status: 'Status', discipline: 'Discipline' };
+const LABEL: Record<string, string> = { within: 'Due', month: 'Month', yard: 'Yard', workPackage: 'Work package', buyer: 'Buyer', category: 'Category', area: 'Area', owner: 'Owner', packageCode: 'Package', severity: 'Severity', facility: 'Facility', level: 'Level', target: 'Target party', age: 'Age (days)', flag: 'Showing', strategy: 'Strategy', cell: 'Heatmap cell', sub: 'Subcontract area', subcontract: 'Service subcontract', priority: 'Priority', pic: 'Person in charge', status: 'Status', discipline: 'Discipline' };
 const WINDOW: Record<string, string> = { overdue: 'overdue', none: 'no date', '30': 'within 30 days', '45': 'within 45 days', '60': 'within 60 days' };
 
 /**

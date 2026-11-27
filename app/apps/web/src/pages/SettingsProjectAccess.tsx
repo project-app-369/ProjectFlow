@@ -34,11 +34,11 @@ export default function ProjectAccessTab() {
   if (!access.canConfigure) return <div className="panel empty">Project access is set by an administrator or the Project Manager of this project.</div>;
   return (
     <>
-      <p className="page-sub" style={{ margin: '-6px 0 16px' }}>
+      <p className="page-sub">
         Decide who may open or change each screen of <strong>{project.shortName ?? project.code}</strong>. Start with the role, then give a person more or less than their role where needed.
         The party a person belongs to (Settings → Party access) is applied first, and a screen that is switched off or read-only for the whole project stays that way for everyone.
       </p>
-      <div className="seg" role="group" aria-label="Set access by" style={{ marginBottom: 16 }}>
+      <div className="seg mb-4" role="group" aria-label="Set access by">
         <button type="button" className={by === 'role' ? 'on' : ''} aria-pressed={by === 'role'} onClick={() => setBy('role')}>By role</button>
         <button type="button" className={by === 'person' ? 'on' : ''} aria-pressed={by === 'person'} onClick={() => setBy('person')}>By person</button>
       </div>

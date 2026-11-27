@@ -18,12 +18,22 @@ The `try-new-UI` branch moves the web client to a soft-glass look (named "Lintel
 
 Tokens in `styles.css`: `--gap` (1 rem), `--card-px` (1.25 rem; 1 rem on phones), `--card-py` (1 rem; .875 rem on phones).
 
-1. Blocks on a page are separated by `--gap` only. The page (`.fade`) is a flex column; a block never sets its own outer margin.
+1. Blocks on a page are separated by `--gap` only. The page (`.route`) is a flex column; a block never sets its own outer margin.
 2. A card's edge padding is `--card-py` / `--card-px`. Anything inside a card (head, toolbar, chip row, table cells, chart, list row, dialog head/body/actions) uses the same two values at its outer edge, so text lines up with the card's own heading. A block inside a card does not add its own outer padding on top.
 3. Rows inside one block (filter rows, tiles) are `--sp-2`–`--sp-3` apart.
 4. KPI cards (`.stats > .stat`) are one size: same padding, label / value / foot, equal height in a row, foot pinned to the bottom and wrapping rather than truncated. The grid is `auto-fit` with a 9.5 rem minimum so cards share the row with no dead space.
 5. Tile groups (`.ins-boxes`) are flex-wrapped so a short last row stretches instead of leaving an orphan. Chart grids use `grid-auto-flow: row dense` so a full-width chart does not leave a hole.
 6. Do not hard-code paddings in page code. If a page needs different spacing, change the token or the shared class.
+
+7. Spacing inside page code uses the token utilities `mt-1…5`, `mb-0…5`, `my-4` (4-point scale) or a shared class (`panel-body`, `boot-state`, `bar-stack`); a pixel value in `style={{}}` is only allowed for data-driven indents, written as `calc(<depth> * var(--sp-4))`.
+8. Chart rows and two-column card grids never leave an empty part of a row: a last chart or card on its own row takes the remaining width (shared rules in `styles.css`, no per-page props needed).
+9. KPI figures shrink with their card (container query) rather than overflow; large figures use a compact format on the card (for example `2.96M h`) and the full value in tables.
+
+## Type, motion and wording
+
+- Text is never below 12 px (`--fs-xs`), including `<small>` and chart axis labels (`fontSize: 12`).
+- Motion uses `--dur-fast` (.14 s, hover and focus), `--dur` (.22 s, menus, drawers, tabs) and `--dur-slow` (.32 s, entrances) with one easing, `--ease`. Only transform and opacity animate; `prefers-reduced-motion` turns all motion off.
+- A page-level create button and its dialog title read **New <item>** (New issue, New activity, New equipment); in-row composers read **Add**. Form dialogs end with Cancel and Save; detail dialogs with Close.
 
 ## Phones (≤ 720 px)
 
