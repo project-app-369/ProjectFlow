@@ -1,4 +1,4 @@
-/** Sends plain-text email. Apps Script uses MailApp; the simulator logs; tests keep what was sent. */
+/** Sends plain-text email. the deployed backend has no mail transport yet; the simulator logs; tests keep what was sent. */
 export interface Mailer {
   send(to: string[], subject: string, body: string): void;
 }

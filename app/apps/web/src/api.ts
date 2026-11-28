@@ -12,12 +12,10 @@ export function errorText(e: unknown): string {
 }
 
 /**
- * Two backends serve the same routes. "rest" is the NestJS API behind the Vite proxy. "sheets" is the pre-build
- * backend: a Google Apps Script web app over a spreadsheet, which only accepts simple GET/POST requests and always
- * answers HTTP 200, so the route travels as a parameter and the status inside a JSON envelope.
+ * Two backends serve the same routes. "rest" is the NestJS API behind the Vite proxy. "sheets" is the Project Flow
+ * router contract (the name is historic): the Supabase edge function, API v2 or the local simulator. It answers every
+ * request with HTTP 200, so the route travels in the body and the status inside a JSON envelope.
  */
-/** The exact Google Sheet that holds the data (set per environment, see .env.sheets). */
-export const SPREADSHEET_URL: string = import.meta.env.VITE_SPREADSHEET_URL ?? '';
 export const apiMode: 'rest' | 'sheets' = import.meta.env.VITE_API_MODE === 'sheets' ? 'sheets' : 'rest';
 const sheetsUrl: string = import.meta.env.VITE_SHEETS_URL ?? '';
 const sheetsToken: string = import.meta.env.VITE_SHEETS_TOKEN ?? '';
@@ -57,7 +55,7 @@ interface Envelope { ok: boolean; status: number; data?: unknown; error?: { code
 
 /** Turns a backend envelope into its data, or throws the error it carries. */
 function unwrap<T>(envelope: Envelope | null, httpStatus: number): T {
-  if (!envelope) throw new ApiError('The sheets API returned something other than JSON. Check the web app deployment and its access setting.', 'BAD_RESPONSE', httpStatus);
+  if (!envelope) throw new ApiError('The API returned something other than JSON. Check the API address and the deployment.', 'BAD_RESPONSE', httpStatus);
   if (!envelope.ok) {
     if (envelope.error?.code === 'USER_REQUIRED' || envelope.error?.code === 'AUTH_REQUIRED') window.dispatchEvent(new Event('projectflow:signed-out'));
     throw new ApiError(envelope.error?.message ?? 'Request failed.', envelope.error?.code, envelope.status, envelope.error?.issues);
@@ -74,7 +72,7 @@ async function getOne<T>(path: string): Promise<T> {
 
 /**
  * GET requests made in the same moment (a screen asks for several things at once) travel as one BATCH request: each call to the
- * sheets backend costs a round trip and, on Apps Script, a fresh read of the sheets, so one call for five reads is far cheaper than five.
+ * sheets backend costs a round trip and a fresh read of the datasets, so one call for five reads is far cheaper than five.
  * A backend that does not know BATCH (an older deployment) answers with a single error envelope; the app then switches batching off
  * and asks for each path on its own.
  */
@@ -123,12 +121,12 @@ async function requestSheets<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError('A cut-off snapshot is read-only. Switch to the current data to make changes.', 'READ_ONLY_SNAPSHOT', 409);
   }
   if (asOfPath) path += `${path.includes('?') ? '&' : '?'}asOf=${currentAsOf}`;
-  if (!sheetsUrl) throw new ApiError('VITE_SHEETS_URL is not set. Copy .env.sheets.example to .env.sheets.local and fill it in.', 'NOT_CONFIGURED');
+  if (!sheetsUrl) throw new ApiError('VITE_SHEETS_URL is not set. Set it in the .env file of the mode you run (see .env.v3).', 'NOT_CONFIGURED');
   const method = (init?.method ?? 'GET').toUpperCase();
   if (method === 'GET') return getBatched<T>(path);
   const res = await fetch(sheetsUrl, {
     method: 'POST',
-    // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script cannot answer one).
+    // text/plain keeps this a "simple" request, so the browser sends no CORS preflight.
     headers: { 'content-type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined, token: sheetsToken || undefined, user: getUserId() ?? undefined, session: getSession() ?? undefined }),
   });
@@ -246,7 +244,7 @@ export interface ModuleInfo {
   sheetCapable?: boolean;
   sheetsCreated?: SheetInfo[];
 }
-export interface SheetInfo { name: string; gid: number; url: string }
+export interface SheetInfo { name: string; gid: number }
 export interface ModuleRecords { sheet: SheetInfo | null; columns: string[]; items: Record<string, string | number | null>[] }
 export interface ModulesResponse { workspaces: { id: WorkspaceId; label: string }[]; modules: ModuleInfo[] }
 

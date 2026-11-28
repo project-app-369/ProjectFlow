@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "types": ["node", "google-apps-script"]
+    "types": ["node"]
   },
   "include": ["src", "scripts", "../api/src/registry/catalog.ts", "../api/src/schedule/progress.ts", "../api/seed/sttp2b.json"]
 }

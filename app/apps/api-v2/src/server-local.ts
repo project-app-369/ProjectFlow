@@ -28,7 +28,7 @@ try {
   const before = await readSnapshot(client);
   const archivePath = resolve('../../../.tmp/projectflow-live-archive.json');
   const source = before.sheets.length ? null : existsSync(archivePath) ? archivePath : '--seed';
-  const store = new MemoryStore(process.env.BACKUP_SHEET_URL);
+  const store = new MemoryStore();
   store.loadSnapshot(source ? await loadArchive(source) : before);
   ensureAllSheets(store);
   const loaded = appendSeedFacilityEquipment(store, seedData);

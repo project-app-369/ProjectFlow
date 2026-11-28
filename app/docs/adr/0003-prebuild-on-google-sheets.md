@@ -1,6 +1,6 @@
 # 0003 — Pre-build on Google Sheets and Apps Script
 
-Status: accepted (pre-build only). Sheet names, single-project scope and the access model were extended by [0004](0004-projects-users-and-worksheet-areas.md). Supersedes nothing: the NestJS API in `apps/api` remains the target backend.
+Status: **superseded by [0007](0007-supabase-only-backend.md)** (28 Nov 2026): the Google Sheet and Apps Script are retired. Kept as the record of the pre-build. Was: accepted (pre-build only). Sheet names, single-project scope and the access model were extended by [0004](0004-projects-users-and-worksheet-areas.md). Supersedes nothing: the NestJS API in `apps/api` remains the target backend.
 
 ## Context
 

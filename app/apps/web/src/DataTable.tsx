@@ -8,7 +8,7 @@ declare module '@tanstack/react-table' {
 }
 
 /** Server-driven table: sorting, filtering and paging happen in the API; TanStack Table owns column/row modelling. */
-export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName, loading, tableClass }: {
+export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName, loading, tableClass, revealFrom = Infinity }: {
   columns: ColumnDef<T, any>[];
   data: T[];
   state: SortState;
@@ -19,6 +19,8 @@ export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName
   loading?: boolean;
   /** Class on the table element. */
   tableClass?: string;
+  /** Rows from this index on just arrived (a register that loads as you scroll, `useInfiniteList`): they fade in. */
+  revealFrom?: number;
 }) {
   const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel(), manualSorting: true, manualPagination: true, manualFiltering: true });
   return (
@@ -46,7 +48,7 @@ export function DataTable<T>({ columns, data, state, onSort, empty, rowClassName
         </thead>
         <tbody>
           {table.getRowModel().rows.length ? table.getRowModel().rows.map(row => (
-            <tr key={row.id} className={rowClassName?.(row.original)}>{row.getVisibleCells().map(c => <td key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>
+            <tr key={row.id} className={[rowClassName?.(row.original), row.index >= revealFrom ? 'row-in' : ''].filter(Boolean).join(' ') || undefined}>{row.getVisibleCells().map(c => <td key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>
           )) : loading
             ? Array.from({ length: 8 }, (_, i) => <tr key={i} aria-busy="true"><td colSpan={columns.length}><span className="sk sk-row" /></td></tr>)
             : <tr><td colSpan={columns.length} className="empty">{empty}</td></tr>}

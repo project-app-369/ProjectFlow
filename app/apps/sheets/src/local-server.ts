@@ -1,6 +1,7 @@
 /**
- * Local stand-in for the deployed Apps Script web app: same envelope protocol, same router and service,
- * rows held in memory (reset on restart). `pnpm --filter @projectflow/sheets dev`.
+ * Local simulator, kept for developing the AI functions: same envelope protocol, router and service as the deployed edge
+ * function, rows held in memory (reset on restart). The data lives in Supabase; this is not a second backend.
+ * `pnpm --filter @projectflow/sheets dev`.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -12,7 +13,7 @@ import { hashPassword } from './hash';
 import { seedStore } from './seed';
 import { seedData } from './seed-data';
 import { Api } from './api';
-import { handleAi } from './ai';
+import { aiConfigFrom, handleAi } from './ai';
 
 // The AI key and model come from .env.local next to this package (never committed) or from the environment.
 const envFile = resolve(__dirname, '..', '.env.local');
@@ -22,7 +23,7 @@ if (existsSync(envFile)) {
     if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, '$2');
   }
 }
-const ai = { apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL, baseUrl: process.env.OPENAI_BASE_URL };
+const ai = aiConfigFrom(name => process.env[name]);
 const port = Number(process.env.PORT ?? 3200);
 const token = process.env.API_TOKEN;
 const store = new MemoryStore();

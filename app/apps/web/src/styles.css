@@ -751,8 +751,10 @@ footer{border-top:1px solid var(--line);padding-top:var(--sp-4)}
 .task-choice:hover{background:var(--soft);color:var(--ink)}
 .task-choice:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .task-choice.selected{border-color:var(--brand);background:var(--soft);color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
-.task-choice.urgency-high.selected{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
-.task-choice.urgency-urgent.selected{border-color:var(--red);color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.task-choice.urgency-low.selected{border-color:var(--t-ok);background:var(--t-ok-bg);color:var(--t-ok);box-shadow:0 0 0 1px var(--t-ok)}
+.task-choice.urgency-normal.selected{border-color:var(--t-info);background:var(--t-info-bg);color:var(--t-info);box-shadow:0 0 0 1px var(--t-info)}
+.task-choice.urgency-high.selected{border-color:var(--t-warn);background:var(--t-warn-bg);color:var(--t-warn);box-shadow:0 0 0 1px var(--t-warn)}
+.task-choice.urgency-urgent.selected{border-color:var(--t-crit);background:var(--t-crit-bg);color:var(--t-crit);box-shadow:0 0 0 1px var(--t-crit)}
 .task-choice.status-ongoing.selected{border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
 .task-choice.status-completed.selected{border-color:var(--green);color:var(--green);box-shadow:0 0 0 1px var(--green)}
 .task-date-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-4)}
@@ -827,8 +829,8 @@ footer{border-top:1px solid var(--line);padding-top:var(--sp-4)}
 @media(max-width:639px){.task-icon-select-menu{right:auto;left:0}.task-icon-select.status-picker .task-icon-select-menu{right:0;left:auto}}
 
 /* The same urgency ribbon follows a task through every view. */
-.urgency-low{--urgency-ribbon:#5b91ac}
-.urgency-normal{--urgency-ribbon:#399176}
+.urgency-low{--urgency-ribbon:#399176}
+.urgency-normal{--urgency-ribbon:#4a74cf}
 .urgency-high{--urgency-ribbon:#c28a3c}
 .urgency-urgent{--urgency-ribbon:#c95365}
 .task-list .task-row td:first-child{box-shadow:inset 4px 0 0 var(--urgency-ribbon)}
@@ -1699,7 +1701,9 @@ details.multi-form{min-width:7rem}
 body.dark{--t-neutral:#b3bfd1;--t-neutral-bg:#2a364b;--t-info:#9db8ff;--t-info-bg:#26365c;--t-warn:#f1cd8b;--t-warn-bg:#443821;--t-ok:#93dfbf;--t-ok-bg:#1d4239;--t-crit:#ffadbc;--t-crit-bg:#482d3b}
 .icon.i-urgency-urgent{color:var(--t-crit)}.icon.i-urgency-high{color:var(--t-warn)}.icon.i-urgency-normal{color:var(--t-info)}.icon.i-urgency-low{color:var(--t-neutral)}
 .icon.i-status-backlog{color:var(--t-neutral)}.icon.i-status-planned{color:var(--t-info)}.icon.i-status-ongoing{color:var(--t-warn)}.icon.i-status-completed{color:var(--t-ok)}
-.task-symbol.urgency-low,.task-symbol.status-backlog{color:var(--t-neutral);background:var(--t-neutral-bg)}
+.icon.i-prio-low{color:var(--t-ok)}.icon.i-prio-normal{color:var(--t-info)}.icon.i-prio-high{color:var(--t-warn)}.icon.i-prio-urgent{color:var(--t-crit)}
+.task-symbol.urgency-low{color:var(--t-ok);background:var(--t-ok-bg)}
+.task-symbol.status-backlog{color:var(--t-neutral);background:var(--t-neutral-bg)}
 .task-symbol.urgency-normal,.task-symbol.status-planned{color:var(--t-info);background:var(--t-info-bg)}
 .task-symbol.urgency-high,.task-symbol.status-ongoing{color:var(--t-warn);background:var(--t-warn-bg)}
 .task-symbol.urgency-urgent,.task-symbol.overdue{color:var(--t-crit);background:var(--t-crit-bg)}
@@ -1972,8 +1976,8 @@ button.fl-sys-row{cursor:pointer}
 /* summary boxes: one title each, all the same size */
 .ins-boxes{align-content:start}
 .ins-boxes .ins-box{height:5.25rem;min-height:0;justify-content:center}
-@media (min-width:1101px){.ins-boxes,.ins-panel.compact .ins-boxes{grid-auto-flow:row;grid-template-columns:repeat(max(5,var(--n,5)),minmax(0,1fr))}.ins-boxes>.ins-box:last-child{grid-column:auto!important}}
-@media (max-width:1100px){.ins-boxes>.ins-box.ins-box:last-child{grid-column:auto!important}}
+/* summary box columns: see the 60-column grid at the end of this file */
+
 
 /* milestone register: the same columns in every group, key date on up to two lines, status colour at the start of each row */
 @media (min-width:721px){
@@ -2133,11 +2137,11 @@ small{font-size:var(--fs-xs)}
 /* urgency and status choices in the task form: icon, word and hint */
 .task-editor .task-choice{display:flex;align-items:center;justify-content:flex-start;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);text-align:left;min-height:3.1rem}
 .task-editor .task-choice .icon{width:1.15rem;height:1.15rem;flex:none}
-.task-choice-text{display:flex;flex-direction:column;min-width:0;line-height:1.25}
-.task-choice-text strong{font-size:var(--fs-sm);color:var(--ink)}
-.task-choice-text small{color:var(--muted)}
-.task-choice.selected .task-choice-text strong{color:inherit}
-.task-editor .task-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.task-choice-text{min-width:0;line-height:1.25;font-size:var(--fs-sm);font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-choice.selected .task-choice-text{color:inherit}
+.task-editor .task-choice-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.task-editor .task-choice{padding:var(--sp-2);min-height:2.6rem;justify-content:center}
+@media(max-width:1100px){.task-editor .task-choice{flex-direction:column;gap:2px;padding:var(--sp-1);min-height:3rem}.task-editor .task-choice-text{font-size:var(--fs-xs)}}
 /* kanban: labelled columns, lift on hover, a held card and a clear drop target */
 .board-column > h3{display:flex;align-items:center;gap:var(--sp-2)}
 .board-column .task-card h3{color:var(--ink)}
@@ -2180,3 +2184,111 @@ table.workload .stack-seg{flex:none;transition:width var(--dur-slow) var(--ease)
 @keyframes person-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.person-chip{animation:none}}
 .delete-hint{margin-right:auto;align-self:center}
+
+/* ===== Card gaps audit (28 Nov 2026): no void beside, below or inside a card ===== */
+/* Summary boxes sit on a 60-column grid, so any number of boxes (1 to 9) fills its rows evenly at any card width:
+   one row up to 5 boxes, then two even rows; in a narrow card 4 boxes are 2 by 2 and 5 are 3 over 2 */
+.ins-panel .ins-boxes.ins-boxes.ins-boxes{display:grid;grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(60,minmax(0,1fr))}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box{grid-column:span 15}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:only-child{grid-column:span 60}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(2),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(2)~.ins-box.ins-box{grid-column:span 30}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(3),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(3)~.ins-box.ins-box{grid-column:span 20}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5)~.ins-box.ins-box{grid-column:span 12}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(6),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(6)~.ins-box.ins-box{grid-column:span 20}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(8),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(8)~.ins-box.ins-box{grid-column:span 15}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(9),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(9)~.ins-box.ins-box{grid-column:span 20}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(7),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(7)~.ins-box.ins-box{grid-column:span 15}
+.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(7)~.ins-box.ins-box:nth-child(n+5){grid-column:span 20}
+@container (max-width:27rem){
+  .ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(4),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(4)~.ins-box.ins-box{grid-column:span 30}
+  .ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5)~.ins-box.ins-box{grid-column:span 30}
+  .ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5),.ins-panel .ins-boxes.ins-boxes>.ins-box.ins-box:first-child:nth-last-child(5)~.ins-box.ins-box:nth-child(-n+3){grid-column:span 20}
+}
+/* Cards of one row share the row's height; the link at the foot of a card stays at the bottom */
+.dash-grid{align-items:stretch}
+.dash-grid>.panel{display:flex;flex-direction:column;margin:0}
+.dash-grid>.panel>.panel-foot{margin-top:auto}
+.fl-grid{align-items:stretch}
+/* Fixed sets of tiles: the column count comes from the number of tiles (balancedColumns) */
+.domain-grid{grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
+@media (max-width:1100px){.domain-grid{grid-template-columns:repeat(var(--cols-md,2),minmax(0,1fr))}}
+@media (max-width:700px){.domain-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.domain-grid>:last-child:nth-child(odd){grid-column:1/-1}}
+@media (max-width:420px){.domain-grid{grid-template-columns:minmax(0,1fr)}}
+/* Register toolbar: the search takes the width the filters leave, never a squeezed box */
+.toolbar .search{flex:1 1 18rem;min-width:min(100%,16rem);max-width:32rem}
+/* Bars of a stretched card spread over its height instead of leaving a void under them */
+.dash-grid>.panel>.panel-content{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between}
+/* List rows share the height a stretched card has left, so the list ends at the card's foot */
+.dash-grid>.panel>.list-card{flex:1 1 auto;align-items:center}
+/* Facility layout: the equipment list takes the height of the model beside it and scrolls inside */
+@media (min-width:1101px){
+  .fl-list{min-height:0}
+  .fl-list>.fl-groups{flex:1 1 0;min-height:24rem;max-height:none}
+}
+/* Segmented controls in a card header are as tall as the buttons beside them */
+.panel-head .seg button{min-height:var(--ctl-h-sm)}
+
+/* ===== Motion and interaction layer (28 Nov 2026) =====
+   One language across the app: a section enters with a short rise, a control answers a hover with a 1–2 px lift
+   and a press sinks 1 px, the active place is drawn in (tab line, nav accent). Durations and easing are the tokens
+   (--dur-fast/--dur/--dur-slow, --ease); the reduced-motion rule near the top switches every animation and transition off. */
+@keyframes rise-soft{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes nav-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+@keyframes tab-line{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* Page: the sections rise in one after the other (the first eight); KPI cards follow a beat faster */
+.route>*:not(.stats):not(.dash){animation:rise-soft var(--dur-slow) var(--ease) backwards}
+.route>*:nth-child(2){animation-delay:.04s}.route>*:nth-child(3){animation-delay:.08s}.route>*:nth-child(4){animation-delay:.12s}
+.route>*:nth-child(5){animation-delay:.16s}.route>*:nth-child(6){animation-delay:.2s}.route>*:nth-child(7){animation-delay:.24s}.route>*:nth-child(8){animation-delay:.28s}
+.route>.stats>.stat{animation:rise-soft var(--dur-slow) var(--ease) backwards}
+.route>.stats>.stat:nth-child(2){animation-delay:.04s}.route>.stats>.stat:nth-child(3){animation-delay:.08s}
+.route>.stats>.stat:nth-child(4){animation-delay:.12s}.route>.stats>.stat:nth-child(5){animation-delay:.16s}.route>.stats>.stat:nth-child(6){animation-delay:.2s}
+
+/* Controls: colour and shadow follow the pointer quickly, a press sinks */
+.btn,.icon-btn,.seg button,.tab,.check-chip,input,select,textarea{transition:background-color var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
+.btn:active:not(:disabled),.icon-btn:active:not(:disabled),.seg button:active:not(:disabled){transform:translateY(1px) scale(.985)}
+.btn.primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 14px color-mix(in srgb,var(--brand) 26%,transparent)}
+.btn.primary:active:not(:disabled){transform:translateY(0) scale(.985);box-shadow:0 2px 6px color-mix(in srgb,var(--brand) 22%,transparent)}
+.icon-btn:hover:not(:disabled){background:var(--soft);color:var(--brand)}
+
+/* Cards that open something lift a little, and settle on press */
+.domain-tile,button.ins-box,a.list-card,.task-card{transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),border-color var(--dur) var(--ease),background-color var(--dur-fast) var(--ease)}
+.domain-tile:hover,button.ins-box:hover,.task-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px color-mix(in srgb,var(--ink) 11%,transparent)}
+.domain-tile:active,button.ins-box:active,.task-card:active{transform:translateY(0);box-shadow:var(--shadow)}
+tbody tr{transition:background-color var(--dur-fast) var(--ease)}
+
+/* Tabs and segmented controls: the active line is drawn in; the pressed segment changes in place */
+.tab.active:after{transform-origin:left center;animation:tab-line var(--dur) var(--ease) both}
+.seg button[aria-pressed=true]{transition-duration:var(--dur)}
+
+/* Navigation: sub-entries glide in under their parent, the icon leans toward the pointer */
+.sidebar .nav-item.sub{animation:nav-in var(--dur) var(--ease) backwards}
+.sidebar .nav-item.sub:nth-child(2){animation-delay:.03s}.sidebar .nav-item.sub:nth-child(3){animation-delay:.06s}.sidebar .nav-item.sub:nth-child(4){animation-delay:.09s}
+.sidebar .nav-item.sub:nth-child(5){animation-delay:.12s}.sidebar .nav-item.sub:nth-child(6){animation-delay:.15s}.sidebar .nav-item.sub:nth-child(n+7){animation-delay:.18s}
+.sidebar .nav-item .icon{transition:color var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.sidebar .nav-item:hover .icon{transform:translateX(2px)}
+:root[data-nav=collapsed] .sidebar .nav-item:hover .icon{transform:none}
+
+/* The sidebar width glides when it collapses to the icon rail */
+@property --sidebar-w{syntax:'<length>';inherits:true;initial-value:248px}
+:root{transition:--sidebar-w var(--dur-slow) var(--ease)}
+
+/* Light and dark: a brief cross-fade of colours while the theme switches (class set by setDark) */
+.theme-fade,.theme-fade *,.theme-fade *:before,.theme-fade *:after{transition:background-color var(--dur-slow) cubic-bezier(.4,0,.2,1),border-color var(--dur-slow) cubic-bezier(.4,0,.2,1),color var(--dur-slow) cubic-bezier(.4,0,.2,1),fill var(--dur-slow) cubic-bezier(.4,0,.2,1),stroke var(--dur-slow) cubic-bezier(.4,0,.2,1)!important}
+
+/* Long lists load as you scroll (lazyList.tsx: useInfiniteList, useProgressive, LoadMore). While more rows remain, the
+   foot of the register stays at the bottom of the screen as a frosted bar over the rows (the panel clips instead of
+   hiding overflow, so sticky works); rows that just arrived fade up. No motion with prefers-reduced-motion. */
+.load-sentinel{height:1px;margin-top:-1px;pointer-events:none}
+.load-more{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-height:3.5rem;padding:.625rem var(--card-px);border-top:1px solid var(--line);font-size:var(--fs-xs);color:var(--muted);background:var(--surface)}
+.load-more-count{flex:1 1 auto;border-radius:var(--pill);outline-offset:3px;font-variant-numeric:tabular-nums}
+.load-meter{flex:0 0 6rem;height:4px;border-radius:var(--pill);background:var(--line);overflow:hidden}
+.load-meter>span{display:block;height:100%;background:var(--brand);transform:scaleX(var(--p,0));transform-origin:left center;transition:transform var(--dur-slow) var(--ease)}
+.panel:has(>.load-more.has-more){overflow:clip}
+.panel>.load-more.has-more{position:sticky;bottom:0;z-index:2;background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)}
+.load-more.standalone{position:relative;border-top:1px solid var(--line)}
+.load-more.standalone>.load-sentinel{position:absolute;inset:0 0 auto;margin:0}
+.row-in,[data-lazy-item].row-in{animation:row-in var(--dur-slow) var(--ease) both}
+@keyframes row-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (max-width:720px){.load-meter{flex-basis:4rem}}
+@media (prefers-reduced-motion:reduce){.row-in,[data-lazy-item].row-in{animation:none}.load-meter>span{transition:none}}

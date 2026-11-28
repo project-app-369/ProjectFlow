@@ -7,7 +7,7 @@
  *
  * Nothing is written here. The register is read through the router (so a person only gets what they may open, and extraction needs write
  * access), then the model is called, then the answer is cleaned up against the register's own values before it is returned.
- * The hosts that can make an outgoing call (the local simulator and the Supabase function) mount `handleAi`; Apps Script does not.
+ * The hosts that can make an outgoing call (the local simulator and the Supabase function) mount `handleAi`.
  */
 import type { Api } from './api';
 import { COLUMNS, SHEET } from './datasets';
@@ -276,6 +276,26 @@ export function cleanDigest(raw: unknown, ctx: Any): Any {
 
 const fail = (status: number, code: string, message: string): Envelope => ({ ok: false, status, error: { code, message } });
 
+/**
+ * Where the AI runs, from the host's environment. AI/ML API (OpenAI-compatible) is used when `AIMLAPI_API_KEY` is set,
+ * with `AIMLAPI_MODEL` (default alibaba/qwen3.7-max) and `AIMLAPI_BASE_URL`; otherwise OpenAI with `OPENAI_API_KEY`,
+ * `OPENAI_MODEL` and an optional `OPENAI_BASE_URL`.
+ */
+export function aiConfigFrom(get: (name: string) => string | undefined): AiConfig {
+  const aiml = get('AIMLAPI_API_KEY')?.trim();
+  if (aiml) return { apiKey: aiml, model: get('AIMLAPI_MODEL')?.trim() || 'alibaba/qwen3.7-max', baseUrl: get('AIMLAPI_BASE_URL')?.trim() || 'https://api.aimlapi.com/v1' };
+  return { apiKey: get('OPENAI_API_KEY')?.trim() || undefined, model: get('OPENAI_MODEL')?.trim() || undefined, baseUrl: get('OPENAI_BASE_URL')?.trim() || undefined };
+}
+
+/** The JSON object in a model's answer, also when it is wrapped in a code fence or a sentence. */
+export function parseJsonAnswer(content: string): Any {
+  const t = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  try { return JSON.parse(t); } catch { /* look for the object inside */ }
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+  throw new Error('The AI service did not answer with JSON.');
+}
+
 /** One chat completion that must answer with a JSON object. */
 export async function askModel(cfg: AiConfig, system: string, user: string, fetchImpl: typeof fetch = fetch): Promise<Any> {
   const res = await fetchImpl(`${(cfg.baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '')}/chat/completions`, {
@@ -285,14 +305,17 @@ export async function askModel(cfg: AiConfig, system: string, user: string, fetc
     signal: AbortSignal.timeout(110_000),
   });
   const body = await res.text();
+  const hide = (m: string) => (cfg.apiKey ? m.split(cfg.apiKey).join('…') : m).replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-…');
   if (!res.ok) {
     let message = `The AI service answered ${res.status}.`;
-    try { message = String(JSON.parse(body)?.error?.message ?? message); } catch { /* not JSON */ }
-    throw Object.assign(new Error(message.replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-…')), { upstream: res.status });
+    try { const e = JSON.parse(body); message = String(e?.error?.message ?? e?.message ?? message); } catch { /* not JSON */ }
+    // out of credits is a quota refusal whatever the provider's status code (OpenAI 429, AI/ML API 402 or 403)
+    const quota = res.status === 429 || res.status === 402 || (res.status === 403 && /fund|credit|balance|quota/i.test(message));
+    throw Object.assign(new Error(hide(message)), { upstream: quota ? 429 : res.status });
   }
   const content = JSON.parse(body)?.choices?.[0]?.message?.content;
-  if (typeof content !== 'string') throw new Error('The AI service returned no answer.');
-  return JSON.parse(content);
+  if (typeof content !== 'string' || !content.trim()) throw new Error('The AI service returned no answer.');
+  return parseJsonAnswer(content);
 }
 
 const PATH = /^\/projects\/([^/?]+)\/ai\/(analyse|extract|digest)$/;

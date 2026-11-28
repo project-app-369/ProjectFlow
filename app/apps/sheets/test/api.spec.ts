@@ -57,7 +57,7 @@ describe('identity and access', () => {
   it('needs a known, active user for everything except health and the directory', () => {
     expect(err(call('GET', '/projects', undefined, null)).error.code).toBe('USER_REQUIRED');
     expect(err(call('GET', '/projects', undefined, 'u-nobody')).status).toBe(401);
-    expect(ok(call('GET', '/health', undefined, null)).database).toBe('sheets');
+    expect(ok(call('GET', '/health', undefined, null)).database).toBe('memory');
     expect(ok(call('GET', '/directory', undefined, null)).map((u: any) => u.id)).toEqual([ADMIN, MANAGER, MEMBER, CLIENT]);
     expect(ok(call('GET', '/directory', undefined, null))[0]).not.toHaveProperty('email');
   });
@@ -123,7 +123,7 @@ describe('data endpoints match the NestJS API contract', () => {
   });
 });
 
-describe('module registry and sheet links', () => {
+describe('module registry and records', () => {
   const put = (key: string, state: string, user = ADMIN) => call('PUT', `${P}/modules/${key}`, { state }, user);
 
   it('lists every module with a sheet link for dataset modules only', () => {
@@ -154,22 +154,22 @@ describe('module registry and sheet links', () => {
     expect(ok(call('GET', `${P}/module-changes`))[0].actor).toBe(ADMIN);
   });
 
-  it('establishing a module generates a sheet named for its workspace and returns the link', () => {
+  it('establishing a module creates its dataset, named for its workspace', () => {
     expect(ok(put('ti', 'Enabled')).sheetsCreated).toEqual([]);
     const one = ok(put('ti.workpacks', 'Enabled'));
     expect(one.sheetsCreated.map((s: any) => s.name)).toEqual(['EPCIC - T&I - Workpacks']);
-    expect(one.sheet.url).toMatch(/#gid=\d+$/);
+    expect(one.sheet.gid).toBeGreaterThan(0);
     expect(ok(put('ti.workpacks', 'Enabled')).sheetsCreated).toEqual([]);
   });
 
-  it('generates a sheet on request and reads only this project\'s rows', () => {
-    const g = ok(call('POST', `${P}/modules/management.lessons-learned/sheet`));
-    expect(g).toMatchObject({ created: true, sheet: { name: 'Governance - Management - Lessons Learned' } });
-    store.appendRows(g.sheet.name, COLUMNS.generic, [{ projectId: 'sttp2b', id: 'I1', title: 'Late drawings', status: 'Open' }, { projectId: 'other', id: 'I2', title: 'Elsewhere' }]);
+  it("reads only this project's rows of a module sheet, and has no route to generate one on request", () => {
+    expect(err(call('POST', `${P}/modules/management.lessons-learned/sheet`)).error.code).toBe('ROUTE_NOT_FOUND');
+    const made = ok(put('management.lessons-learned', 'Enabled')).sheetsCreated.find((s: any) => /Lessons Learned/.test(s.name));
+    const name = made?.name ?? 'Governance - Management - Lessons Learned';
+    store.appendRows(name, COLUMNS.generic, [{ projectId: 'sttp2b', id: 'I1', title: 'Late drawings', status: 'Open' }, { projectId: 'other', id: 'I2', title: 'Elsewhere' }]);
     const rec = ok(call('GET', `${P}/modules/management.lessons-learned/records`));
     expect(rec.columns).not.toContain('projectId');
     expect(rec.items).toMatchObject([{ id: 'I1', title: 'Late drawings' }]);
-    expect(err(call('POST', `${P}/modules/management/sheet`)).error.code).toBe('NO_SHEET');
   });
 });
 
@@ -1073,10 +1073,10 @@ describe('procurement registers', () => {
     expect(pk.items.filter((p: any) => p.status === 'Planned')).toHaveLength(9);
     expect(pk.items.filter((p: any) => p.workPackage).length).toBeGreaterThan(130);
     expect(pk.items.find((p: any) => p.code === 'STTP2B-GF-MEC-017')).toMatchObject({ status: 'Planned', workPackage: 'WP2', packageType: 'PS', vendor: null });
-    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(170);
-    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(0);
+    expect(ok(call('GET', `${LG}?pageSize=200`)).total).toBe(214);
+    expect(ok(call('GET', `${LG}?source=Client`)).total).toBe(44);
     expect(ok(call('GET', `${MB}?pageSize=200`)).total).toBe(190);
-    expect(ok(call('GET', MS)).items).toHaveLength(8);
+    expect(ok(call('GET', MS)).items).toHaveLength(13);
     const c = ok(call('GET', `${PC}/summary`));
     expect(c).toMatchObject({ total: 26, open: 26, bySeverity: { High: 5, Medium: 21, Critical: 0, Low: 0 }, byType: { Issue: 5, Risk: 3, Concern: 18 } });
     expect(ok(call('GET', `${P}/modules`)).modules.find((m: any) => m.key === 'procurement.logistics').sheet.name).toBe('EPCIC - Logistics shipments');
@@ -1114,7 +1114,7 @@ describe('procurement registers', () => {
 
   it('tracks shipments and flags the ones past their forecast date against the cut-off', () => {
     const s = ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', shipmentNo: 'SH-TEST', status: 'On Sailing', forecastOnSite: '2026-11-01', grossWeightKg: 1200 }, MEMBER));
-    expect(s).toMatchObject({ id: 'LG-0171', overdue: true, daysLate: 5, status: 'On Sailing' });
+    expect(s).toMatchObject({ id: 'LG-0215', overdue: true, daysLate: 5, status: 'On Sailing' });
     expect(ok(call('GET', `${LG}?pageSize=200`)).items.filter((r: any) => r.overdue)).toHaveLength(1);
     expect(ok(call('PATCH', `${LG}/${s.id}`, { actualOnSite: '2026-11-05' }))).toMatchObject({ status: 'Received', overdue: false, daysLate: null });
     expect(ok(call('GET', `${LG}.csv?source=PTSC`)).csv).toContain('SH-TEST');
@@ -1163,7 +1163,7 @@ describe('procurement registers', () => {
     expect(d.expediting).toMatchObject({ total: 145, health: { delay: 12, highRisk: 3, atRisk: 4, ok: 126 } });
     expect(d.expediting.behind.length).toBe(10);
     expect(d.expediting.behind[0].variance).toBeLessThanOrEqual(d.expediting.behind[9].variance);
-    expect(d.logistics).toMatchObject({ total: 170, byStatus: { Received: 132, 'On Sailing': 19, 'Under Customs': 13, 'Inland transportation': 6 }, bySource: { PTSC: 170 }, heldCount: 18 });
+    expect(d.logistics).toMatchObject({ total: 214, byStatus: { Received: 175, 'On Sailing': 19, 'Under Customs': 13, 'Inland transportation': 6 }, bySource: { PTSC: 170, Client: 44 }, heldCount: 18 });
     expect(d.materials.totals.map((t: any) => t.supply)).toEqual(['PTSC MC', 'Client']);
     expect(d.concerns).toMatchObject({ open: 26 });
     expect(d.attentionCount).toBe(32);
@@ -1228,9 +1228,9 @@ describe('procurement registers', () => {
   it('is included in cut-off reports and cannot be changed while one is open', () => {
     ok(call('POST', `${P}/snapshots`, { cutoff: '2026-10-30' }, MANAGER));
     ok(call('POST', LG, { source: 'PTSC', packageNo: 'STTP2B-GF-STR-001A', status: 'Planned' }));
-    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(170);
-    expect(ok(call('GET', LG)).total).toBe(171);
-    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(170);
+    expect(ok(call('GET', `${LG}?asOf=2026-10-30`)).total).toBe(214);
+    expect(ok(call('GET', LG)).total).toBe(215);
+    expect(ok(call('GET', `${P}/procurement/dashboard?asOf=2026-10-30`)).logistics.total).toBe(214);
     expect(err(call('POST', `${PC}?asOf=2026-10-30`, { title: 'x' })).error.code).toBe('READ_ONLY_SNAPSHOT');
   });
 });

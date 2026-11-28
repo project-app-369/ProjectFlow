@@ -974,9 +974,9 @@ The architecture and product baseline above are settled for implementation. The 
 | Private-task retention/conversion policy and source-task ownership mappings | Product owner and organization data owner | Before P1 task rollout |
 | Whether project activators may enable modules that are not yet delivered, or only administrators (SET-06) | Product owner and platform owner | Before P1 pilot |
 
-### 11.4 Non-normative note: worksheet organization in the Google Sheets pre-build
+### 11.4 Non-normative note: dataset organization (formerly the Google Sheets pre-build)
 
-The pre-build stores data in one Google spreadsheet. Its worksheets are named `<area> - <dataset>` and ordered by area, so each workspace's data stays together: Settings (Projects, Users, Memberships, Modules, Module changes), Personal (Tasks), EPCIC (S-curve, Work packages, Milestones, Procurement packages, Expediting packages, plus a sheet per established module), Governance (Risks, Interfaces, Interface points). Each area has its own tab colour. Sheets that hold project records start with a `projectId` column so one file can serve several projects. A separate file per workspace was considered and rejected for the pre-build: one deployment, one token and one link per module are simpler, and the prefix gives the same separation. This note adds no requirement to the full application.
+Data is stored in Supabase (the retired pre-build kept it in one Google spreadsheet). Datasets are named `<area> - <dataset>` and ordered by area, so each workspace's data stays together: Settings (Projects, Users, Memberships, Modules, Module changes), Personal (Tasks), EPCIC (S-curve, Work packages, Milestones, Procurement packages, Expediting packages, plus a sheet per established module), Governance (Risks, Interfaces, Interface points). Each area has its own tab colour. Sheets that hold project records start with a `projectId` column so one file can serve several projects. A separate file per workspace was considered and rejected for the pre-build: one deployment, one token and one link per module are simpler, and the prefix gives the same separation. This note adds no requirement to the full application.
 
 ## Appendix A. Source selection and conflict resolution
 
@@ -1012,12 +1012,12 @@ The selection preserves capability intent without treating every proposed implem
 | User management in Settings, administrator mode | SET-08, DEC-15 | Users page visible to administrators only |
 | Separate worksheets per workspace and general settings | §11.4 | Non-normative pre-build note; the full application is unaffected |
 | Build Risk Management and Interface Management | MGT-06, INT-04 | First screens over MGT-01 and INT-01 to INT-03 |
-| Milestones as reference data | PLAN-03 | Key Milestones workbook seeds a Google Sheets-backed register with role-checked create, edit and guarded delete; summaries refresh from stored rows |
+| Milestones as reference data | PLAN-03 | Key Milestones workbook seeds a Supabase-backed register with role-checked create, edit and guarded delete; summaries refresh from stored rows |
 | Construction budget: manhours per WBS activity with histogram | CON-05 to CON-07 | Added as a Construction submodule; entry by row or pasted WBS; hours spread evenly over plan dates |
 | General Knowledge with the nine knowledge areas | KNW-01 to KNW-04 | One Reports module, a submodule per area; starter articles come from loaded data |
 | Edit modal pushed from the right; submenu arrows; collapsible navbar; icon buttons | NAV-08, NAV-09 | Modals are a right-hand drawer overlay rather than a native dialog (an earlier centred version misread the request); icon vocabulary lives in one place (`Btn`) |
-| Procurement data from `data/EPCIC/Procurement`, linked to Google Sheets, with CRUD | PROC-04, PROC-07, PROC-08 | Procurement plan, expediting, logistics, material balance and weights are loaded by `extract_procurement.py` and stored on the sheets; each register has create, edit and delete |
-| Issue management: several PICs by email, sub-tasks, history log, due-date reminders | MGT-07 to MGT-10 | Source is the task monitor workbook; reminders go out by Apps Script mail |
+| Procurement data from `data/EPCIC/Procurement`, with CRUD | PROC-04, PROC-07, PROC-08 | Procurement plan, expediting, logistics, material balance and weights are loaded by `extract_procurement.py` and stored on the sheets; each register has create, edit and delete |
+| Issue management: several PICs by email, sub-tasks, history log, due-date reminders | MGT-07 to MGT-10 | Source is the task monitor workbook; reminders need a mail service and a schedule, not set up on Supabase yet |
 | Procurement dashboard: six cards, S-curve by facility and LS/PS, progress by work package, actual-against-plan bars; risks and concerns per package | PROC-05, PROC-05a, PROC-06 | One dashboard with attention score per package; the S-curve comes from the plan workbook's weekly series; the supplied bar reference is implemented with actual fill, a plan tick and a single row of actual, plan and signed percentage-point variance; work-package figures use the procurement `Progress Table (W)` cumulative this-week columns M/N; concerns are typed Risk, Concern or Issue with severity, owner and action |
 | Header: short project name, cut-off dropdown, snapshot button, full-width content, no sidebar project card | NAV-07 | Saved cut-off reports opened read-only from the dropdown; the Friday default is a shortcut, not a rule |
 | Task Management: list/card/kanban/gantt, task fields, calendar, workload | TASK-13 to TASK-15 | Personal tasks with derived Overdue; Planned added as a stored status so the four kanban columns map to the status field |
@@ -1080,5 +1080,5 @@ The selection preserves capability intent without treating every proposed implem
 | STTP2B project data | `data/` and [ProjectFlow_reference_data.md](ProjectFlow_reference_data.md) | Real workbooks used to seed the first modules, with mapping and cleaning rules |
 | Static prototypes | `v2_codex/`, `v3_gemini/`, `MVP/Claude/` | Interaction and visual reference only; they add no requirements |
 | Application | `app/` ([README](../app/README.md), [ADRs](../app/docs/adr/)) | Implementation on the §11.1 baseline |
-| Pre-build backend | `app/apps/sheets/` ([README](../app/apps/sheets/README.md)) | Google Sheets + Apps Script stand-in for the API until the full server exists; not a deployment target for this specification |
+| Pre-build backend | `app/apps/sheets/` ([README](../app/apps/sheets/README.md)) | Shared router and services behind the Supabase edge function and API v2, plus the local AI simulator; not a deployment target for this specification |
 | Implementation plan | [ProjectFlow_implementation_plan.md](ProjectFlow_implementation_plan.md) | What exists, pre-build limits, NestJS parity backlog and roadmap against §13 |

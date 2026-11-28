@@ -13,7 +13,7 @@ try {
     if (latest.rows.length !== 1 || latest.rows[0].sheet_count !== snapshot.sheets.length || latest.rows[0].row_count !== rows) {
       throw new Error('Database rows do not match the latest import audit record.');
     }
-    const store = new MemoryStore(process.env.BACKUP_SHEET_URL);
+    const store = new MemoryStore();
     store.loadSnapshot(snapshot);
     const api = new Api(store);
     const routes = ['/directory', '/projects', '/projects/sttp2b/dashboard', '/projects/sttp2b/cpn', '/projects/sttp2b/procurement/dashboard', '/projects/sttp2b/issues'];

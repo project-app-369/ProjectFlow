@@ -30,3 +30,11 @@ export const fmtDay = (iso: string) => atNoon(iso).toLocaleDateString('en-GB', {
 export const fmtMonth = (iso: string) => atNoon(iso).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 export const fmtShort = (iso: string) => atNoon(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 export const hours = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)} h`;
+
+/** Columns for a fixed set of `n` tiles so that the last row is full (9 tiles: 3 by 3, not 4+4+1); the most columns up to `max` that leave the fewest empty slots. */
+export function balancedColumns(n: number, max = 4): number {
+  if (n <= max) return Math.max(1, n);
+  let best = max, gap = Infinity;
+  for (let c = max; c >= 2; c--) { const empty = (c - (n % c)) % c; if (empty < gap) { gap = empty; best = c; } }
+  return best;
+}

@@ -11,7 +11,7 @@ export interface ApiRequest {
   /** Session token from POST /auth/login; the acting user is taken from it when the deployment requires sign-in. */
   session?: string;
 }
-/** Apps Script web apps always answer HTTP 200, so the real status travels inside the envelope. */
+/** The hosts always answer HTTP 200 to the web app, so the real status travels inside the envelope. */
 export type Envelope = { ok: true; status: number; data: unknown } | { ok: false; status: number; error: { code: string; message: string; issues?: unknown } };
 
 interface Ctx { api: Api; actor: Actor; p: Record<string, string>; q: Record<string, string>; body: unknown }
@@ -96,7 +96,6 @@ const ROUTES: Route[] = [
   route('GET', 'modules', c => c.api.svc.catalog()),
   route('GET', `${PID}/modules`, c => ({ workspaces: c.api.svc.catalog().workspaces, modules: c.api.svc.modules(c.p.pid) }), { access: 'projectAny' }),
   route('PUT', `${PID}/modules/(?<key>[^/]+)`, c => { requireConfigure(c.actor, c.p.pid); return c.api.svc.changeModule(c.p.pid, c.p.key, c.body, c.actor); }, { access: 'user' }),
-  route('POST', `${PID}/modules/(?<key>[^/]+)/sheet`, c => { requireWrite(c.actor, c.p.pid); return c.api.svc.generateSheet(c.p.key); }, { module: p => p.key }),
   route('GET', `${PID}/modules/(?<key>[^/]+)/records`, c => c.api.svc.records(c.p.pid, c.p.key), { module: p => p.key }),
   route('GET', `${PID}/module-changes`, c => c.api.svc.moduleChanges(c.p.pid), { access: 'projectAny' }),
 

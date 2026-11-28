@@ -182,20 +182,6 @@ export const SHEET = {
 
 export type SheetKey = keyof typeof SHEET;
 
-/** Tab colours per area, applied when a sheet is created. */
-export const AREA_COLOR = {
-  Settings: '#6b7280',
-  Personal: '#00877d',
-  EPCIC: '#343c78',
-  Governance: '#ad751d',
-  Reports: '#bc5660',
-} as const;
-
-export const tabColorOf = (sheetName: string): string | undefined => {
-  const area = sheetName.split(' - ')[0] as keyof typeof AREA_COLOR;
-  return AREA_COLOR[area];
-};
-
 /** Sheets whose rows belong to a project (first column `projectId`). Deleting a project removes its rows from these. */
 export const PROJECT_SHEETS: SheetKey[] = ['modules', 'moduleChanges', 'memberships', 'roleAccess', 'personAccess', 'scurve', 'scurveWeekly', 'workPackages', 'milestones', 'procurement', 'expediting', 'risks', 'riskActions', 'riskMatrix', 'riskBreakdown', 'interfaces', 'interfacePoints', 'interfacePointRevs', 'interfaceParties', 'responsibility', 'rasci', 'budget', 'facilityEquipment', 'logistics', 'materialBalance', 'materialSummary', 'procConcerns', 'procCurves', 'facilityCurves', 'facilityScopes', 'facilityWbs', 'workingSchedule', 'cpnItems', 'phaseProgress', 'issues', 'issueSubtasks', 'issueLog', 'knowledge', 'snapshots', 'snapshotData'];
 

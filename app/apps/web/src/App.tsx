@@ -38,12 +38,13 @@ const Profile = lazyPage(() => import('./pages/Profile'));
 const CriticalPathNetwork = lazyPage(() => import('./pages/Cpn').then(m => ({ default: m.CriticalPathNetwork })));
 const FacilityProgressPage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilityProgressPage })));
 const FacilitySchedulePage = lazyPage(() => import('./pages/Facilities').then(m => ({ default: m.FacilitySchedulePage })));
-import { AppDataProvider, CrumbContext, ModuleKeyContext, NO_PROJECT, SheetContext, useApp, usePrefs } from './state';
+import { AppDataProvider, CrumbContext, ModuleKeyContext, NO_PROJECT, useApp, usePrefs } from './state';
 import { Btn, ErrorBox, Field, Loading, PageHead } from './ui';
 
 const PAGES: Record<string, () => ReactNode> = {
   dashboard: () => <Dashboard />,
   'task-management.board': () => (apiMode === 'sheets' ? <TaskManagement /> : <Tasks />),
+  'task-management.project-tasks': () => (apiMode === 'sheets' ? <TaskManagement scope="project" /> : <Tasks />),
   'task-management.calendar': () => <TaskCalendar />,
   'task-management.workload': () => <TaskWorkload />,
   'planning.overall-progress': () => <ProgressOverall />,
@@ -96,11 +97,9 @@ function ModuleRoute() {
 
   return (
     <CrumbContext.Provider value={crumbsOf(modules, key)}>
-      <SheetContext.Provider value={m.sheet ?? null}>
-        <ModuleKeyContext.Provider value={key}>
-          {page ? page() : <Placeholder moduleKey={key} />}
-        </ModuleKeyContext.Provider>
-      </SheetContext.Provider>
+      <ModuleKeyContext.Provider value={key}>
+        {page ? page() : <Placeholder moduleKey={key} />}
+      </ModuleKeyContext.Provider>
     </CrumbContext.Provider>
   );
 }
@@ -119,7 +118,7 @@ function Home() {
   );
 }
 
-/* ---------------- demo sign-in (sheets pre-build only) ---------------- */
+/* ---------------- demo sign-in (demo mode only) ---------------- */
 function SignIn({ onSignIn }: { onSignIn: (id: string) => void }) {
   const dir = useQuery({ queryKey: ['directory'], queryFn: () => request<DirectoryUser[]>('/directory') });
   return (
@@ -135,7 +134,7 @@ function SignIn({ onSignIn }: { onSignIn: (id: string) => void }) {
                 <span className="avatar teal">{u.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}</span>{u.name}
               </button>
             ))}
-            {!dir.data.length && <div className="empty">No active users. Run the sheets setup function first.</div>}
+            {!dir.data.length && <div className="empty">No active users. Import the project data first.</div>}
           </div>
         )}
       </div>

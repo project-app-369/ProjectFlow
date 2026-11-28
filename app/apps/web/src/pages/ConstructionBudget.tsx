@@ -7,6 +7,7 @@ import { useAccess, useApp, useToast } from '../state';
 import { Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Stat, DateInput } from '../ui';
 import { parseBudgetImport } from './budgetImport';
 import { lazyPage } from '../lazyPage';
+import { LoadMore, useProgressive } from '../lazyList';
 
 const BudgetHistogramChart = lazyPage(() => import('../BudgetHistogramChart'));
 const hrs = (n: number) => `${n.toLocaleString('en-GB', { maximumFractionDigits: 1 })} h`;
@@ -52,6 +53,8 @@ export default function ConstructionBudget() {
     return out;
   }, [items, collapsed, filter]);
 
+  // 450-odd rows: the first 80 render at once, the rest as the list is scrolled (a search starts again from the top)
+  const rows = useProgressive(visible, 80, filter);
   const s = budget.data?.summary;
   const h = histogram.data;
   const total = s?.totalHours || 1;
@@ -113,13 +116,13 @@ export default function ConstructionBudget() {
         <div className="toolbar">
           <label className="search"><Icon name="search" /><input placeholder="Search WBS, activity or discipline…" value={filter} onChange={e => setFilter(e.target.value)} aria-label="Search the WBS" /></label>
         </div>
-        {budget.error ? <ErrorBox error={budget.error} /> : budget.isPending ? <Loading /> : (
+        {budget.error ? <ErrorBox error={budget.error} /> : budget.isPending ? <Loading /> : (<>
           <div className="table-wrap">
             <table className="wbs">
               <thead><tr><th>WBS</th><th>ACTIVITY</th><th>DISCIPLINE</th><th>PLAN</th><th style={{ textAlign: 'right' }}>BUDGET</th><th style={{ textAlign: 'right' }}>SPENT</th><th style={{ textAlign: 'right' }}>CPI</th><th>SHARE</th>{(access.canWrite || access.canManage) && <th />}</tr></thead>
               <tbody>
-                {visible.map(n => (
-                  <tr key={n.wbs} className={n.leaf ? '' : 'wbs-parent'}>
+                {rows.shown.map((n, i) => (
+                  <tr key={n.wbs} className={[n.leaf ? '' : 'wbs-parent', i >= rows.revealFrom ? 'row-in' : ''].filter(Boolean).join(' ') || undefined}>
                     <td className="mono"><span style={{ paddingLeft: filter ? 0 : `calc(${n.level - 1} * var(--sp-4))` }}>
                       {!n.leaf && !filter ? <button type="button" className="tree-toggle" aria-label={`${collapsed.has(n.wbs) ? 'Expand' : 'Collapse'} ${n.wbs}`} aria-expanded={!collapsed.has(n.wbs)} onClick={() => toggle(n.wbs)}>{collapsed.has(n.wbs) ? '▸' : '▾'}</button> : <span className="tree-toggle" />}
                       {n.wbs}</span></td>
@@ -144,7 +147,8 @@ export default function ConstructionBudget() {
               {items.length > 0 && !filter && <tfoot><tr><td colSpan={4}><strong>Total budget</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.totalHours.toLocaleString('en-GB', { maximumFractionDigits: 1 })}</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.actualHours != null ? s!.actualHours.toLocaleString('en-GB', { maximumFractionDigits: 1 }) : ''}</strong></td><td style={{ textAlign: 'right' }} className="mono"><strong>{s!.cpi != null ? s!.cpi.toFixed(2) : ''}</strong></td><td colSpan={2} /></tr></tfoot>}
             </table>
           </div>
-        )}
+          <LoadMore source={rows.lazy} noun="rows" />
+        </>)}
       </div>
 
       {editing && <ActivityForm node={editing.node} parent={editing.parent ?? null} nodes={items} base={base} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />}

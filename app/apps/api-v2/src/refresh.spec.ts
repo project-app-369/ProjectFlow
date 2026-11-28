@@ -7,7 +7,7 @@ import { refreshStore } from './refresh';
 
 describe('reference data refresh', () => {
   it('replaces stale reference rows, moves the cut-off, and leaves what people entered alone', () => {
-    const store = new MemoryStore('x');
+    const store = new MemoryStore();
     seedStore(store, seedData);
     const issues = store.readRows(SHEET.issues, COLUMNS.issues).length;
     store.deleteRows(SHEET.milestones, COLUMNS.milestones, { projectId: 'sttp2b' });
@@ -26,7 +26,7 @@ describe('reference data refresh', () => {
   });
 
   it('loads the facility equipment once into a database that has none and never overwrites what people edit', () => {
-    const store = new MemoryStore('x');
+    const store = new MemoryStore();
     seedStore(store, seedData);
     store.deleteRows(SHEET.facilityEquipment, COLUMNS.facilityEquipment, { projectId: 'sttp2b' });
     const first = refreshStore(store);
@@ -42,7 +42,7 @@ describe('reference data refresh', () => {
   });
 
   it('loads the construction budget once, switches Construction → Budget on, and keeps corrected hours', () => {
-    const store = new MemoryStore('x');
+    const store = new MemoryStore();
     seedStore(store, seedData);
     store.deleteRows(SHEET.budget, COLUMNS.budget, { projectId: 'sttp2b' });
     const first = refreshStore(store);

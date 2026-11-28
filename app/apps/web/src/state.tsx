@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Me, ModulesResponse, Project, Role, SheetInfo, WorkspaceId } from './api';
+import type { Me, ModulesResponse, Project, Role, WorkspaceId } from './api';
 
 /* ---------------- personal UI preferences (browser-local) ---------------- */
 const PREFS_KEY = 'projectflow.prefs';
@@ -27,7 +27,13 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   }, [prefs]);
   const value = useMemo<PrefsCtx>(() => ({
     ...prefs,
-    setDark: dark => setPrefs(p => ({ ...p, dark })),
+    setDark: dark => {
+      // colours cross-fade for a moment instead of flipping
+      const root = document.documentElement;
+      root.classList.add('theme-fade');
+      window.setTimeout(() => root.classList.remove('theme-fade'), 400);
+      setPrefs(p => ({ ...p, dark }));
+    },
     setWorkspace: workspace => setPrefs(p => (p.workspace === workspace ? p : { ...p, workspace })),
     setNavCollapsed: navCollapsed => setPrefs(p => ({ ...p, navCollapsed })),
     reset: () => setPrefs(defaults),
@@ -79,8 +85,6 @@ export function useAccess() {
 export type Crumb = string | { label: string; to?: string };
 export const CrumbContext = createContext<Crumb[]>([]);
 
-/** The spreadsheet sheet behind the current screen, when the backend keeps data in Google Sheets. */
-export const SheetContext = createContext<SheetInfo | null>(null);
 /** The module the screen belongs to, so permission checks can be about this screen and not only the project role. */
 export const ModuleKeyContext = createContext<string | null>(null);
 

@@ -46,7 +46,7 @@ const issueQuery = listQuery(['id', 'title', 'priorityRank', 'status', 'dueDate'
 const LOGGED: [keyof typeof issueFields, string][] = [['title', 'Title'], ['description', 'Description'], ['priority', 'Priority'], ['discipline', 'Discipline'], ['status', 'Status'], ['startDate', 'Start date'], ['dueDate', 'Due date'], ['nextAction', 'Next action'], ['remarks', 'Remarks'], ['packageCode', 'Package'], ['subcontract', 'Service subcontract']];
 
 /**
- * Cells are edited by hand in the spreadsheet, so what is read is tidied before it is used: a status or priority is matched by
+ * Rows can arrive from imports and older data, so what is read is tidied before it is used: a status or priority is matched by
  * meaning and case ("In Progess", "done", "HIGH"), and PICs may be separated by commas, semicolons or spaces.
  */
 const STATUS_WORDS: Record<string, (typeof ISSUE_STATUSES)[number]> = {
@@ -388,7 +388,7 @@ export class IssuesService {
     });
   }
 
-  /** The daily job for every project; used by the Apps Script time trigger. */
+  /** The daily job for every project; meant for a scheduled trigger (none is set up on Supabase yet). */
   remindAll() {
     return this.svc.projectRows().map(p => ({ projectId: String(p.id), ...this.remindDue(String(p.id)) }));
   }

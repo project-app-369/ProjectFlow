@@ -2,22 +2,19 @@
   "name": "@projectflow/sheets",
   "version": "0.1.0",
   "private": true,
-  "description": "Pre-build backend: Google Apps Script web app over a Google Spreadsheet, same REST contract as the NestJS API.",
+  "description": "Shared Project Flow router, services and in-memory store (used by the Supabase edge function and API v2) plus a local simulator for developing the AI functions.",
   "scripts": {
-    "build": "node scripts/build.mjs",
     "dev": "tsx src/local-server.ts",
     "dev:secure": "node scripts/dev-secure.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export-seed": "tsx scripts/export-seed.ts"
+    "sheet-catalog": "tsx scripts/sheet-catalog.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/google-apps-script": "^2.0.15",
     "@types/node": "^26.6.6",
-    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "~5.9",
     "vitest": "^5.1.0"

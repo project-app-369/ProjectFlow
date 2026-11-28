@@ -5,7 +5,7 @@ import {
 } from '../../api/src/registry/catalog';
 import { overallProgress } from '../../api/src/schedule/progress';
 import type { Actor } from './auth';
-import { COLUMNS, SHEET, SNAPSHOT_KEY_OF_SHEET, moduleSheet, pathOf, tabColorOf } from './datasets';
+import { COLUMNS, SHEET, SNAPSHOT_KEY_OF_SHEET, moduleSheet, pathOf } from './datasets';
 import { HttpError, filterAndSort, listQuery, notFound, paginate, parse, toCsv, unique, type ListParams } from './http';
 import type { Row, SheetInfo, Store } from './store';
 
@@ -15,7 +15,7 @@ const expeditingQuery = listQuery(['code', 'discipline', 'vendor', 'status', 'ac
 const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
 const moduleChange = z.object({ state: z.string(), reason: z.string().max(500).optional() });
 
-/** Same fields the NestJS API returns for a module, plus where its data lives in the spreadsheet. */
+/** Same fields the NestJS API returns for a module, plus the dataset that holds its rows. */
 export interface ModuleView extends ModuleManifest {
   state: OperationState;
   effective: boolean;
@@ -80,14 +80,6 @@ export class Service {
     return { workspaces: WORKSPACES, modules: MANIFESTS };
   }
 
-  /** Creates the sheet behind a module when it has none yet. */
-  generateSheet(key: string): { sheet: SheetInfo; created: boolean } {
-    const target = moduleSheet(key, MANIFESTS);
-    if (!target) throw new HttpError(409, { code: 'NO_SHEET', message: 'This module does not keep a register of its own.' });
-    const existed = !!this.store.sheetInfo(target.sheet);
-    return { sheet: this.store.ensureSheet(target.sheet, target.columns, tabColorOf(target.sheet)), created: !existed };
-  }
-
   changeModule(projectId: string, key: string, body: unknown, actor: Actor) {
     const { state, reason } = parse(moduleChange, body);
     return this.store.withLock(() => {
@@ -110,7 +102,7 @@ export class Service {
         const inSubtree = m.key === key || this.isDescendant(m.key, key);
         if (!inSubtree || !isEffective(m.key, after)) continue;
         const target = moduleSheet(m.key, MANIFESTS);
-        if (target && !this.store.sheetInfo(target.sheet)) created.push(this.store.ensureSheet(target.sheet, target.columns, tabColorOf(target.sheet)));
+        if (target && !this.store.sheetInfo(target.sheet)) created.push(this.store.ensureSheet(target.sheet, target.columns));
       }
       const module = this.modules(projectId).find(m => m.key === key)!;
       return { ...module, sheetsCreated: created };
@@ -251,6 +243,6 @@ export class Service {
   }
 
   health() {
-    return { status: 'ok', database: 'sheets', spreadsheet: this.store.spreadsheetUrl() };
+    return { status: 'ok', database: 'memory' };
   }
 }

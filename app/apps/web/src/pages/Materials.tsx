@@ -1,14 +1,15 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { downloadCsv, request, type MaterialWeight, type Page, type StockLine } from '../api';
 import { RecordDrawer } from '../crud';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { Icon } from '../icons';
-import { SortBy, useListState, usePrefetchNext } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
-import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead, Pager } from '../ui';
+import { ActualPlanBar, Badge, Btn, ErrorBox, Loading, PageHead } from '../ui';
 import { stockFields, weightFields } from './procFields';
 import { useDeepLink } from '../deepLink';
 
@@ -28,9 +29,8 @@ export default function Materials() {
   const base = `/projects/${project.id}/materials`;
 
   const weights = useQuery({ queryKey: ['material-weights', project.id], queryFn: () => request<Page<MaterialWeight>>(`${base}/summary?pageSize=200`) });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...filters });
-  const page = useQuery({ queryKey: ['material-balance', project.id, query], queryFn: () => request<Page<StockLine>>(`${base}/balance${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['material-balance', project.id, q], q => request<Page<StockLine>>(`${base}/balance${q}`));
+  const query = list.query({ ...filters });
+  const page = useInfiniteList({ key: ['material-balance', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<Page<StockLine>>(`${base}/balance${q}`) });
   const stock: StockLine | 'new' | null = stockId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === stockId) ?? null);
   const facets = page.data?.facets;
 
@@ -111,8 +111,8 @@ export default function Materials() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No stock line matches. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No stock line matches. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="stock lines" />
           </>
         )}
       </div>

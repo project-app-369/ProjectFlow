@@ -224,9 +224,10 @@ export default function ProcurementDashboard() {
           <Panel title="Shipments" sub={`${lg.total} shipments · ${kg(lg.receivedKg)} of ${kg(lg.weightKg)} received`} foot={<Link className="btn text" to="/m/procurement.logistics">Open logistics →</Link>}>
             <Legend items={Object.entries(lg.byStatus).map(([label, n]) => ({ label: `${label} ${n}`, color: label === 'Received' ? 'var(--c-good)' : label === 'Planned' ? 'var(--c-neutral)' : 'var(--c-warn)' }))} />
             <div className="panel-content"><Bar height={12} total={lg.total} parts={Object.entries(lg.byStatus).map(([label, value]) => ({ label, value, color: label === 'Received' ? 'var(--c-good)' : label === 'Planned' ? 'var(--c-neutral)' : 'var(--c-warn)' }))} /></div>
-            {lg.overdue.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span className="negative">{r.daysLate} d late</span>} />)}
-            {lg.held.slice(0, 5).map(r => <ShipmentRow key={r.id} r={r} note={<Badge tone="amber">Held</Badge>} />)}
-            {lg.soon.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span>{fmtShort(r.forecastOnSite!)}</span>} />)}
+            {/* at most seven rows, late first, so the card is as tall as the one beside it */}
+            {[...lg.overdue.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span className="negative">{r.daysLate} d late</span>} />),
+              ...lg.held.slice(0, 5).map(r => <ShipmentRow key={r.id} r={r} note={<Badge tone="amber">Held</Badge>} />),
+              ...lg.soon.slice(0, 4).map(r => <ShipmentRow key={r.id} r={r} note={<span>{fmtShort(r.forecastOnSite!)}</span>} />)].slice(0, 7)}
             {!lg.overdue.length && !lg.held.length && !lg.soon.length && <div className="empty">Nothing late, held or due soon.</div>}
           </Panel>
         ) : <Off label="Logistics" />}

@@ -83,6 +83,8 @@ export function InsightsView({ data, error, onFilter, active, compact, extra, pa
 }): ReactNode {
   if (error) return <section className="panel ins-panel"><div className="panel-head"><div><h2>Summary unavailable</h2><p>The register remains available below.</p></div></div><ErrorBox error={error} /></section>;
   if (!data) return <><div className="stats" role="status" aria-busy="true" aria-label="Loading summary">{Array.from({ length: 6 }, (_, i) => <span key={i} className="sk sk-card" />)}</div><span className="sk sk-panel" /></>;
+  /** A chart without data is left out: an empty card is a hole in the page. */
+  const charts = data.charts.filter(c => c.categories.length > 0);
   return (
     <>
       <div className={`stats ${compact ? 'compact' : ''}`}>
@@ -92,16 +94,14 @@ export function InsightsView({ data, error, onFilter, active, compact, extra, pa
         {data.strip && <Boxes {...data.strip} onFilter={onFilter} active={active} compact={compact} />}
         {data.lookAhead && <Boxes {...data.lookAhead} onFilter={onFilter} active={active} compact={compact} />}
       </div>
-      {(data.charts.length > 0 || extra) && (
+      {(charts.length > 0 || extra) && (
         <div className={`ins-charts ${compact ? 'compact' : ''} ${chartsInRow ? 'in-row' : ''} ${twoCol ? 'two-col' : ''}`}>
-          {data.charts.map(c => (
+          {charts.map(c => (
             <section key={c.title} className={`panel ins-panel ${compact ? 'compact' : ''} ${c.layout === 'column' && c.categories.length > 8 && !chartsInRow ? 'wide' : ''}`}>
               <div className="panel-head"><div><h2 title={compact ? c.sub : undefined}>{c.title}</h2>{!compact && <p>{c.sub}</p>}</div></div>
-              {c.categories.length ? (
-                <Suspense fallback={<Loading label="Loading chart…" />}>
-                  <InsightChartView compact={compact} chart={c} onPick={onFilter && c.filterKey ? v => onFilter({ [c.filterKey!]: v }) : undefined} />
-                </Suspense>
-              ) : <div className="empty">Nothing to chart yet.</div>}
+              <Suspense fallback={<Loading label="Loading chart…" />}>
+                <InsightChartView compact={compact} chart={c} onPick={onFilter && c.filterKey ? v => onFilter({ [c.filterKey!]: v }) : undefined} />
+              </Suspense>
             </section>
           ))}
           {extra}

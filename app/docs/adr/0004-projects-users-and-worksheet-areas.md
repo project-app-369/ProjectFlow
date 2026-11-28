@@ -1,6 +1,6 @@
 # 0004 — Projects, users, registers and worksheet areas in the pre-build
 
-Status: accepted (pre-build only). Extends [0003](0003-prebuild-on-google-sheets.md). The NestJS API remains the target backend and does not yet have these features (see the [implementation plan](../../../docs/ProjectFlow_implementation_plan.md)).
+Status: accepted; the storage it describes is now Supabase ([0007](0007-supabase-only-backend.md)), so read "sheet" as dataset and ignore tab colours and Apps Script steps. Was: accepted (pre-build only). Extends [0003](0003-prebuild-on-google-sheets.md). The NestJS API remains the target backend and does not yet have these features (see the [implementation plan](../../../docs/ProjectFlow_implementation_plan.md)).
 
 ## Context
 

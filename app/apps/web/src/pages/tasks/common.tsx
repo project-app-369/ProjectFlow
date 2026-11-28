@@ -80,13 +80,13 @@ export function ProjectChips({ ids = [] }: { ids?: string[] }) {
   return <>{ids.map(id => <span key={id} className="chip task-project-chip"><Icon name="layers" />{label(id)}</span>)}</>;
 }
 
-const urgencyStateTone: Record<Urgency, StateTone> = { Low: 'neutral', Normal: 'info', High: 'warn', Urgent: 'crit' };
+const urgencyStateTone: Record<Urgency, StateTone> = { Low: 'ok', Normal: 'info', High: 'warn', Urgent: 'crit' };
 const taskStateTone: Record<TaskStatus, StateTone> = { Backlog: 'neutral', Planned: 'info', Ongoing: 'warn', Completed: 'ok' };
 
 /** `text` writes the word next to the icon (list and table views); cards keep the compact icon. */
 export function UrgencyBadge({ urgency, text }: { urgency: Urgency; text?: boolean }) {
-  if (text) return <StateTag icon={`urgency-${urgency.toLowerCase()}`} label={urgency} tone={urgencyStateTone[urgency]} title={`Urgency: ${urgency}`} />;
-  return <span className={`task-symbol urgency-${urgency.toLowerCase()}`} role="img" aria-label={`Urgency: ${urgency}`} title={`Urgency: ${urgency}`}><Icon name={`urgency-${urgency.toLowerCase()}`} /></span>;
+  if (text) return <StateTag icon={`prio-${urgency.toLowerCase()}`} label={urgency} tone={urgencyStateTone[urgency]} title={`Urgency: ${urgency}`} />;
+  return <span className={`task-symbol urgency-${urgency.toLowerCase()}`} role="img" aria-label={`Urgency: ${urgency}`} title={`Urgency: ${urgency}`}><Icon name={`prio-${urgency.toLowerCase()}`} /></span>;
 }
 
 export function StatusBadges({ task, text }: { task: PTask; text?: boolean }) {
@@ -95,17 +95,15 @@ export function StatusBadges({ task, text }: { task: PTask; text?: boolean }) {
 }
 
 interface IconOption { value: string; label: string; icon: string }
-const urgencyOptions: IconOption[] = [{ value: '', label: 'All urgencies', icon: 'flag' }, ...URGENCIES.map(u => ({ value: u, label: u, icon: `urgency-${u.toLowerCase()}` }))];
 export const statusOptions: IconOption[] = TASK_STATUSES.map(s => ({ value: s, label: s, icon: `status-${s.toLowerCase()}` }));
-const statusFilterOptions: IconOption[] = [{ value: '', label: 'All statuses', icon: 'check' }, ...statusOptions, { value: 'Overdue', label: 'Overdue', icon: 'clock' }];
 
-/** Icon-only selector with named options for hover and assistive technology. */
+/** Compact selector for a card: the icon and word of the current value, a menu of named options. */
 export function IconSelect({ value, options, onChange, label, className = '' }: { value: string; options: IconOption[]; onChange: (value: string) => void; label: string; className?: string }) {
   const selected = options.find(o => o.value === value) ?? options[0];
   return <details className={`task-icon-select value-${selected.value.toLowerCase()} ${className}`} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) e.currentTarget.open = false; }} onKeyDown={e => { if (e.key === 'Escape') { e.currentTarget.open = false; e.currentTarget.querySelector('summary')?.focus(); } }}>
-    <summary aria-label={`${label}: ${selected.label}`} title={`${label}: ${selected.label}`}><Icon name={selected.icon} /></summary>
+    <summary aria-label={`${label}: ${selected.label}`} title={`${label}: ${selected.label}`}><Icon name={selected.icon} /><span className="task-icon-select-text">{selected.label}</span></summary>
     <div className="task-icon-select-menu" role="group" aria-label={label}>
-      {options.map(o => <button key={o.value} type="button" className={value === o.value ? 'selected' : ''} aria-label={o.label} title={o.label} aria-pressed={value === o.value} onClick={e => { onChange(o.value); e.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name={o.icon} /></button>)}
+      {options.map(o => <button key={o.value} type="button" className={value === o.value ? 'selected' : ''} aria-label={o.label} title={o.label} aria-pressed={value === o.value} onClick={e => { onChange(o.value); e.currentTarget.closest('details')?.removeAttribute('open'); }}><Icon name={o.icon} /><span>{o.label}</span></button>)}
     </div>
   </details>;
 }
@@ -134,7 +132,7 @@ export function applyFilter(tasks: PTask[], f: TaskFilter): PTask[] {
     (!f.status || (f.status === 'Overdue' ? t.overdue : t.status === f.status)));
 }
 
-export function TaskFilters({ value, onChange }: { value: TaskFilter; onChange: (f: TaskFilter) => void }) {
+export function TaskFilters({ value, onChange, hideProject = false }: { value: TaskFilter; onChange: (f: TaskFilter) => void; /** Project Tasks fixes the project. */ hideProject?: boolean }) {
   const { projects } = useApp();
   const set = (patch: Partial<TaskFilter>) => onChange({ ...value, ...patch });
   return (
@@ -144,13 +142,19 @@ export function TaskFilters({ value, onChange }: { value: TaskFilter; onChange: 
         <input placeholder="Search number, title, assigner or sub-task…" value={value.q} onChange={e => set({ q: e.target.value })} aria-label="Search tasks" />
       </label>
       <div className="filter-group">
-        <label className="task-filter"><Icon name="layers" /><select className="filter" aria-label="Filter by project" value={value.project} onChange={e => set({ project: e.target.value })}>
-          <option value="">All projects</option>
-          <option value={PERSONAL_KEY}>No project</option>
-          {projects.filter(p => p.myRole).map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
-        </select></label>
-        <IconSelect value={value.urgency} options={urgencyOptions} onChange={urgency => set({ urgency })} label="Filter by urgency" />
-        <IconSelect className="status-filter" value={value.status} options={statusFilterOptions} onChange={status => set({ status })} label="Filter by status" />
+        {!hideProject && (
+          <select className="filter" aria-label="Filter by project" value={value.project} onChange={e => set({ project: e.target.value })}>
+            <option value="">All projects</option>
+            <option value={PERSONAL_KEY}>No project</option>
+            {projects.filter(p => p.myRole).map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
+          </select>
+        )}
+        <select className="filter" aria-label="Filter by urgency" value={value.urgency} onChange={e => set({ urgency: e.target.value })}>
+          <option value="">All urgencies</option>{URGENCIES.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        <select className="filter" aria-label="Filter by status" value={value.status} onChange={e => set({ status: e.target.value })}>
+          <option value="">All statuses</option>{TASK_STATUSES.map(st => <option key={st} value={st}>{st}</option>)}<option value="Overdue">Overdue</option>
+        </select>
         <Btn kind="small" onClick={() => onChange(emptyFilter)}>Clear</Btn>
       </div>
     </div>
@@ -176,6 +180,8 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
   const up = <K extends keyof typeof v>(k: K, val: (typeof v)[K]) => setV(s => ({ ...s, [k]: val }));
   const busy = create.isPending || update.isPending;
   const badRange = !!v.planStart && !!v.planFinish && v.planFinish < v.planStart;
+  const [initial] = useState(() => JSON.stringify(v));
+  const dirty = !task || JSON.stringify(v) !== initial;
 
   const save = () => {
     setError('');
@@ -191,12 +197,12 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
 
   return (
     <>
-      <Modal title={task ? `${task.taskNo} · Task details` : 'New task'} size="lg" onClose={onClose}
+      <Modal title={task ? `${task.taskNo} · Task details` : 'New task'} size="xl" onClose={onClose}
         actions={<>
-          {task && <Btn kind="text task-delete-action" icon="trash" iconOnly aria-label="Delete task" onClick={() => setConfirming(true)} />}
+          {task && <Btn kind="text task-delete-action" icon="trash" iconOnly aria-label="Delete task" title="Delete task" onClick={() => setConfirming(true)} />}
           <span className="task-action-spacer" />
-          <Btn icon="close" iconOnly aria-label="Cancel editing" onClick={onClose} />
-          <Btn kind="primary" icon="tick" iconOnly aria-label={busy ? 'Saving task' : 'Save task'} disabled={busy || !v.title.trim() || badRange} onClick={save} />
+          <Btn onClick={onClose}>{dirty ? 'Cancel' : 'Close'}</Btn>
+          <Btn kind="primary" disabled={busy || !v.title.trim() || badRange || !dirty} onClick={save}>{busy ? 'Saving…' : 'Save'}</Btn>
         </>}>
         <div className="dialog-body task-editor">
           <section className="task-editor-section" aria-label="Task content">
@@ -207,14 +213,14 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
           </section>
 
           <div className="task-editor-choices">
-            <fieldset className="task-choice-group"><legend><Icon name="flag" />Urgency</legend>
+            <fieldset className="task-choice-group"><legend><Icon name="prio-high" />Urgency</legend>
               <div className="task-choice-grid">
-                {URGENCIES.map(u => <button key={u} type="button" className={`task-choice urgency-${u.toLowerCase()} ${v.urgency === u ? 'selected' : ''}`} aria-label={u} aria-pressed={v.urgency === u} onClick={() => up('urgency', u)} title={`${u} · ${urgencyHint[u]}`}><Icon name={`urgency-${u.toLowerCase()}`} /></button>)}
+                {URGENCIES.map(u => <button key={u} type="button" className={`task-choice urgency-${u.toLowerCase()} ${v.urgency === u ? 'selected' : ''}`} aria-pressed={v.urgency === u} onClick={() => up('urgency', u)} title={`${u} · ${urgencyHint[u]}`}><Icon name={`prio-${u.toLowerCase()}`} /><span className="task-choice-text">{u}</span></button>)}
               </div>
             </fieldset>
             <fieldset className="task-choice-group"><legend><Icon name="check" />Status</legend>
               <div className="task-choice-grid">
-                {TASK_STATUSES.map(s => <button key={s} type="button" className={`task-choice status-${s.toLowerCase()} ${v.status === s ? 'selected' : ''}`} aria-label={s} aria-pressed={v.status === s} onClick={() => up('status', s)} title={`${s} · ${statusHint[s]}`}><Icon name={`status-${s.toLowerCase()}`} /></button>)}
+                {TASK_STATUSES.map(s => <button key={s} type="button" className={`task-choice status-${s.toLowerCase()} ${v.status === s ? 'selected' : ''}`} aria-pressed={v.status === s} onClick={() => up('status', s)} title={`${s} · ${statusHint[s]}`}><Icon name={`status-${s.toLowerCase()}`} /><span className="task-choice-text">{s}</span></button>)}
               </div>
               {task?.overdue && <small className="negative">Overdue until completed or rescheduled.</small>}
             </fieldset>
@@ -224,7 +230,7 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
             <div className="task-date-grid">
               <TaskField icon="calendar" label="Start"><DateInput value={v.planStart} onChange={e => up('planStart', e.target.value)} /></TaskField>
               <TaskField icon="calendar" label="Finish"><DateInput value={v.planFinish} min={v.planStart || undefined} onChange={e => up('planFinish', e.target.value)} /></TaskField>
-              <TaskField icon="clock" label="Due"><DateInput value={v.due} onChange={e => up('due', e.target.value)} /></TaskField>
+              <TaskField icon="flag" label="Due"><DateInput value={v.due} onChange={e => up('due', e.target.value)} /></TaskField>
             </div>
             {badRange && <p className="negative tiny" role="alert">Plan finish cannot be before plan start.</p>}
           </section>
@@ -232,7 +238,7 @@ export function TaskForm({ task, defaults, onClose }: { task: PTask | null; defa
           <section className="task-editor-section" aria-label="Ownership and scope">
             <div className="form-grid task-context-grid">
               <TaskField icon="user" label="Assigned by"><input list="task-assigners" value={v.assigner} maxLength={120} onChange={e => up('assigner', e.target.value)} /><datalist id="task-assigners">{directory.data?.map(u => <option key={u.id} value={u.name} />)}</datalist></TaskField>
-              <TaskField icon="clock" label="Effort (hours)"><input type="number" min={0} step="0.5" value={v.effort} onChange={e => up('effort', e.target.value)} /></TaskField>
+              <TaskField icon="hourglass" label="Effort (hours)"><input type="number" min={0} step="0.5" value={v.effort} onChange={e => up('effort', e.target.value)} /></TaskField>
               <div className="field full task-projects"><span className="task-field-label"><Icon name="layers" />Projects</span>
                 <div className="check-row">{mine.length ? mine.map(p => <label key={p.id} className="check-chip"><input type="checkbox" checked={v.projects.includes(p.id)} onChange={e => up('projects', e.target.checked ? [...v.projects, p.id] : v.projects.filter(x => x !== p.id))} />{p.code}</label>) : <span className="tiny muted">No project memberships.</span>}</div>
               </div>

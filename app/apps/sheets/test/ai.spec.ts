@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { analysisPrompt, cleanAnalysis, cleanCandidates, extractionPrompt, handleAi, aiContext, type AiConfig } from '../src/ai';
+import { aiConfigFrom, parseJsonAnswer, analysisPrompt, cleanAnalysis, cleanCandidates, extractionPrompt, handleAi, aiContext, type AiConfig } from '../src/ai';
 import { Api } from '../src/api';
 import { MemoryStore } from '../src/memory-store';
 import { handle, type ApiRequest, type Envelope } from '../src/router';
@@ -139,6 +139,24 @@ describe('AI helpers', () => {
     expect(out.items).toEqual([]);
     expect((await handleAi(as('u-admin', { text: 'short' }, 'digest'), run, CFG, model) as any).status).toBe(400);
     expect(sent).toHaveLength(1);
+  });
+
+  it('uses AI/ML API when its key is set, else OpenAI', () => {
+    const env = (o: Record<string, string>) => (k: string) => o[k];
+    expect(aiConfigFrom(env({ AIMLAPI_API_KEY: 'k1', OPENAI_API_KEY: 'sk-x', OPENAI_MODEL: 'm' }))).toEqual({ apiKey: 'k1', model: 'alibaba/qwen3.7-max', baseUrl: 'https://api.aimlapi.com/v1' });
+    expect(aiConfigFrom(env({ AIMLAPI_API_KEY: 'k1', AIMLAPI_MODEL: 'openai/gpt-6.1-terra' })).model).toBe('openai/gpt-6.1-terra');
+    expect(aiConfigFrom(env({ OPENAI_API_KEY: 'sk-x', OPENAI_MODEL: 'm' }))).toEqual({ apiKey: 'sk-x', model: 'm', baseUrl: undefined });
+    expect(aiConfigFrom(env({})).apiKey).toBeUndefined();
+  });
+
+  it('reads JSON wrapped in a code fence, and reports running out of funds as a quota refusal without the key', async () => {
+    expect(parseJsonAnswer('```json\n{"a": 1}\n```')).toEqual({ a: 1 });
+    expect(parseJsonAnswer('Here it is: {"a": 2} done')).toEqual({ a: 2 });
+    const cfg: AiConfig = { apiKey: '15065e2030970abc', model: 'alibaba/qwen3.7-max', baseUrl: 'https://api.aimlapi.com/v1' };
+    const broke = (async () => new Response(JSON.stringify({ status: 403, message: "You've run out of funds. key 15065e2030970abc" }), { status: 403 })) as unknown as typeof fetch;
+    const e = await handleAi(as('u-admin', { kind: 'issues' }, 'analyse'), run, cfg, broke);
+    expect(e && !e.ok && e.error.code).toBe('AI_QUOTA');
+    expect(JSON.stringify(e)).not.toContain('15065e2030970abc');
   });
 
   it('builds prompts that name the allowed values and the document', () => {

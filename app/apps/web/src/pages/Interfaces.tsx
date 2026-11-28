@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -8,12 +8,13 @@ import {
   type Milestone, type Page, type PointStatus, type RasciMatrices, type ResponsibilityMatrix,
 } from '../api';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
 import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, Stat, useDebounced, ModalSkeleton, DateInput } from '../ui';
+import { Badge, Btn, Confirm, ErrorBox, Field, Modal, PageHead, Stat, useDebounced, ModalSkeleton, DateInput } from '../ui';
 import { Detail, DisciplinePicker, IconFilter, MultiFilter, People } from './governance';
 import { disciplineTitle } from '../disciplines';
 import { useDeepLink } from '../deepLink';
@@ -59,8 +60,8 @@ export function InterfacePointsPage() {
   const insights = useQuery({ queryKey: ['insights', 'interface-points', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const { flag, ...rest } = filter.extra;
   const extra = { ...rest, overdue: flag === 'overdue' ? 'true' : undefined, open: flag === 'open' ? 'true' : undefined };
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...extra });
-  const page = useQuery({ queryKey: ['interface-points', project.id, query], queryFn: () => request<PointPage>(`${base}${query}`), placeholderData: keepPreviousData });
+  const query = list.query({ ...extra });
+  const page = useInfiniteList({ key: ['interface-points', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<PointPage>(`${base}${q}`) });
   const facets = page.data?.facets;
   const setExtra = (k: keyof typeof filter.extra, v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
   const reset = () => { filter.reset(); setParams({}); };
@@ -127,8 +128,8 @@ export function InterfacePointsPage() {
         <FilterChips chips={chips} onClear={reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No interface point matches. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No interface point matches. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="interface points" />
           </>
         )}
       </div>
@@ -477,8 +478,8 @@ export function InterfaceRegister() {
   const filterQs = { q, type: f.type, status: f.status, party: f.party, originator, receiver, overdue: f.overdue ? 'true' : undefined };
 
   const summary = useQuery({ queryKey: ['interface-summary', project.id], queryFn: () => request<InterfaceSummary>(`${base}/summary`) });
-  const query = qs({ ...filterQs, sort: f.sort, order: f.order, page: f.page, pageSize: 25 });
-  const page = useQuery({ queryKey: ['interfaces', project.id, query], queryFn: () => request<Page<InterfaceRecord>>(`${base}${query}`), placeholderData: keepPreviousData });
+  const query = qs({ ...filterQs, sort: f.sort, order: f.order });
+  const page = useInfiniteList({ key: ['interfaces', project.id], query, pageSize: 25, fetch: q => request<Page<InterfaceRecord>>(`${base}${q}`) });
 
   const sortBy = (key: string) => setF(s => ({ ...s, sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc', page: 1 }));
   const columns = useMemo<ColumnDef<InterfaceRecord>[]>(() => [
@@ -533,8 +534,8 @@ export function InterfaceRegister() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={f} onSort={sortBy} empty={page.data && !page.data.total && !s?.total ? 'No formal interfaces recorded yet. Raise day-to-day queries as interface points.' : 'No interfaces match. Change the search or filters.'} />
-            <Pager page={f.page} pageSize={25} total={page.data?.total ?? 0} onPage={p => set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={f} onSort={sortBy} empty={page.data && !page.data.total && !s?.total ? 'No formal interfaces recorded yet. Raise day-to-day queries as interface points.' : 'No interfaces match. Change the search or filters.'} />
+            <LoadMore source={page.lazy} noun="interfaces" />
           </>
         )}
       </div>

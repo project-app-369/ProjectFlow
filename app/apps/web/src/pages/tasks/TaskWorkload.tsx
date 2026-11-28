@@ -41,23 +41,26 @@ export default function TaskWorkload() {
     <>
       <PageHead title="Workload" desc="Estimated hours and task counts per period, by project. A task counts in the period of its deadline (else plan finish, else plan start)." />
       <div className="stats">
-        <Stat label={`Tasks in view`} value={cnt(w.totals.total)} foot={openOnly ? 'Open tasks only' : 'All statuses'} icon="check" />
-        <Stat label="Hours in view" value={hours(hrs(w.totals.total))} foot={`${w.periods.length} ${by}s`} icon="clock" />
+        <Stat label="Tasks in view" value={cnt(w.totals.total)} foot={openOnly ? 'Open tasks only' : 'All statuses'} icon="status-ongoing" />
+        <Stat label="Hours in view" value={hours(hrs(w.totals.total))} foot={`${w.periods.length} ${by}s`} icon="hourglass" />
         <Stat label="Unscheduled" value={cnt(w.unscheduled)} foot={`${hours(hrs(w.unscheduled))} · no date set`} icon="calendar" />
-        <Stat label="Outside this range" value={w.outside.tasks} foot={`${hours(w.outside.hours)} · use ‹ › to look further`} icon="layers" />
-        <Stat label="Total assigned" value={w.totals.total.tasks} foot="All statuses across periods" icon="box" />
-        <Stat label="Open assigned" value={w.totals.total.open} foot="Tasks still to complete" icon="flag" />
+        <Stat label="Outside this range" value={w.outside.tasks} foot={`${hours(w.outside.hours)} · use the arrows to look further`} icon="layers" />
+        <Stat label="Total assigned" value={w.totals.total.tasks} foot="All statuses across periods" icon="sheet" />
+        <Stat label="Open assigned" value={w.totals.total.open} foot="Tasks still to complete" icon="status-planned" />
       </div>
       <div className="panel">
         <div className="panel-head">
           <div><h2>Per {by}</h2><p>{fmtShort(w.from)} – {fmtShort(w.to)}</p></div>
           <div className="actions">
-            <label className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input type="checkbox" checked={openOnly} onChange={e => setOpenOnly(e.target.checked)} />Open tasks only</label>
-            <Btn kind="small" aria-label="Earlier" onClick={() => setOffset(o => o - STEP[by])}>‹</Btn>
-            <Btn kind="small" onClick={() => setOffset(0)}>Today</Btn>
-            <Btn kind="small" aria-label="Later" onClick={() => setOffset(o => o + STEP[by])}>›</Btn>
-            <Btn kind={`small ${by === 'week' ? 'primary' : ''}`} onClick={() => { setBy('week'); setOffset(0); }}>Week</Btn>
-            <Btn kind={`small ${by === 'month' ? 'primary' : ''}`} onClick={() => { setBy('month'); setOffset(0); }}>Month</Btn>
+            <label className="check-inline tiny"><input type="checkbox" checked={openOnly} onChange={e => setOpenOnly(e.target.checked)} />Open tasks only</label>
+            <span className="period-nav">
+              <Btn kind="small" icon="chevron-left" iconOnly aria-label={`Earlier ${by}s`} onClick={() => setOffset(o => o - STEP[by])} />
+              <Btn kind="small" onClick={() => setOffset(0)}>Today</Btn>
+              <Btn kind="small" icon="chevron-right" iconOnly aria-label={`Later ${by}s`} onClick={() => setOffset(o => o + STEP[by])} />
+            </span>
+            <span className="seg" role="group" aria-label="Group by">
+              {(['week', 'month'] as const).map(b => <button key={b} type="button" aria-pressed={by === b} onClick={() => { setBy(b); setOffset(0); }}>{b === 'week' ? 'Week' : 'Month'}</button>)}
+            </span>
           </div>
         </div>
         {noData ? <div className="empty">No dated tasks in this range.</div> : (
@@ -74,7 +77,7 @@ export default function TaskWorkload() {
                     return (
                       <tr key={p.start} className={current ? 'current-period' : ''}>
                         <td><strong>{periodLabel(p)}</strong>{current && <span className="tiny muted"> · now</span>}</td>
-                        <td style={{ minWidth: 220 }}>
+                        <td className="workload-bar">
                           <div className="stack">
                             {w.projects.map(id => {
                               const s = p.byProject[id];

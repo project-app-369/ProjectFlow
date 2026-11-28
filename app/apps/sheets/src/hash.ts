@@ -1,6 +1,6 @@
 /**
  * Salted SHA-256 for the profile password. Written out in plain TypeScript because the same code runs in Node (tests,
- * local server) and in Apps Script, which has no `crypto`. Not a substitute for a real identity provider: the pre-build
+ * local server) and in the Supabase edge runtime (Deno). Not a substitute for a real identity provider: the pre-build
  * has no sign-in, so the stored hash only proves the "current password" when it is changed.
  */
 const K = new Uint32Array([
@@ -55,7 +55,7 @@ function digestBytes(input: number[]): number[] {
 const hex = (bytes: number[]) => bytes.map(b => b.toString(16).padStart(2, '0')).join('');
 export const sha256 = (text: string): string => hex(digestBytes(utf8(text)));
 
-/** HMAC-SHA256 (RFC 2104) as hex; signs the session tokens, so it must behave the same in Node, Deno and Apps Script. */
+/** HMAC-SHA256 (RFC 2104) as hex; signs the session tokens, so it must behave the same in Node and Deno. */
 export function hmacSha256(key: string, message: string): string {
   let k = utf8(key);
   if (k.length > 64) k = digestBytes(k);

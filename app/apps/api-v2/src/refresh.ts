@@ -35,7 +35,7 @@ export function refreshStore(store: MemoryStore, raw = seedData, now = new Date(
     store.addMissingColumns(name, columns);
     const current = store.readRows(name, columns).filter(r => r.projectId === pid);
     // round-trip through a scratch store so the comparison sees the values as the store keeps them (trimmed, typed)
-    const scratch = new MemoryStore('scratch');
+    const scratch = new MemoryStore();
     scratch.ensureSheet(name, columns);
     scratch.appendRows(name, columns, (rows[key] ?? []).map(r => ({ projectId: pid, ...r })) as never);
     const next = scratch.readRows(name, columns);
@@ -79,7 +79,7 @@ async function main() {
     if (apply) await withWriteLock(client);
     const before = await readSnapshot(client);
     if (!before.sheets.length) throw new Error('Supabase has no data; run db:import first.');
-    const store = new MemoryStore(process.env.BACKUP_SHEET_URL);
+    const store = new MemoryStore();
     store.loadSnapshot(before);
     const changes = refreshStore(store);
     const after = store.snapshot();

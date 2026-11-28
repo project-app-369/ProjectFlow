@@ -59,15 +59,17 @@ export default function TaskCalendar() {
   return (
     <>
       <PageHead title="Calendar" desc="Planned spans and deadlines of your tasks by day, week or month."
-        actions={<Btn kind="small primary" icon="plus" iconOnly aria-label="New task" onClick={() => setEditing({ due: anchor })} />} />
+        actions={<Btn kind="small primary" icon="plus" onClick={() => setEditing({ due: anchor })}>New task</Btn>} />
       <div className="panel">
         <div className="panel-head">
-          <div><h2>{title}</h2><p>Bars show the plan start–finish; ⚑ marks the deadline</p></div>
+          <div><h2>{title}</h2><p>Bars show the plan start to finish; the flag marks the deadline</p></div>
           <div className="actions">
-            <Btn kind="small" aria-label="Previous" onClick={() => move(-1)}>‹</Btn>
-            <Btn kind="small" onClick={() => setAnchor(today)}>Today</Btn>
-            <Btn kind="small" aria-label="Next" onClick={() => move(1)}>›</Btn>
-            {MODES.map(([id, label]) => <Btn key={id} kind={`small ${mode === id ? 'primary' : ''}`} onClick={() => setMode(id)}>{label}</Btn>)}
+            <span className="period-nav">
+              <Btn kind="small" icon="chevron-left" iconOnly aria-label={`Previous ${mode}`} onClick={() => move(-1)} />
+              <Btn kind="small" onClick={() => setAnchor(today)}>Today</Btn>
+              <Btn kind="small" icon="chevron-right" iconOnly aria-label={`Next ${mode}`} onClick={() => move(1)} />
+            </span>
+            <span className="seg" role="group" aria-label="Calendar scale">{MODES.map(([id, label]) => <button key={id} type="button" aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>)}</span>
           </div>
         </div>
         <TaskFilters value={filter} onChange={setFilter} />
@@ -107,7 +109,7 @@ export default function TaskCalendar() {
           <div className="panel-body">
             {dayEntries.length ? (
               <div className="table-wrap"><table>
-                <thead><tr><th title="Task number"><Icon name="sheet" /><span className="sr-only">Task number</span></th><th title="Task"><Icon name="doc" /><span className="sr-only">Task</span></th><th title="On this day"><Icon name="calendar" /><span className="sr-only">On this day</span></th><th title="Urgency"><Icon name="flag" /><span className="sr-only">Urgency</span></th><th title="Status"><Icon name="check" /><span className="sr-only">Status</span></th><th title="Effort"><Icon name="chart" /><span className="sr-only">Effort</span></th></tr></thead>
+                <thead><tr><th>TASK NO</th><th>TASK</th><th>ON THIS DAY</th><th>URGENCY</th><th>STATUS</th><th>EFFORT</th></tr></thead>
                 <tbody>{dayEntries.map(e => (
                   <tr key={e.task.id + e.kind}>
                     <td className="mono">{e.task.taskNo}</td>

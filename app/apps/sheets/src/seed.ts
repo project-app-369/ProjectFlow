@@ -1,5 +1,5 @@
 import { MANIFESTS, MANIFEST_BY_KEY, defaultState } from '../../api/src/registry/catalog';
-import { COLUMNS, SHEET, pathOf, tabColorOf } from './datasets';
+import { COLUMNS, SHEET, pathOf } from './datasets';
 import { milestoneFacility } from './registers-service';
 import { splitActions } from './risks-service';
 import { isIsoDate, type Row, type Store } from './store';
@@ -13,8 +13,8 @@ const str = (v: unknown) => (v === null || v === undefined ? null : String(v));
 interface RawRow { [k: string]: unknown }
 
 /**
- * The reference data file (apps/api/seed/sttp2b.json). It is a parameter, not an import, so the deployed script carries none of it:
- * Apps Script's setup reads it from the project's seed.html, and the simulator and tests load it from the file.
+ * The reference data file (apps/api/seed/sttp2b.json). It is a parameter, not an import, so each host decides where it comes from:
+ * the simulator, the tests and the database scripts load it from the file.
  */
 export type SeedData = typeof import('../../api/seed/sttp2b.json');
 
@@ -247,7 +247,7 @@ export function ensureAllSheets(store: Store) {
     [SHEET.interfaces, COLUMNS.interfaces], [SHEET.interfacePoints, COLUMNS.interfacePoints], [SHEET.interfacePointRevs, COLUMNS.interfacePointRevs], [SHEET.interfaceParties, COLUMNS.interfaceParties], [SHEET.responsibility, COLUMNS.responsibility], [SHEET.rasci, COLUMNS.rasci],
     [SHEET.knowledge, COLUMNS.knowledge], [SHEET.snapshots, COLUMNS.snapshots], [SHEET.snapshotData, COLUMNS.snapshotData], [SHEET.budget, COLUMNS.budget], [SHEET.facilityEquipment, COLUMNS.facilityEquipment],
   ];
-  for (const [name, columns] of sheets) store.ensureSheet(name, columns as never, tabColorOf(name));
+  for (const [name, columns] of sheets) store.ensureSheet(name, columns as never);
   store.addMissingColumns(SHEET.milestones, COLUMNS.milestones); // the optional Major column
   store.addMissingColumns(SHEET.budget, COLUMNS.budget); // the actual and earned manhours
   store.addMissingColumns(SHEET.interfacePoints, COLUMNS.interfacePoints); // the revision number

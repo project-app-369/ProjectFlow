@@ -35,11 +35,11 @@ async function database() {
   await db.exec(await readFile(join(import.meta.dirname, '../sql/001_dataset_store.sql'), 'utf8'));
   return { db, client: db as unknown as PoolClient };
 }
-const load = (snapshot: StoreSnapshot) => { const s = new MemoryStore('x'); s.loadSnapshot(snapshot); return s; };
+const load = (snapshot: StoreSnapshot) => { const s = new MemoryStore(); s.loadSnapshot(snapshot); return s; };
 
 describe('API v2 on PostgreSQL answers like the Sheets backend', () => {
   it('serves every read route identically after a round trip through the database', async () => {
-    const seeded = new MemoryStore('x');
+    const seeded = new MemoryStore();
     seedStore(seeded, seedData);
     const { db, client } = await database();
     try {
@@ -54,7 +54,7 @@ describe('API v2 on PostgreSQL answers like the Sheets backend', () => {
   });
 
   it('keeps a write made through the routes after it is saved and read back', async () => {
-    const seeded = new MemoryStore('x');
+    const seeded = new MemoryStore();
     seedStore(seeded, seedData);
     const { db, client } = await database();
     try {

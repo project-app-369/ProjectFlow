@@ -1,13 +1,14 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { errorText, qs, request, type KnowledgeArticle, type KnowledgeDomain, type KnowledgeInput, type KnowledgePage, type KnowledgeSource, type KnowledgeSummary, type KnowledgeTaxonomy } from '../api';
-import { fmtDate } from '../format';
+import { balancedColumns, fmtDate } from '../format';
 import { Icon } from '../icons';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, Pager, useDebounced, PageSkeleton } from '../ui';
+import { Badge, Btn, Confirm, ErrorBox, Field, Loading, Modal, PageHead, useDebounced, PageSkeleton } from '../ui';
 import { ArticleBody } from './knowledgeBody';
 import { useDeepLink } from '../deepLink';
+import { LoadMore, useInfiniteList } from '../lazyList';
 
 const PAGE_SIZE = 24;
 
@@ -24,7 +25,6 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
   const [openId, setOpenId] = useDeepLink();
   const [editing, setEditing] = useState<KnowledgeArticle | 'new' | null>(null);
   const debounced = useDebounced(q);
@@ -32,8 +32,8 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
   const searching = !!debounced.trim() || !!category || !!status;
   const showList = !!domain || searching;
 
-  const query = qs({ domain, category, status, q: debounced.trim(), page, pageSize: PAGE_SIZE });
-  const list = useQuery({ queryKey: ['knowledge', project.id, query], queryFn: () => request<KnowledgePage>(`${base}${query}`), enabled: showList, placeholderData: keepPreviousData });
+  const query = qs({ domain, category, status, q: debounced.trim() });
+  const list = useInfiniteList({ key: ['knowledge', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<KnowledgePage>(`${base}${q}`), enabled: showList });
 
   const area = summary.data?.taxonomy.find(t => t.domain === domain);
   const counts = domain ? summary.data?.byDomain[domain] : undefined;
@@ -41,7 +41,6 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
     if (patch.q !== undefined) setQ(patch.q);
     if (patch.category !== undefined) setCategory(patch.category);
     if (patch.status !== undefined) setStatus(patch.status);
-    setPage(1);
   };
 
   return (
@@ -87,7 +86,7 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
         <>
           {list.data.items.length ? (
             <div className="article-grid">
-              {list.data.items.map(a => <ArticleCard key={a.id} a={a} showDomain={!domain} onOpen={() => setOpenId(a.id)} />)}
+              {list.data.items.map((a, i) => <ArticleCard key={a.id} a={a} showDomain={!domain} reveal={i >= list.revealFrom} onOpen={() => setOpenId(a.id)} />)}
             </div>
           ) : (
             <div className="panel empty">
@@ -95,7 +94,7 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
               {!searching && access.canWrite && <div className="mt-3"><Btn kind="small primary" onClick={() => setEditing('new')}>Write the first article</Btn></div>}
             </div>
           )}
-          {list.data.total > PAGE_SIZE && <div className="panel"><Pager page={page} pageSize={PAGE_SIZE} total={list.data.total} onPage={setPage} /></div>}
+          {list.data.total > PAGE_SIZE && <LoadMore source={list.lazy} noun="articles" standalone />}
         </>
       )}
 
@@ -105,9 +104,9 @@ export default function Knowledge({ domain }: { domain?: KnowledgeDomain }) {
   );
 }
 
-function ArticleCard({ a, showDomain, onOpen }: { a: KnowledgeArticle; showDomain: boolean; onOpen: () => void }) {
+function ArticleCard({ a, showDomain, reveal, onOpen }: { a: KnowledgeArticle; showDomain: boolean; reveal?: boolean; onOpen: () => void }) {
   return (
-    <article className="article-card">
+    <article className={`article-card${reveal ? ' row-in' : ''}`} data-lazy-item="">
       <div className="article-meta tiny muted">{showDomain ? `${a.domainLabel} · ` : ''}{a.category}{a.status === 'Draft' && <> <Badge tone="amber">Draft</Badge></>}</div>
       <h3><button className="link-button" onClick={onOpen}>{a.title}</button></h3>
       <p className="clamp3">{a.summary}</p>
@@ -125,7 +124,7 @@ function Overview({ summary, canWrite, onOpen, onNew }: { summary?: KnowledgeSum
   const enabled = summary.taxonomy.filter(t => t.enabled);
   return (
     <>
-      <div className="domain-grid">
+      <div className="domain-grid" style={{ '--cols': balancedColumns(enabled.length), '--cols-md': balancedColumns(enabled.length, 3) } as CSSProperties}>
         {enabled.map(t => {
           const d = summary.byDomain[t.domain];
           return (

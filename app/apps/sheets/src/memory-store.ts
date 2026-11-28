@@ -4,12 +4,10 @@ import { coerceCell, type Column, type Row, type SheetInfo, type Store } from '.
 interface MemSheet { gid: number; header: string[]; rows: Row[] }
 export interface StoreSnapshot { sheets: { name: string; gid: number; header: string[]; rows: Row[] }[] }
 
-/** In-memory store with the same behaviour contract as the spreadsheet store. Used by tests and the local simulator. */
+/** In-memory store: the working copy of one request on the deployed backend, and the store for tests and the local simulator. */
 export class MemoryStore implements Store {
   private sheets = new Map<string, MemSheet>();
   private nextGid = 1000;
-
-  constructor(private readonly baseUrl = 'https://docs.google.com/spreadsheets/d/LOCAL-SIMULATOR/edit') {}
 
   /** Keep every worksheet, including dynamically created module sheets, in a portable archive. */
   snapshot(): StoreSnapshot {
@@ -27,10 +25,10 @@ export class MemoryStore implements Store {
   }
 
   private info(name: string, s: MemSheet): SheetInfo {
-    return { name, gid: s.gid, url: `${this.baseUrl}#gid=${s.gid}` };
+    return { name, gid: s.gid };
   }
 
-  ensureSheet(name: string, columns: Column[], _tabColor?: string): SheetInfo {
+  ensureSheet(name: string, columns: Column[]): SheetInfo {
     let s = this.sheets.get(name);
     if (!s) {
       s = { gid: this.nextGid++, header: columns.map(c => c.key), rows: [] };
@@ -92,10 +90,6 @@ export class MemoryStore implements Store {
     const before = s.rows.length;
     s.rows = s.rows.filter(r => !this.matches(r, match));
     return before - s.rows.length;
-  }
-
-  spreadsheetUrl() {
-    return this.baseUrl;
   }
 
   withLock<T>(fn: () => T): T {

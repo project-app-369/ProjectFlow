@@ -1,11 +1,12 @@
 """
 Adds the procurement-side reference data to sttp2b.json from the workbooks in data/EPCIC/Procurement.
 
-    python extract_procurement.py
+    python extract_procurement.py               # newest workbook of each folder
+    python extract_procurement.py 2026-11-20    # newest workbook dated on or before that cut-off
 
 Keys written (existing keys are left alone; running again replaces these five):
   procurementPlan   one row per package of the Procurement Plan workbook (work package, LS/PS, weight in overall progress)
-  logistics         shipments: PTSC weekly report ("PTSC items") and the client shipments ("CLJOC Items")
+  logistics         shipments: PTSC weekly report ("PTSC items") and the client shipments ("CLJOC Items" or "Client-supplied materials")
   materialBalance   stock still on hand ("Balance" sheet of the Material Stock Report)
   materialSummary   weights per facility: needed for purchase, arrived, on yard ("Summary Weight" sheet)
   procCurves        weekly cumulative S-curves (planned, forecast, actual) per facility and LS / PS / overall ("S-curve data" sheet)
@@ -26,6 +27,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.normpath(os.path.join(HERE, '..', '..', '..', '..', 'data', 'EPCIC', 'Procurement'))
 OUT = os.path.join(HERE, 'sttp2b.json')
 
+
+CUTOFF = None  # set from the command line: ignore workbooks dated after this cut-off
 
 MONTHS = {m: i for i, m in enumerate(['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], 1)}
 
@@ -49,7 +52,7 @@ def latest(folder, pattern='*.xls*'):
     for path in glob.glob(os.path.join(DATA, folder, pattern)):
         base = os.path.basename(path)
         when = None if base.startswith('~$') else name_date(base)
-        if when:
+        if when and (CUTOFF is None or when <= CUTOFF):
             found.append((when, os.path.join(folder, base)))
     if not found:
         raise SystemExit(f'No workbook with a cut-off date in its name under {os.path.join(DATA, folder)}')
@@ -146,7 +149,7 @@ def logistics():
         })
     index, rows = _columns(list(book[client].iter_rows(values_only=True)), 'No.')
     for r in rows:
-        if not r or not isinstance(r[0], (int, float)):
+        if not r or not re.fullmatch(r'\d+(\.0)?', str(r[0] if r[0] is not None else '').strip()):  # item number, a number or text
             continue
         g = lambda *n: _pick(index, r, *n)  # noqa: E731
         actual = iso(g('ATA Site'))
@@ -176,13 +179,21 @@ def balance():
 
 
 def summary():
+    """Both blocks of the "Summary Weight" sheet, found by their titles ("PTSCMC SUPPLY", "CLIENT SUPPLY") on the first row:
+    facility, MTO for purchase, arrived, delivered to the sub's (VSP) yard, still on the MC yard."""
     rows = list(open_book(latest('Materials', '*SUMMARY LIST*')[1])['Summary Weight'].iter_rows(values_only=True))
+    title = [str(c or '').strip().upper() for c in rows[0]]
+    blocks = [('PTSC MC', title.index('PTSCMC SUPPLY')), ('Client', title.index('CLIENT SUPPLY'))]
     out = []
-    for r in rows[2:9]:
-        if r[6] and any(v is not None for v in r[7:11]):  # PTSC MC supply: facility, MTO, arrived, transferred to VSP, on MC yard
-            out.append({'supply': 'PTSC MC', 'facility': clean(r[6], 60), 'mtoKg': num(r[7]), 'arrivedKg': num(r[8]), 'vspYardKg': num(r[9]), 'mcYardKg': num(r[10])})
-        if r[11] and r[12] is not None and not str(r[11]).startswith('Portion'):  # client supply: facility, MTO, arrived, on VSP yard, on MC yard
-            out.append({'supply': 'Client', 'facility': clean(r[11], 60), 'mtoKg': num(r[12]), 'arrivedKg': num(r[13]), 'vspYardKg': num(r[14]), 'mcYardKg': num(r[15])})
+    for supply, c in blocks:
+        for r in rows[2:]:
+            facility = r[c] if c < len(r) else None
+            values = r[c + 1:c + 5]
+            if not facility and all(v is None for v in values):
+                break  # end of the block; further down the sheet are other tables
+            if not facility or str(facility).startswith('Portion') or all(v is None for v in values):
+                continue
+            out.append({'supply': supply, 'facility': clean(facility, 60), 'mtoKg': num(values[0]), 'arrivedKg': num(values[1]), 'vspYardKg': num(values[2]), 'mcYardKg': num(values[3])})
     return out
 
 
@@ -215,6 +226,9 @@ def curves(cutoff):
 
 
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        CUTOFF = dt.date.fromisoformat(sys.argv[1])
     seed = json.load(open(OUT, encoding='utf8'))
     seed['procurementPlan'] = plan()
     seed['logistics'] = logistics()

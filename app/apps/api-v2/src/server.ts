@@ -26,7 +26,6 @@ const token = process.env.API_V2_TOKEN;
 if (!token) throw new Error('API_V2_TOKEN is required; API v2 must not be exposed without a server-side token.');
 const port = Number(process.env.PORT ?? 3300);
 const pool = createPool();
-const sheetUrl = process.env.BACKUP_SHEET_URL ?? 'https://docs.google.com/spreadsheets/d/LOCAL-SIMULATOR/edit';
 const corsOrigin = process.env.CORS_ORIGIN ?? '';
 const fail = (status: number, code: string, message: string): Envelope => ({ ok: false, status, error: { code, message } });
 
@@ -53,11 +52,11 @@ async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
     ? (payload.requests ?? []).slice(0, 20).map(r => ({ method: 'GET', path: r.path, user: payload.user, session: payload.session }))
     : [{ method: payload.method ?? 'GET', path: payload.path ?? '', body: payload.body, user: payload.user, session: payload.session }];
   if (requests.some(r => !r.path.startsWith('/') || r.method === 'BATCH')) return fail(400, 'BAD_REQUEST', 'A method and absolute API path are required.');
-  if (requests.some(r => /\/remind(?:-due)?(?:\?|$)/.test(r.path))) return fail(403, 'OWNER_ONLY', 'Email reminders remain with the Sheet owner.');
+  if (requests.some(r => /\/remind(?:-due)?(?:\?|$)/.test(r.path))) return fail(501, 'NOT_AVAILABLE', 'Email reminders are not available on this host: no mail service or schedule is set up yet.');
   const writing = requests.some(r => r.method.toUpperCase() !== 'GET');
   if (!writing) {
     const before = await freshSnapshot();
-    if (!before.sheets.length) return fail(503, 'MIGRATION_REQUIRED', 'Import the Google Sheet archive into Supabase before using API v2.');
+    if (!before.sheets.length) return fail(503, 'MIGRATION_REQUIRED', 'Import the Project Flow data into Supabase (db:import) before using API v2.');
     return run(before, requests, batch).result;
   }
   const client = await pool.connect();
@@ -71,7 +70,7 @@ async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
     if (!before.sheets.length) {
       await client.query('commit');
       open = false;
-      return fail(503, 'MIGRATION_REQUIRED', 'Import the Google Sheet archive into Supabase before using API v2.');
+      return fail(503, 'MIGRATION_REQUIRED', 'Import the Project Flow data into Supabase (db:import) before using API v2.');
     }
     const { result, store } = run(before, requests, batch);
     if (!Array.isArray(result) && result.ok) {
@@ -97,12 +96,12 @@ async function serve(payload: Payload): Promise<Envelope | Envelope[]> {
 
 /** Runs the routes against a copy of the snapshot (MemoryStore.loadSnapshot copies, so the cached one stays clean). */
 function run(snapshot: StoreSnapshot, requests: ApiRequest[], batch: boolean) {
-  const store = new MemoryStore(sheetUrl);
+  const store = new MemoryStore();
   store.loadSnapshot(snapshot);
   const api = new Api(store, () => new Date(), noMailer, sessionSecret ? { secret: sessionSecret } : undefined);
   let result = batch ? handleBatch(api, requests) : handle(api, requests[0]);
   if (!batch && requests[0].path === '/health' && !Array.isArray(result) && result.ok) {
-    result = { ok: true, status: 200, data: { status: 'ok', database: 'supabase', api: 'v2', backupSpreadsheet: sheetUrl } };
+    result = { ok: true, status: 200, data: { status: 'ok', database: 'supabase', api: 'v2' } };
   }
   return { result, store };
 }
@@ -166,7 +165,7 @@ createServer(async (req, res) => {
   } catch (error) {
     result = fail(500, 'API_V2_ERROR', error instanceof Error ? error.message : 'Unexpected error.');
   }
-  // Existing Site clients expect the Apps Script envelope, including its status field.
+  // Existing Site clients expect the JSON envelope, including its status field.
   const body = Buffer.from(JSON.stringify(result));
   // the larger answers are tens of kilobytes of repetitive JSON: compressed they are a fraction of that over the wire
   if (body.length > 1024 && /gzip/.test(String(req.headers['accept-encoding'] ?? ''))) {

@@ -1,33 +1,32 @@
-# Project Flow — pre-build database (Google Sheets)
+# Project Flow — database (Supabase)
 
-**Version:** 1.0 · **Date:** 9 November 2026 · **Project:** STTP2B (Su Tu Trang Phase 2B)
+**Version:** 2.0 · **Date:** 28 November 2026 · **Project:** STTP2B (Su Tu Trang Phase 2B) · Version 1.0 (9 November 2026) described the Google Sheet this data started in; that Sheet and its Apps Script are retired.
 
-This document describes the Google Sheets database that backs the pre-build of Project Flow: what is in it, how it is laid out, where the data came from, who can change it, and how to keep it in step with the code. The application specification is `ProjectFlow_spec_final.md`; the design decisions are in `app/docs/adr/0004-projects-users-and-worksheet-areas.md`; deployment steps are in `app/apps/sheets/README.md`.
+This document describes the database that backs Project Flow: what is in it, how it is laid out, where the data came from, who can change it, and how to keep it in step with the code. The data is stored as named datasets (the file name and the dataset names keep the old "sheet" wording). The application specification is `ProjectFlow_spec_final.md`; the design decisions are in `app/docs/adr/0004-projects-users-and-worksheet-areas.md` and `0007-supabase-only-backend.md`; setup and deployment are in `app/apps/api-v2/README.md` and `app/apps/sheets/README.md`.
 
 ## 1. What it is
 
-The pre-build keeps all of its data in one Google spreadsheet. A Google Apps Script web app (`apps/sheets`) is the only thing that reads and writes it; the React web app talks to that script with the same routes the NestJS API uses. Nothing else should write to the sheets while the app is in use, except by hand on the rows described in §6.
+All data lives in Supabase PostgreSQL, schema `projectflow_v2`: `datasets` (name, id, header) and `dataset_rows` (typed row objects as JSONB, in stable order). The router and services in `apps/sheets` run in the Supabase edge function (`project-flow-api-v3`) and in API v2; for each request they load the datasets into memory, run the route and write back what changed in one transaction under a write lock. The React web app calls them with the same routes the NestJS API uses. Nothing else should write to the tables while the app is in use.
 
 | | |
 |---|---|
-| Live spreadsheet | https://docs.google.com/spreadsheets/d/1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY/edit (“Project Flow — STTP2B data (pre-build)”) |
-| Spreadsheet ID | `1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY` |
-| Time zone | Asia/Saigon |
-| Code | `app/apps/sheets` (Apps Script bundle in `dist/Code.js`; local simulator for development) |
+| Backend | Supabase project `dulzdonvhjkvqmthsezh`: edge function `src/edge-v3.ts`, Node API `src/server.ts` (`apps/api-v2`) |
+| Time zone | Asia/Saigon (dates are plain `YYYY-MM-DD`; timestamps are UTC) |
+| Code | `app/apps/sheets` (shared router, services, in-memory store, local AI simulator) |
 | Seed | `app/apps/api/seed/sttp2b.json`, built from the workbooks in `data/` (see §5) |
-| Sheets | 28, in five areas |
+| Datasets | 53 live on 28 November 2026 (5,748 rows): the 46 defined in `src/datasets.ts` plus module datasets created when modules were switched on |
 
-The same code runs against an in-memory store for tests and the local simulator (`pnpm --filter @projectflow/sheets test`; the simulator is started as `app-sheets-sim` on port 3200 and the web app as `app-web-sheets` on port 5174). The live spreadsheet is a separate copy of the data: changes made in the simulator do not appear in it.
+The same code runs against an in-memory store for tests and the local simulator (`pnpm --filter @projectflow/sheets test`; the simulator is kept for developing the AI functions, started as `app-sheets-sim` on port 3200). The simulator holds its own seeded copy: changes made in it never reach Supabase.
 
 ## 2. Layout rules
 
-- **One sheet per register.** A sheet is named `<Area> - <dataset>`. Areas are, in order: **Settings** (grey tab), **Personal** (teal), **EPCIC** (indigo), **Governance** (amber), **Reports** (red). Sheets are created in that order so each workspace's data stays together. A module that is switched on in Settings → Modules without a sheet of its own gets a generated sheet named `<Workspace> - <Module> - <Submodule>` with the columns `id, title, status, owner, due, notes, updatedAt`.
-- **Row 1 is the header and is matched by name.** Columns can be reordered, and extra columns can be added to the right for notes; the code reads and writes only the columns it knows. A column the code expects but cannot find is treated as empty and is added when a row is written. Do not rename a header.
-- **Project rows start with `projectId`.** One spreadsheet can serve several projects. Settings and Personal sheets, which are not project-scoped, have no `projectId` (Personal rows carry `owner`).
-- **Everything is stored as plain text, numbers or ISO dates.** Text and date columns are formatted as plain text (`@`) so Sheets never reinterprets a value: dates stay `YYYY-MM-DD`, timestamps are ISO 8601 UTC, a leading `=` is never evaluated, and strings like `0,0,0.18` are not turned into numbers. Number columns hold numbers. Blank means empty (null).
+- **One dataset per register.** A dataset is named `<Area> - <dataset>`. Areas are, in order: **Settings**, **Personal**, **EPCIC**, **Governance**, **Reports**, so each workspace's data stays together. A module that is switched on in Settings → Modules without a dataset of its own gets a generated one named `<Workspace> - <Module> - <Submodule>` with a generic register template.
+- **The header is matched by key.** Each dataset stores its column keys; the code reads and writes only the columns it knows. A column the code expects but the dataset lacks is treated as empty and is added when a row is written. Extra columns that older data carries are kept and ignored.
+- **Project rows start with `projectId`.** One database serves several projects. Settings and Personal datasets, which are not project-scoped, have no `projectId` (Personal rows carry `owner`).
+- **Everything is stored as plain text, numbers or ISO dates.** Dates stay `YYYY-MM-DD`, timestamps are ISO 8601 UTC, and strings like `0,0,0.18` are never turned into numbers. Number columns hold numbers. Blank means empty (null).
 - **Ids.** Records get a prefixed running number when created in the app: `LG-0194` (shipment), `MB-191` (stock line), `PC-023` (concern), `KM-001` (milestone you add; milestones loaded from the workbook keep the workbook's id such as `02-M-1030`), `PR-…`, `EX-…`, `RSK-…`, and so on. An id is unique within its sheet and is never reused or edited.
 - **Derived values are not stored.** Status and flags that depend on the reporting cut-off are worked out when read: milestone status, shipment overdue and days late, concern overdue and age, procurement package status, expediting variance, the dashboard attention score, and every summary shown at the top of a page. The stored `variance` on a milestone and on an expediting package is the exception: it is recalculated whenever the dates or the progress figures change.
-- **Limits.** A cell holds at most 50,000 characters, so long series are kept compact (see S-curves below) and cut-off report data is split into parts of 40,000 characters. A sheet is created with 1,000 rows; Sheets adds rows when more are written.
+- **Limits.** Long series are kept compact (see S-curves below) and cut-off report data is split into parts of 40,000 characters, so one row stays small.
 
 ## 3. Access and roles
 
@@ -121,11 +120,10 @@ Rows are the number the seed loads. “Columns” lists every column in the orde
 | `Governance - Issue log` | The history. One row for every change: who, when, the action (Created, Updated, Status changed, PIC added, PIC removed, Sub-task added, Sub-task done, Sub-task reopened, Sub-task updated, Sub-task removed, Note, Reminder sent), the field with its old and new value, and a note. Rows are only ever added by the app; deleting an issue deletes its log |
 
 - **Numbers follow the task monitor.** An issue keeps the number it has in the workbook's "No." column: `ISS-005` is item 5 there, and the gaps in the monitor's numbering (4, 18) stay gaps. Issues added in the app continue after the highest number.
-- **Cells may be edited by hand.** The app reads a status or priority by meaning and ignoring case ("In Progess", "done", "HIGH" become In progress, Completed, High), and accepts PICs separated by commas, semicolons or spaces; anything without an `@` is ignored. Dates stay `YYYY-MM-DD`.
+- **Values are tidied on read.** The app reads a status or priority by meaning and ignoring case ("In Progess", "done", "HIGH" become In progress, Completed, High). People are picked by name; the e-mail is stored (see below).
 - **Persons in charge** are stored as email addresses in `pics`, separated by commas, lower case, without repeats; at most 10 per issue. A sub-task has one `pic`. Any valid email is accepted, so a person does not need an account.
 - **Overdue** is judged against the project cut-off, like the other registers. **Reminders** use today's date.
-- **Emails.** A person is emailed when they are added to an issue or given a sub-task (not when it is you who adds yourself). *Remind PICs* on an issue emails everyone responsible for it and for its open sub-tasks. The daily job (`remindDue`) sends each person one email listing their open issues and sub-tasks that are overdue or due within 3 days, and skips anything it already reminded about today (`lastRemindedOn`). Every reminder is written to the log. A failure to send never undoes the change.
-- **Turning on the daily job:** after deploying, run **Project Flow → Turn on daily issue reminders** once (creates a trigger around 07:00 in the script's time zone). The script then needs two extra permissions, *send email* and *manage triggers*; Google asks for them the first time. Mail goes out from the account that deployed the script and counts against its daily quota (100 recipients on a free Google account, 1,500 on Workspace).
+- **Emails.** The code can email a person when they are added to an issue or given a sub-task, on *Remind PICs*, and in a daily job (`remindDue`) that lists open items overdue or due within 3 days. **None of this runs on Supabase yet:** there is no mail service and no schedule, and the reminder routes answer `NOT_AVAILABLE`. Setting that up (a mail provider and a Supabase scheduled function) is open work.
 - The simulator sends no mail; it prints each message in its console.
 
 ## 5. Where the data came from, and how to reload it
@@ -143,22 +141,15 @@ Run an extractor with `PYTHONIOENCODING=utf-8 python app/apps/api/seed/<name>.py
 
 **Report dates differ between sources.** Progress is at **30 October 2026**; procurement, logistics and expediting are at **6 November 2026**; stock is at 7 November. The project's cut-off (Settings → Projects) is 6 November, and statuses that depend on a date use it. The phase and work-package figures are labelled with the progress report date.
 
-**Re-running an extractor does not change the live spreadsheet.** The seed is used when the sheets are first created (`setup`) and in the simulator. A sheet that already has rows keeps them. To refresh live data, replace the rows (clear the sheet below the header and write the new rows from the seed, with text formatting kept), or write them through the Sheets API as was done for the first load. Do this outside working hours and take a copy of the spreadsheet first (File → Make a copy).
+**Re-running an extractor does not change the live data.** The seed fills a new database (`db:import -- --seed`) and the simulator. To bring reference datasets (S-curves, milestones, procurement, expediting, logistics, materials, facility progress, working schedule, CPN, cut-off) up to a new seed, run `pnpm --filter @projectflow/api-v2 db:refresh` to see what would change, then `db:refresh -- --apply`; it saves the previous rows to `.tmp/`, writes in one transaction and never touches users, memberships, tasks, issues, risks, interfaces or lessons. Details are in `app/apps/api-v2/README.md`.
 
 ### 5.1 Not loaded
 
 The stock ledger (`Sheet1`, 6,288 rows) and the PTSC-MSV, PTSC-No MSV and HHI sheets of the stock report; the received-shipment lists of the material summary; the item-level expediting sheets (`R1` to `R5`); the weekly and the S-curve data by work package and phase in the progress report; the construction progress monitoring and manpower histogram workbooks; the schedule PDFs. The construction budget and the formal interface register start empty. Risks, the risk matrix and breakdown (RBS), interface points, interface parties, the responsibility matrix and the RASCI come from the project's Risk and Interface management workbooks (`app/apps/api/seed/extract_governance.py`); risk actions are split from the numbered mitigation lines when the seed is loaded.
 
-## 6. Editing the spreadsheet by hand
+## 6. Changing data
 
-Editing in Sheets is allowed for the registers that the app lets you edit, with these cautions:
-
-1. Keep the header row and the column names; do not insert a header above them.
-2. Type dates as `YYYY-MM-DD` and keep the column's plain-text format; paste as plain text (Ctrl+Shift+V).
-3. Do not change `projectId` or `id`. To delete a record, delete the whole row.
-4. Do not edit `Reports - Cut-off snapshots` or `Reports - Snapshot data`; a report is a stored copy and is never changed.
-5. The app reads fresh data on every request, so a change made in Sheets appears after the page is refreshed.
-6. Do not type over derived columns; the app recalculates them (`variance`).
+Change data in the app, which validates every write and logs it. Do not edit the tables by hand: a row typed into `dataset_rows` skips the validation, the access checks and the issue log. Reference data is refreshed with `db:refresh` (§5); corrections to a single record go through the app or a reviewed script.
 
 ## 7. Cut-off reports
 
@@ -166,15 +157,14 @@ Saving a cut-off report copies these datasets into `Reports - Snapshot data` as 
 
 ## 8. Setting up and deploying
 
-1. Create a Google spreadsheet, or use the one above.
-2. Build the script: `pnpm build:sheets` (writes `apps/sheets/dist/Code.js`, `seed.html` and `appsscript.json`; the data is not in the code, only `seed.html` carries it and only *Set up sheets* reads it).
-3. Deploy it with clasp or by pasting `Code.js` into the bound script and adding `seed.html` as an HTML file named `seed` (steps in `app/apps/sheets/README.md`), authorise it, and run **Set up sheets**. This creates every sheet in §4 with its header, text formats and tab colour, and loads the seed when it creates them. A sheet that already exists is left as it is.
-4. Deploy as a web app and point the web app at its URL (see the README for the exact setting).
+1. Create the Supabase project and fill `app/apps/api-v2/.env.local` from `example.env`.
+2. `pnpm --filter @projectflow/api-v2 db:migrate`, then `db:import -- --seed` for a new database (or `db:refresh` on an existing one), then `db:verify`.
+3. Deploy the edge function with `pnpm --filter @projectflow/api-v2 deploy:edge-v3 -- --yes` and publish the web app (`build:static`) with `VITE_SHEETS_URL` pointing at it.
 
-A spreadsheet from the earlier layout without `projectId` is not readable by this code.
+Full steps, secrets (`SESSION_SECRET`, `OPENAI_API_KEY`, `OPENAI_MODEL`) and troubleshooting are in `app/apps/api-v2/README.md` and `docs/Supabase_configuration.md`.
 
 ## 9. Keeping this document in step
 
-- The catalogue in §4 is generated: `cd app/apps/sheets && npx tsx scripts/sheet-catalog.ts` prints the table; paste it over §4.
-- When a column or sheet is added, change `src/datasets.ts` (columns, sheet name, area order), `src/seed.ts` (seed rows and sheet order) and `scripts/export-seed.ts`, update the two sheet-order assertions in `test/api.spec.ts` and `test/bundle.spec.ts`, then add the column or sheet to the live spreadsheet and fill it.
-- Run `pnpm test` and `pnpm build:sheets` after any such change.
+- The catalogue in §4 is generated: `pnpm --filter @projectflow/sheets sheet-catalog` prints the table; paste it over §4.
+- When a column or dataset is added, change `src/datasets.ts` (columns, name, area order) and `src/seed.ts` (seed rows and order), update the sheet-order assertion in `test/api.spec.ts`, then run `db:refresh` so the live datasets get the column.
+- Run `pnpm test` and `pnpm typecheck` after any such change.

@@ -95,7 +95,7 @@ paths, so it works in a sub-folder and needs no server rewrite rule.
   .htaccess / _headers       MIME types (.wasm, .glb), compression and cache rules for Apache / Netlify / Cloudflare Pages
 
 API:  ${env.VITE_SHEETS_URL ?? '(none)'}
-Data: Supabase. The original Google Sheet remains a backup.
+Data: Supabase.
 
 Needs outbound HTTPS to: the API above, cdn.jsdelivr / developer.api.autodesk.com (the Autodesk Viewer script of the 3D page; the page
 credits it as powered by Autodesk), and fonts if the host serves none. Serve the site over HTTPS.

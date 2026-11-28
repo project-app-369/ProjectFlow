@@ -26,16 +26,15 @@ DATABASE_URL=postgres://projectflow:projectflow@localhost:5432/projectflow pnpm 
 | `AUTO_SEED` | `true` | Seed reference data when the database is empty |
 | `API_URL` | `http://localhost:3100` | Vite dev proxy target |
 
-## Pre-build on Google Sheets
+## Supabase backend
 
-The Supabase-backed successor is under [`apps/api-v2`](apps/api-v2/README.md). It preserves the current Sheets route contract, migrates the live Sheet into a private PostgreSQL schema, and leaves this Google Sheets API available as a backup. It is not connected to the published Site until its live import and verification are complete.
+Supabase is the only backend. The shared router and services live in [`apps/sheets`](apps/sheets/README.md) (the name is historic) and run in the Supabase edge function and in [`apps/api-v2`](apps/api-v2/README.md), which store the data in a private PostgreSQL schema. The Google Sheet and Apps Script pre-build is retired (ADR 0003 is superseded). The NestJS API (`apps/api`) is a separate implementation.
 
-Before the full server exists, the same web client can run against a Google Spreadsheet served by an Apps Script web app: one sheet per dataset, and a sheet plus link generated whenever a module is established. It also carries projects, users and roles, milestones, risks and interfaces, which the NestJS API does not have yet. See [`apps/sheets/README.md`](apps/sheets/README.md), [ADR 0003](docs/adr/0003-prebuild-on-google-sheets.md), [ADR 0004](docs/adr/0004-projects-users-and-worksheet-areas.md) and the [implementation plan](../docs/ProjectFlow_implementation_plan.md).
+The same web client talks to either backend (`VITE_API_MODE`). It carries projects, users and roles, milestones, risks, interfaces, issues and procurement, which the NestJS API does not have yet. See [`apps/sheets/README.md`](apps/sheets/README.md), [ADR 0003](docs/adr/0003-prebuild-on-google-sheets.md) (superseded) and [ADR 0004](docs/adr/0004-projects-users-and-worksheet-areas.md).
 
 ```bash
-pnpm dev:sheets-api    # local simulator of the Apps Script API (no Google needed), http://localhost:3200/exec
-pnpm dev:web-sheets    # web client in sheets mode, http://localhost:5173
-pnpm build:sheets      # apps/sheets/dist/Code.js + appsscript.json, ready to deploy to Apps Script
+pnpm dev:sheets-api    # local simulator for developing the AI functions (rows in memory), http://localhost:3200/exec
+pnpm dev:web-v2        # web client against API v2 (needs API_V2_TOKEN), http://localhost:5173
 ```
 
 ## Checks
@@ -64,8 +63,8 @@ Authentication and authorization (spec §2) — requests run as a single demo us
 ```
 apps/api   NestJS + Drizzle ORM. src/registry (catalog + rules), src/db (schema, migrations, seed), one folder per module.
 apps/web   React + TanStack Query/Table + ECharts. src/pages per screen, src/nav.ts navigation rules.
-apps/sheets Pre-build backend: Apps Script web app over a Google Spreadsheet, same routes as apps/api.
-docs/adr   Architecture decisions (0001 stack and dev database, 0002 navigation and module catalog, 0003 pre-build on Google Sheets).
+apps/sheets Shared router, services and in-memory store (Supabase edge function, API v2) and the local AI simulator.
+docs/adr   Architecture decisions (0001 stack and dev database, 0002 navigation and module catalog, 0003 pre-build on Google Sheets, superseded).
 ```
 
 Schema changes: edit `apps/api/src/db/schema.ts`, run `pnpm --filter @projectflow/api db:generate`, commit the generated SQL in `apps/api/drizzle/`. Migrations apply on API start.

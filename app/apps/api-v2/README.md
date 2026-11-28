@@ -1,21 +1,21 @@
 # Project Flow API v2 — Supabase PostgreSQL
 
-API v2 uses the **current Google Sheets route contract** with PostgreSQL persistence in a private `projectflow_v2` schema. The React client can use the same `/exec` envelope through a server-side proxy. The v1 Google Sheet and Apps Script remain in place as the backup; the import reads them and never writes to them.
+API v2 serves the Project Flow router (`apps/sheets`) with PostgreSQL persistence in a private `projectflow_v2` schema. **Supabase is the only backend**: the Google Sheet and Apps Script it was first imported from are retired. The React client uses the same `/exec` envelope through a server-side proxy or the edge function (API v3).
 
-## Current migration (17 November 2026)
+## Live data
 
-The [Project Flow Supabase project](https://supabase.com/dashboard/project/dulzdonvhjkvqmthsezh) contains 42 imported worksheets and 4,541 rows from the live [Project Flow Sheet](https://docs.google.com/spreadsheets/d/1CTkxAb2HEhjLEIoz0EAQHN1qm4VF4Sg6mwoorClnKQY/edit). The local export and JSON archive are in the repository root's ignored `.tmp/` directory; connection credentials are in the ignored `.env.local`. The PostgreSQL import audit, six representative data routes, API v2 HTTP health and dashboard, and task create/read/delete were verified. The separate Project Flow v3 Site now reads and writes through the Supabase Edge Function; v2 remains on Google Sheets.
+The [Project Flow Supabase project](https://supabase.com/dashboard/project/dulzdonvhjkvqmthsezh) holds 53 datasets and 5,748 rows (`db:verify`, 28 November 2026). The data was first imported from the Google Sheet on 17 November 2026 (42 worksheets, 4,541 rows) and has been refreshed and extended through the app and `db:refresh` since; Supabase is the source of truth. Connection credentials are in the ignored `.env.local`.
 
 ## Setup
 
 Environment variables and credential placement are listed in [Supabase configuration](../../../docs/Supabase_configuration.md).
 
 1. Create a private Supabase project. Keep the `projectflow_v2` schema out of Supabase's [exposed Data API schemas](https://supabase.com/docs/guides/api/using-custom-schemas). Copy the **Session pooler** URI from the project's Connect dialog (do not guess the host), as described in the [connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres). The `pg` client uses the bundled Supabase root certificate with full server verification. Do not add `sslmode` to the URI because it overrides the explicit client TLS settings.
-2. Copy `example.env` to `.env.local`. Set `SUPABASE_DB_URL`, a new random `API_V2_TOKEN`, the existing Apps Script deployment URL and API token, and the original Sheet URL. Keep `.env.local` private.
+2. Copy `example.env` to `.env.local`. Set `SUPABASE_DB_URL` and a new random `API_V2_TOKEN`. Keep `.env.local` private.
 3. From `app/`, run `pnpm install` and `pnpm --filter @projectflow/api-v2 db:migrate`.
-4. Export the live Google Sheet. The preferred repeatable path is to deploy the Apps Script source from `apps/sheets/` so `/admin/export` is available. This read-only admin endpoint is guarded by the existing Sheet API token and `u-admin` role, and pages 100 rows at a time. Run `pnpm --filter @projectflow/api-v2 sheets:pull -- ../../../.tmp/projectflow-sheets-backup.json`. Alternatively, export the complete live Sheet as XLSX and use `python scripts/convert-sheet-xlsx.py source.xlsx sheet-gids.json archive.json`, where `sheet-gids.json` is the Sheet API metadata mapping of tab titles to sheet IDs. The converter restores names over Excel's 31-character tab limit.
-5. Save the resulting JSON archive in the repository root's ignored `.tmp/` directory. Run `pnpm --filter @projectflow/api-v2 db:validate -- ../../../.tmp/projectflow-live-archive.json` and `pnpm --filter @projectflow/api-v2 db:smoke-import -- ../../../.tmp/projectflow-live-archive.json`. Check the sheet and row counts against the Sheet. API v2 fills newly added columns with null in Supabase without changing the Google Sheet.
-6. Run `pnpm --filter @projectflow/api-v2 db:import -- ../../../.tmp/projectflow-live-archive.json`. The import creates an audit record and refuses to replace existing Supabase data unless `REPLACE_SUPABASE_DATA=true` is explicitly set after a backup.
+4. Choose the data to load. For a new database use `--seed`: the reference seed (`apps/api/seed/sttp2b.json`) and the demo users. To restore or copy existing data use a JSON archive, `{"sheets":[{"name","gid","header","rows"}]}`, written by a `StoreSnapshot` export, saved in the repository root's ignored `.tmp/` directory.
+5. Run `pnpm --filter @projectflow/api-v2 db:validate -- <archive.json|--seed>` and `pnpm --filter @projectflow/api-v2 db:smoke-import -- <archive.json|--seed>`. Columns added to the code after the archive was written are filled with null.
+6. Run `pnpm --filter @projectflow/api-v2 db:import -- <archive.json|--seed>`. The import creates an audit record and refuses to replace existing Supabase data unless `REPLACE_SUPABASE_DATA=true` is explicitly set after a backup.
 7. Start with `pnpm --filter @projectflow/api-v2 dev`. For deployment, build with `pnpm --filter @projectflow/api-v2 build` and run `pnpm --filter @projectflow/api-v2 start` with the same environment variables injected by the host. Verify `GET /api/v2/exec?path=/health&token=...` and representative dashboard, register, and write routes through a server-side proxy before pointing the Site at v2.
 
 8. Facility Layout equipment is created, edited and deleted in the app and kept in the `EPCIC - Facility equipment` dataset. `db:refresh -- --apply` loads the seed rows into it once (and switches the module and its Construction group on); after that it never touches them.
@@ -26,7 +26,7 @@ For local UI testing, start API v2 and then run `pnpm --filter @projectflow/web 
 
 **No access to Supabase from this machine?** `pnpm --filter @projectflow/api-v2 dev:local` runs the same server on an embedded PostgreSQL (PGlite) with the same schema and SQL. Its files are in `apps/api-v2/.local-db` (ignored by git); on first start it is filled from `.tmp/projectflow-live-archive.json` when that exists, otherwise from the demo seed, and the facility equipment list is loaded with the Facility Layout module switched on. Then run `pnpm --filter @projectflow/web dev:v2`. Delete `.local-db` to start over.
 
-`--seed` is available for a disposable development database, but **production migration must use the live Sheet archive** so edits after the original workbook extraction are retained.
+`--seed` also fills a disposable development database; on production, never re-import over live data: use `db:refresh` (item 9), which leaves users, tasks, issues, risks and the other registers alone.
 
 ## Sign-in
 
@@ -42,15 +42,15 @@ After that administrators set and reset passwords under Settings → Users. Run 
 
 `projectflow_v2.datasets` stores worksheet metadata and `projectflow_v2.dataset_rows` stores typed row objects in JSONB with stable order. This transitional schema preserves all current fields, including the module-specific sheets; it does not claim the older partial NestJS schema has full app parity. API v2 loads the affected dataset state, applies the existing route validation and authorization logic, then commits changed datasets in one PostgreSQL transaction. A PostgreSQL advisory lock serializes writes across API instances. Each instance keeps its last snapshot and reuses it while the dataset version (count and latest `updated_at` of `projectflow_v2.datasets`) is unchanged, so a read costs one query instead of loading every row; a write by any instance changes the version. The API refuses to start without a database URL and server-side token.
 
-The current demo user ID mechanism is **not real authentication**. Keep API v2 behind a server-side proxy with the token secret; do not put either database credentials or the API token in a browser bundle. Migration does not switch production traffic. Keep the Sheet available for rollback and export a fresh copy before cutover.
+The demo user ID mechanism (without `SESSION_SECRET`) is **not real authentication**. Keep API v2 behind a server-side proxy with the token secret; do not put either database credentials or the API token in a browser bundle.
 
-The Google Sheet is a **point-in-time backup** after cutover; API v2 does not write back to it. To refresh the backup, export Supabase data separately or add a reviewed backup job before production traffic moves. Rollback to the Sheet would otherwise lose writes made only in Supabase.
+**Backups.** There is no backup job. `db:refresh -- --apply` saves the rows it replaces to `.tmp/` first; otherwise rely on Supabase's own backups (dashboard → Database → Backups) and export a snapshot before risky changes. Email reminders are not available on either host (`NOT_AVAILABLE`) until a mail service and a schedule are set up.
 
 ## API v3 and static distribution
 
-API v3 is the Supabase Edge Function in src/edge-v3.ts. Build with pnpm --filter @projectflow/api-v2 build:edge-v3 and deploy the generated dist/edge-v3.js as the project-flow-api-v3 function. Its public HTTPS endpoint uses the same GET ?path=... and POST envelope as the Sheets backend. The private Postgres connection is provided by the Edge Function runtime through SUPABASE_DB_URL; no database credential belongs in the static frontend. Public editing is intentionally enabled to match the v2 demo access model. The identity chooser is not authentication.
+API v3 is the Supabase Edge Function in src/edge-v3.ts. Build with pnpm --filter @projectflow/api-v2 build:edge-v3 and deploy the generated dist/edge-v3.js as the project-flow-api-v3 function. Its public HTTPS endpoint uses the same GET ?path=... and POST envelope as API v2. The private Postgres connection is provided by the Edge Function runtime through SUPABASE_DB_URL; no database credential belongs in the static frontend. Public editing is intentionally enabled to match the v2 demo access model. The identity chooser is not authentication.
 
-The separate [Project Flow v3 Site](https://project-flow-v3.ptsc-7423.chatgpt.site/) and deliverables/project-flow-v3-static.zip both call that endpoint. Upload the ZIP contents to any HTTPS shared host or CDN. The portable build uses hash routes, so no rewrite rule is needed for subdirectory hosting. The Sheet remains a point-in-time backup; Supabase edits do not sync back to it.
+The separate [Project Flow v3 Site](https://project-flow-v3.ptsc-7423.chatgpt.site/) and deliverables/project-flow-v3-static.zip both call that endpoint. Upload the ZIP contents to any HTTPS shared host or CDN. The portable build uses hash routes, so no rewrite rule is needed for subdirectory hosting.
 
 ### Connection timeouts and deploying the function over HTTPS
 

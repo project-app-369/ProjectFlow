@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readdir, readFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { COLUMNS, SHEET } from '../../sheets/src/datasets';
 import { MemoryStore, type StoreSnapshot } from '../../sheets/src/memory-store';
 import { seedData } from '../../sheets/src/seed-data';
@@ -14,28 +14,14 @@ export async function loadArchive(input: string): Promise<StoreSnapshot> {
     return store.snapshot();
   }
   const path = resolve(input);
-  if (path.endsWith('.json')) {
-    const archive = JSON.parse(await readFile(path, 'utf8')) as StoreSnapshot;
-    upgradeArchive(archive);
-    validate(archive);
-    return archive;
-  }
-  const sheets: StoreSnapshot['sheets'] = [];
-  const names = new Set(await readdir(path));
-  for (const [key, name] of Object.entries(SHEET)) {
-    const file = join(path, `${key}.json`);
-    if (!names.has(`${key}.json`)) continue;
-    const exportData = JSON.parse(await readFile(file, 'utf8')) as { sheet: string; header: string[]; rows: unknown[][] };
-    if (exportData.sheet !== name) throw new Error(`${file}: sheet name does not match ${name}.`);
-    sheets.push({ name, gid: 1000 + sheets.length, header: exportData.header, rows: exportData.rows.map(cells => Object.fromEntries(exportData.header.map((column, i) => [column, cells[i] ?? null])) as never) });
-  }
-  const archive = { sheets };
+  if (!path.endsWith('.json')) throw new Error('The import source must be a JSON archive or --seed.');
+  const archive = JSON.parse(await readFile(path, 'utf8')) as StoreSnapshot;
   upgradeArchive(archive);
   validate(archive);
   return archive;
 }
 
-/** Add columns introduced after the live worksheet was created, without changing the Sheet itself. */
+/** Add columns introduced after the archive was written, so an older archive still loads. */
 export function upgradeArchive(archive: StoreSnapshot) {
   for (const [key, name] of Object.entries(SHEET)) {
     const sheet = archive.sheets.find(s => s.name === name);
@@ -58,7 +44,7 @@ export function validate(archive: StoreSnapshot) {
     if (sheet.rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw new Error(`Invalid rows in ${sheet.name}.`);
     seen.add(sheet.name);
   }
-  if (!seen.has(SHEET.projects) || !seen.has(SHEET.users)) throw new Error('The archive must include Projects and Users from the live Sheet.');
+  if (!seen.has(SHEET.projects) || !seen.has(SHEET.users)) throw new Error('The archive must include Projects and Users.');
   for (const [key, name] of Object.entries(SHEET)) {
     const sheet = archive.sheets.find(s => s.name === name);
     if (!sheet) continue;
@@ -69,7 +55,7 @@ export function validate(archive: StoreSnapshot) {
 
 if (process.argv[1] && /(?:^|[/\\])import\.(?:ts|js)$/.test(process.argv[1])) {
   const source = process.argv[2];
-  if (!source) throw new Error('Usage: pnpm --filter @projectflow/api-v2 db:import <sheet-export-dir|archive.json|--seed>');
+  if (!source) throw new Error('Usage: pnpm --filter @projectflow/api-v2 db:import <archive.json|--seed>');
   const archive = await loadArchive(source);
   const pool = createPool();
   try {
@@ -84,7 +70,7 @@ if (process.argv[1] && /(?:^|[/\\])import\.(?:ts|js)$/.test(process.argv[1])) {
       const rows = archive.sheets.reduce((n, sheet) => n + sheet.rows.length, 0);
       await client.query('insert into projectflow_v2.imports (source, sheet_count, row_count, sha256) values ($1, $2, $3, $4)', [source, archive.sheets.length, rows, createHash('sha256').update(JSON.stringify(archive)).digest('hex')]);
       await client.query('commit');
-      console.log(`Imported ${archive.sheets.length} sheets and ${rows} rows to Supabase. Google Sheets was not changed.`);
+      console.log(`Imported ${archive.sheets.length} sheets and ${rows} rows to Supabase.`);
     } catch (error) {
       await client.query('rollback').catch(() => undefined);
       throw error;

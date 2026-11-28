@@ -1,16 +1,17 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { apiMode, downloadCsv, request, type Insights, type Page, type ProcurementPackage, type ProcurementSummary } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { packageFields } from './procFields';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { fmtDate, initials } from '../format';
 import { Icon } from '../icons';
-import { Toolbar, useListState, usePrefetchNext } from '../Register';
+import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+import { Badge, Btn, ErrorBox, Modal, PageHead, Stat } from '../ui';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -30,9 +31,8 @@ export default function Procurement() {
   const sheets = apiMode === 'sheets';
   const insights = useQuery({ queryKey: ['insights', 'plan', project.id], enabled: sheets, queryFn: () => request<Insights>(`${base}/insights`) });
   const filter = usePick(list, { workPackage: '', buyer: '' });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, workPackage: filter.extra.workPackage, buyer: filter.extra.buyer });
-  const page = useQuery({ queryKey: ['procurement-packages', project.id, query], queryFn: () => request<Page<ProcurementPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['procurement-packages', project.id, q], q => request<Page<ProcurementPackage>>(`${base}/packages${q}`));
+  const query = list.query({ workPackage: filter.extra.workPackage, buyer: filter.extra.buyer });
+  const page = useInfiniteList({ key: ['procurement-packages', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<Page<ProcurementPackage>>(`${base}/packages${q}`) });
   const selected: ProcurementPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ProcurementPackage>[]>(() => [
@@ -79,8 +79,8 @@ export default function Procurement() {
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="packages" />
           </>
         )}
       </div>

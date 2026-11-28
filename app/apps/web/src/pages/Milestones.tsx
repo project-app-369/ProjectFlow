@@ -1,16 +1,17 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { apiMode, downloadCsv, request, type Insights, type ExpeditingPackage, type FacilityTimeline, type Milestone, type Shipment, type MilestoneStatus, type Page } from '../api';
 import { RecordDrawer, suggest, type FieldDef } from '../crud';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { fmtDate, type Tone } from '../format';
 import { Timeline, laneSub, type TimelineRow } from '../Timeline';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { Toolbar, useListState, usePrefetchNext } from '../Register';
+import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Badge, Btn, ErrorBox, PageHead, Pager, Deferred } from '../ui';
+import { Badge, Btn, ErrorBox, PageHead, Deferred } from '../ui';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -130,9 +131,9 @@ export default function Milestones() {
   const insights = useQuery({ queryKey: ['insights', 'milestones', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const grouped = group !== 'none';
   const extra = { within: filter.extra.within, facility: filter.extra.facility };
-  const query = list.query({ page: list.state.page, pageSize: grouped ? 200 : PAGE_SIZE, ...extra });
-  const page = useQuery({ queryKey: ['milestones', project.id, query], queryFn: () => request<Page<Milestone>>(`${base}${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['milestones', project.id, q], q => request<Page<Milestone>>(`${base}${q}`));
+  const query = list.query(extra);
+  // grouped views need every row to group; 200 is the server's largest page, and more load as you scroll
+  const page = useInfiniteList({ key: ['milestones', project.id], query, pageSize: grouped ? 200 : PAGE_SIZE, fetch: q => request<Page<Milestone>>(`${base}${q}`) });
   const editing: Milestone | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   const items = page.data?.items ?? [];
 
@@ -258,11 +259,11 @@ export default function Milestones() {
                 <DataTable tableClass="ms-table" rowClassName={rowTone} columns={columns} data={rows} state={list.state} onSort={list.toggleSort} empty="No milestones match." />
               </details>
             );
-          }) : <div className="empty">No milestones match.</div>
+          }).concat(<LoadMore key="more" source={page.lazy} noun="milestones" />) : <div className="empty">No milestones match.</div>
         ) : (
           <>
-            <DataTable tableClass="ms-table" rowClassName={rowTone} columns={columns} data={items} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No milestones match." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable tableClass="ms-table" rowClassName={rowTone} revealFrom={page.revealFrom} columns={columns} data={items} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No milestones match." />
+            <LoadMore source={page.lazy} noun="milestones" />
           </>
         )}
       </div>

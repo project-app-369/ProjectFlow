@@ -1,15 +1,16 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { downloadCsv, errorText, request, RISK_STATUSES, type Insights, type Milestone, type Page, type Risk, type RiskHeatmap, type RiskMatrix, type RiskOptions } from '../api';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { AiTools } from '../AiTools';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { SortBy, useListState, usePrefetchNext } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, Pager, ModalSkeleton, DateInput } from '../ui';
+import { Btn, Confirm, ErrorBox, Field, Modal, PageHead, ModalSkeleton, DateInput } from '../ui';
 import { Detail, IconChoice, IconFilter, IconSelect, ItemList, LevelPill, MultiFilter, People, StateSelect } from './governance';
 import { useDeepLink } from '../deepLink';
 import { useMembers } from './people';
@@ -46,9 +47,8 @@ export default function Risks() {
   const insights = useQuery({ queryKey: ['insights', 'risks', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const heat = useQuery({ queryKey: ['risk-heatmap', project.id], queryFn: () => request<RiskHeatmap>(`${base}/heatmap`) });
   const extra = { ...filter.extra };
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...extra });
-  const page = useQuery({ queryKey: ['risks', project.id, query], queryFn: () => request<RiskPage>(`${base}${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['risks', project.id, q], q => request<RiskPage>(`${base}${q}`));
+  const query = list.query({ ...extra });
+  const page = useInfiniteList({ key: ['risks', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<RiskPage>(`${base}${q}`) });
   const facets = page.data?.facets;
   const setExtra = (k: keyof typeof extra, v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
   const pickCell = (p: number, s: number) => {
@@ -137,8 +137,8 @@ export default function Risks() {
         <FilterChips chips={filter.chips.filter(([k]) => !['level', 'owner', 'flag', 'basis'].includes(k)).map(([k, v]) => (k === 'cell' ? [k, cellLabel(heat.data?.matrix, v, filter.extra.basis)] : [k, v]))} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." rowClassName={r => (r.status === 'Closed' ? 'row-closed' : '')} />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No risk matches. Change the search or filters." rowClassName={r => (r.status === 'Closed' ? 'row-closed' : '')} />
+            <LoadMore source={page.lazy} noun="risks" />
           </>
         )}
       </div>

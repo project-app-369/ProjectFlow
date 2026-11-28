@@ -12,7 +12,7 @@ const snapshotBody = z.object({
   replace: z.boolean().default(false),
 });
 
-/** A spreadsheet cell holds 50,000 characters; each dataset is stored as JSON cut into parts below that. */
+/** Each dataset of a snapshot is stored as JSON cut into parts of this many characters, so one row stays small. */
 const CHUNK = 40_000;
 
 /**

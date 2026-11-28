@@ -14,7 +14,6 @@ Project Flow uses Supabase project `dulzdonvhjkvqmthsezh`. The v3 browser app ca
 | Supabase Edge Function environment | `SUPABASE_DB_URL` | Database connection supplied to the function runtime. Never embed this value in the web app. |
 | Supabase Edge Function secrets, optional | `SESSION_SECRET` | Enables password sign-in for the deployed API v3 function. Configure separately from the local env file. |
 | `app/apps/web/.env.v3` (public, tracked) | `VITE_API_MODE=sheets`, `VITE_SHEETS_URL` | Selects the current route contract and points builds to API v3. The `sheets` mode name describes the route contract; API v3 stores data in Supabase. |
-| Same public file | `VITE_SPREADSHEET_URL` | Link to the original Google Sheet backup. |
 
 `app/apps/api-v2/example.env` is the template for the private file. The local `.env.local` already contains the configured database URL and API v2 token. Its values must remain out of Git, logs, screenshots, and browser builds. The optional deployment and session secrets are only needed for those features.
 

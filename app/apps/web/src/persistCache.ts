@@ -28,13 +28,28 @@ export function restoreQueryCache(client: QueryClient) {
   }
 }
 
+/**
+ * Registers that load as you scroll (`useInfiniteList`) are saved with their first page only: a reload starts at the top
+ * of the list again instead of rendering, and refetching, every page read last time.
+ */
+export function firstPagesOnly(state: ReturnType<typeof dehydrate>): ReturnType<typeof dehydrate> {
+  return {
+    ...state,
+    queries: state.queries.map(q => {
+      const data = q.state.data as { pages?: unknown[]; pageParams?: unknown[] } | undefined;
+      if (!data || !Array.isArray(data.pages) || !Array.isArray(data.pageParams) || data.pages.length <= 1) return q;
+      return { ...q, state: { ...q.state, data: { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) } } };
+    }),
+  };
+}
+
 export function persistQueryCache(client: QueryClient) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const save = () => {
     timer = undefined;
     if (getCurrentAsOf()) return;
     try {
-      const text = JSON.stringify({ scope: scope(), savedAt: Date.now(), state: dehydrate(client) } satisfies Stored);
+      const text = JSON.stringify({ scope: scope(), savedAt: Date.now(), state: firstPagesOnly(dehydrate(client)) } satisfies Stored);
       if (text.length <= MAX_CHARS) localStorage.setItem(KEY, text);
     } catch { /* storage full or unavailable: the app works without it */ }
   };

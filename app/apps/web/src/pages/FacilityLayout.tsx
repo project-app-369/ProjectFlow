@@ -120,7 +120,7 @@ export default function FacilityLayout() {
     else setExpanded(true);
   };
 
-  // Edits typed in the Google Sheet reach the page on the next load, when the window is focused again, and every minute.
+  // Edits made by other people reach the page on the next load, when the window is focused again, and every minute.
   const equipment = useQuery({
     queryKey: ['facility-equipment', project.id],
     queryFn: () => request<FacilityEquipmentResponse>(`/projects/${project.id}/construction/facility-layout/equipment`),

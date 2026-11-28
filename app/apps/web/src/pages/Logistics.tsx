@@ -1,15 +1,15 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { downloadCsv, request, type Page, type Shipment } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
-import { SortBy, useListState, usePrefetchNext } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
-import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { Badge, Btn, ErrorBox, PageHead } from '../ui';
 import { shipmentFields, SHIPMENT_STATUSES } from './procFields';
 import { useDeepLink } from '../deepLink';
 
@@ -28,9 +28,8 @@ export default function Logistics() {
   const base = `/projects/${project.id}/logistics/shipments`;
 
   const filterQuery = { source: filters.source, deliveryYard: filters.deliveryYard, yard: filters.yard, month: filters.month, within: filters.within, late: filters.late ? 'true' : undefined };
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...filterQuery });
-  const page = useQuery({ queryKey: ['shipments', project.id, query], queryFn: () => request<Page<Shipment>>(`${base}${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['shipments', project.id, q], q => request<Page<Shipment>>(`${base}${q}`));
+  const query = list.query({ ...filterQuery });
+  const page = useInfiniteList({ key: ['shipments', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<Page<Shipment>>(`${base}${q}`) });
   const editing: Shipment | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
   const insights = useInsights('logistics', project.id, `/projects/${project.id}/logistics/insights`);
   const rows = page.data?.items ?? [];
@@ -87,8 +86,8 @@ export default function Logistics() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={shown} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No shipment matches. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={shown} state={list.state} onSort={list.toggleSort} loading={page.isPending} empty="No shipment matches. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="shipments" />
           </>
         )}
       </div>

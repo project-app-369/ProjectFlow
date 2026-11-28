@@ -21,7 +21,7 @@ The folder was reorganized on 8 November 2026 and again when the procurement fil
 
 ## What the application uses today
 
-The output is `app/apps/api/seed/sttp2b.json`, loaded into the database on first start and, for the Google Sheets pre-build, into one worksheet per register. The procurement extraction is repeatable: `PYTHONIOENCODING=utf-8 python app/apps/api/seed/extract_procurement.py` re-reads the workbooks and rewrites the `procurementPlan`, `logistics`, `materialBalance`, `materialSummary` and `procCurves` keys. The earlier extraction of the other keys was a one-off and its script is not in the repository.
+The output is `app/apps/api/seed/sttp2b.json`, loaded into the database on first start and, for Supabase, into one dataset per register. The procurement extraction is repeatable: `PYTHONIOENCODING=utf-8 python app/apps/api/seed/extract_procurement.py` re-reads the workbooks and rewrites the `procurementPlan`, `logistics`, `materialBalance`, `materialSummary` and `procCurves` keys. The earlier extraction of the other keys was a one-off and its script is not in the repository.
 
 | Module | Source workbook · sheet | Entity | Records | Notes |
 |---|---|---|---|---|

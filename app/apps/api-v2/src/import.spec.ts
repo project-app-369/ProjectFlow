@@ -8,13 +8,13 @@ import { upgradeArchive, validate } from './import';
 
 describe('API v2 Sheet archive', () => {
   it('retains live row edits and route results after a snapshot round trip', () => {
-    const original = new MemoryStore('https://docs.google.com/spreadsheets/d/backup/edit');
+    const original = new MemoryStore();
     seedStore(original, seedData);
     const archive = original.snapshot();
     validate(archive);
     const users = archive.sheets.find(s => s.name === 'Settings - Users')!;
     users.rows.find(r => r.id === 'u-admin')!.name = 'Admin changed in Sheet';
-    const loaded = new MemoryStore('https://docs.google.com/spreadsheets/d/backup/edit');
+    const loaded = new MemoryStore();
     loaded.loadSnapshot(archive);
     expect(loaded.snapshot()).toEqual(archive);
     const result = handle(new Api(loaded), { method: 'GET', path: '/me', user: 'u-admin' });

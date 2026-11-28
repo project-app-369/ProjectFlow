@@ -45,7 +45,7 @@ describe('issue management', () => {
     expect(mk().id).toBe('ISS-041');
   });
 
-  it('reads cells that were typed by hand in the spreadsheet', () => {
+  it('reads values that were typed by hand or imported', () => {
     const before = ok(call('GET', `${I}/insights`)).cards[0].value;
     store.updateRow(SHEET.issues, COLUMNS.issues, 'id', 'ISS-002', { status: 'done', priority: 'HIGH', pics: 'Ann@Example.com; bob@example.com  carol@example.com, not-an-email' }, { projectId: 'sttp2b' });
     store.updateRow(SHEET.issues, COLUMNS.issues, 'id', 'ISS-001', { status: 'In Progess' }, { projectId: 'sttp2b' });

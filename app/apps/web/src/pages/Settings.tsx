@@ -55,7 +55,7 @@ function ModulesTab() {
   const change = useMutation({
     mutationFn: ({ key, state }: { key: string; state: OperationState }) => request<ModuleInfo>(`/projects/${project.id}/modules/${key}`, { method: 'PUT', body: JSON.stringify({ state }) }),
     onSuccess: (m) => qc.invalidateQueries({ queryKey: ['modules', project.id] }).then(() =>
-      toast(m.sheetsCreated?.length ? `Modules updated. Sheet created: ${m.sheetsCreated.map(s => s.name).join(', ')}` : 'Modules updated.')),
+      toast(m.sheetsCreated?.length ? `Modules updated. Records set up: ${m.sheetsCreated.map(s => s.name).join(', ')}` : 'Modules updated.')),
     onError: (e: Error) => toast(errorText(e)),
   });
 
@@ -91,7 +91,6 @@ function ModulesTab() {
                   <Badge tone={tone[m.availability]}>{m.availability}</Badge> <Badge tone="indigo">{m.phase}</Badge>
                   {m.core && ' · core, always on'}
                   
-                  {m.sheetCapable && !m.sheet && m.effective && ' · no sheet yet'}
                   {!['Enabled', 'Disabled'].includes(m.state) && ` · ${m.state}`}
                 </small>
               </div>
@@ -143,14 +142,14 @@ function GeneralTab() {
 
 function DataTab() {
   const { project } = useApp();
-  const health = useQuery({ queryKey: ['health'], queryFn: () => request<{ status: string; database: string; spreadsheet?: string }>('/health') });
+  const health = useQuery({ queryKey: ['health'], queryFn: () => request<{ status: string; database: string }>('/health') });
   return (
     <>
       <section className="panel">
         <div className="panel-head"><h2>Data sources</h2></div>
         <div className="panel-body">
           <p className="tiny muted">{apiMode === 'sheets'
-            ? 'The app reads and writes the Google Sheet above through an Apps Script web app. Reference data was loaded once from the project workbooks in /data; after that the sheet is the source of truth.'
+            ? 'The app reads and writes Supabase (PostgreSQL) through the Project Flow edge function. Reference data was loaded once from the project workbooks in /data; after that Supabase is the source of truth.'
             : 'Reference data was extracted once from the project workbooks in /data and loaded into the database. The API serves it read-only; nothing writes back to the source files.'}</p>
           <div className="detail-grid">
             <div><small>Project</small><strong>{project.name}</strong></div>
@@ -159,7 +158,7 @@ function DataTab() {
             <div><small>Procurement source</small><strong>Expediting Report · pgk_gen_info</strong></div>
             <div><small>Expediting source</small><strong>Expediting Report · Equipment / Structural / Pipe-Fitting / Valves / Misc summaries</strong></div>
             <div><small>Cut-off date</small><strong>{fmtDate(project.cutoff)}</strong></div>
-            <div><small>API status</small><strong>{health.data ? `${health.data.status} · ${health.data.database === 'sheets' ? 'Google Sheets via Apps Script' : health.data.database === 'pglite' ? 'embedded PGlite' : 'PostgreSQL'}` : '…'}</strong></div>
+            <div><small>API status</small><strong>{health.data ? `${health.data.status} · ${health.data.database === 'supabase' ? 'Supabase (PostgreSQL)' : health.data.database === 'memory' ? 'local simulator (in memory)' : health.data.database === 'pglite' ? 'embedded PGlite' : 'PostgreSQL'}` : '…'}</strong></div>
           </div>
         </div>
       </section>

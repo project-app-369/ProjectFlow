@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { TASK_STATUSES, type PTask, type TaskStatus } from '../../api';
 import { DataTable } from '../../DataTable';
+import { LoadMore, useProgressive } from '../../lazyList';
 import { addDays, diffDays, fmtDate, fmtShort, hours, monthStart, addMonths, weekStart } from '../../format';
 import { Icon } from '../../icons';
 import { ZoomSlider, useZoomAnchor } from '../../zoom';
@@ -49,30 +50,34 @@ export function TaskList({ tasks, onOpen, today }: ViewProps) {
     { id: 'effort', header: 'EFFORT', meta: { sortKey: 'effort' }, cell: ({ row: { original: t } }) => (t.effort != null ? hours(t.effort) : '—') },
     { id: 'subs', header: 'SUBTASKS', cell: ({ row: { original: t } }) => <SubtaskProgress task={t} /> },
   ], [onOpen]);
+  const view = useProgressive(rows, 60, `${sort.sort}:${sort.order}`);
   if (phone) return <div className="task-cards-wrap"><TaskCards tasks={rows} onOpen={onOpen} today={today} /></div>;
   return (
-    <div className="task-list"><DataTable columns={columns} data={rows} state={sort}
+    <div className="task-list"><DataTable columns={columns} data={view.shown} revealFrom={view.revealFrom} state={sort}
       rowClassName={t => `task-row urgency-${t.urgency.toLowerCase()}`}
-      onSort={key => setSort(s => ({ sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc' }))} empty="No tasks match. Change the filters or add a task." /></div>
+      onSort={key => setSort(s => ({ sort: key, order: s.sort === key && s.order === 'asc' ? 'desc' : 'asc' }))} empty="No tasks match. Change the filters or add a task." />
+      {rows.length > 60 && <LoadMore source={view.lazy} noun="tasks" />}</div>
   );
 }
 
 /* ============================ Cards ============================ */
 export function TaskCards({ tasks, onOpen }: ViewProps) {
   const { update, move } = useTaskMutations();
+  const view = useProgressive(tasks, 36);
   if (!tasks.length) return <div className="empty">No tasks match. Change the filters or add a task.</div>;
   return (
+    <>
     <div className="card-grid">
-      {tasks.map(t => (
-        <article className={`task-card urgency-${t.urgency.toLowerCase()} ${t.overdue ? 'is-overdue' : ''}`} key={t.id}>
+      {view.shown.map((t, i) => (
+        <article className={`task-card urgency-${t.urgency.toLowerCase()} ${t.overdue ? 'is-overdue' : ''}${i >= view.revealFrom ? ' row-in' : ''}`} key={t.id} data-lazy-item="">
           <div className="task-top"><span className="mono tiny muted">{t.taskNo}</span><div className="task-top-actions"><UrgencyBadge urgency={t.urgency} />{t.overdue && <span className="task-symbol overdue" role="img" aria-label="Overdue" title="Overdue"><Icon name="clock" /></span>}<IconSelect className="status-picker" value={t.status} options={statusOptions} label={`Change ${t.taskNo} status`} onChange={status => move.mutate({ id: t.id, status: status as TaskStatus })} /></div></div>
           <h3 className={t.status === 'Completed' ? 'struck' : ''}><button className="link-button" onClick={() => onOpen(t)}>{t.title}</button></h3>
           {t.description && <p className="clamp">{t.description}</p>}
           <div className="chips"><ProjectChips ids={t.projects} /></div>
           <div className="task-meta tiny muted">
             {t.assigner && <span className="task-meta-item" title="Assigned by"><Icon name="user" />{t.assigner}</span>}
-            {t.due && <span className={`task-meta-item ${t.overdue ? 'negative' : ''}`} title={t.overdue ? 'Overdue' : 'Due date'}><Icon name="clock" />{fmtDate(t.due)}</span>}
-            {t.effort != null && <span className="task-meta-item" title="Estimated effort"><Icon name="chart" />{hours(t.effort)}</span>}
+            {t.due && <span className={`task-meta-item ${t.overdue ? 'negative' : ''}`} title={t.overdue ? 'Overdue' : 'Due date'}><Icon name="flag" />{fmtDate(t.due)}</span>}
+            {t.effort != null && <span className="task-meta-item" title="Estimated effort"><Icon name="hourglass" />{hours(t.effort)}</span>}
           </div>
           {t.subtasks.length > 0 && (
             <ul className="subtask-list">
@@ -91,6 +96,8 @@ export function TaskCards({ tasks, onOpen }: ViewProps) {
         </article>
       ))}
     </div>
+    {tasks.length > 36 && <LoadMore source={view.lazy} noun="tasks" />}
+    </>
   );
 }
 
@@ -116,7 +123,7 @@ export function TaskKanban({ tasks, onOpen }: ViewProps) {
             onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null); }}
             onDrop={e => { e.preventDefault(); drop(col, e.dataTransfer.getData('text/plain')); }}
           >
-            <h3><span className={`task-symbol status-${col.toLowerCase()}`} role="img" aria-label={col} title={col}><Icon name={`status-${col.toLowerCase()}`} /></span><span className="count">{cards.length}</span>{h > 0 && <span className="tiny muted col-hours">{hours(h)}</span>}</h3>
+            <h3><span className={`task-symbol status-${col.toLowerCase()}`} aria-hidden="true"><Icon name={`status-${col.toLowerCase()}`} /></span><span className="col-label">{col}</span><span className="count">{cards.length}</span>{h > 0 && <span className="tiny muted col-hours">{hours(h)}</span>}</h3>
             {cards.map(t => (
               <article
                 key={t.id} draggable className={`task-card kanban-card urgency-${t.urgency.toLowerCase()} ${t.overdue ? 'is-overdue' : ''} ${dragging === t.id ? 'dragging' : ''}`}
@@ -127,8 +134,8 @@ export function TaskKanban({ tasks, onOpen }: ViewProps) {
                 <h3 className={t.status === 'Completed' ? 'struck' : ''}><button className="link-button" onClick={() => onOpen(t)}>{t.title}</button></h3>
                 <div className="chips"><ProjectChips ids={t.projects} /></div>
                 <div className="task-meta tiny muted">
-                  {t.due && <span className={`task-meta-item ${t.overdue ? 'negative' : ''}`} title={t.overdue ? 'Overdue' : 'Due date'}><Icon name="clock" />{fmtShort(t.due)}</span>}
-                  {t.effort != null && <span className="task-meta-item" title="Estimated effort"><Icon name="chart" />{hours(t.effort)}</span>}
+                  {t.due && <span className={`task-meta-item ${t.overdue ? 'negative' : ''}`} title={t.overdue ? 'Overdue' : 'Due date'}><Icon name="flag" />{fmtShort(t.due)}</span>}
+                  {t.effort != null && <span className="task-meta-item" title="Estimated effort"><Icon name="hourglass" />{hours(t.effort)}</span>}
                   {t.subtasksTotal > 0 && <span className="task-meta-item" title="Subtasks complete"><Icon name="status-completed" />{t.subtasksDone}/{t.subtasksTotal}</span>}
                 </div>
               </article>
@@ -184,13 +191,13 @@ export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
         <span className="tiny muted">{ready.length} of {tasks.length} tasks shown{hidden > 0 && ` · ${hidden} need plan start, plan finish and a deadline`}</span>
         <span className="actions">
           <ZoomSlider value={px} min={ZOOM_MIN} max={ZOOM_MAX} onChange={zoomTo} />
-          {(Object.entries(ZOOM) as [string, number][]).map(([z, v]) => <button key={z} type="button" className={`btn small ${Math.abs(px - v) < 0.5 ? 'primary' : ''}`} onClick={() => zoomTo(v)}>{z}</button>)}
+          <span className="seg" role="group" aria-label="Scale">{(Object.entries(ZOOM) as [string, number][]).map(([z, v]) => <button key={z} type="button" aria-pressed={Math.abs(px - v) < 0.5} onClick={() => zoomTo(v)}>{z}</button>)}</span>
         </span>
       </div>
       <div className="gantt-scroll" ref={scroller}>
         <div className="gantt-grid" style={{ width: 240 + width }}>
           <div className="gantt-head">
-            <div className="gantt-name gantt-name-head"><Icon name="doc" /><span className="sr-only">Task</span></div>
+            <div className="gantt-name gantt-name-head">Task</div>
             <div className="gantt-track" style={{ width }}>
               {months.map(m => <span key={m.label + m.left} className="gantt-month" style={{ left: m.left, width: m.width }}>{m.label}</span>)}
               {ticks.map(t => <span key={t.left} className="gantt-tick" style={{ left: t.left }}>{t.label}</span>)}
@@ -218,7 +225,7 @@ export function TaskGantt({ tasks, onOpen, today }: ViewProps) {
         <span><span className="dot" style={{ background: 'var(--teal)' }} />Plan start → finish</span>
         <span><span className="gantt-due-key" />Deadline</span>
         <span><span className="gantt-today-key" />Today</span>
-        {(['Planned', 'Ongoing', 'Completed'] as const).map(s => <span key={s} className={`task-symbol status-${s.toLowerCase()}`} role="img" aria-label={s} title={s}><Icon name={`status-${s.toLowerCase()}`} /></span>)}
+        {(['Planned', 'Ongoing', 'Completed'] as const).map(s => <span key={s} className="legend-status"><span className={`task-symbol status-${s.toLowerCase()}`} aria-hidden="true"><Icon name={`status-${s.toLowerCase()}`} /></span>{s}</span>)}
       </div>
     </div>
   );

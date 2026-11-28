@@ -1,16 +1,17 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { downloadCsv, errorText, request, type Insights, type Issue, type IssueOptions, type Page } from '../api';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { AiTools } from '../AiTools';
 import { fmtDate } from '../format';
 import { Icon } from '../icons';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { SortBy, useListState, usePrefetchNext } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
-import { Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { Btn, ErrorBox, PageHead } from '../ui';
 import { initialsOf } from './people';
 import { IssueDrawer, ISSUE_PRIORITIES, ISSUE_STATUSES } from './IssueDrawer';
 import { useDeepLink } from '../deepLink';
@@ -46,9 +47,8 @@ export default function Issues() {
   const insights = useQuery({ queryKey: ['insights', 'issues', project.id], queryFn: () => request<Insights>(`${base}/insights`) });
   const options = useQuery({ queryKey: ['issue-options', project.id], staleTime: 60_000, queryFn: () => request<IssueOptions>(`${base}/options`) });
   const extra = { priority: filter.extra.priority, pic: filter.extra.pic, within: filter.extra.within, subcontract: filter.extra.subcontract, packageCode: pkg, active: openOnly && !list.state.status ? 'true' : undefined };
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, ...extra });
-  const page = useQuery({ queryKey: ['issues', project.id, query], queryFn: () => request<IssuePage>(`${base}${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['issues', project.id, q], q => request<IssuePage>(`${base}${q}`));
+  const query = list.query({ ...extra });
+  const page = useInfiniteList({ key: ['issues', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<IssuePage>(`${base}${q}`) });
   const facets = page.data?.facets;
   const setExtra = (k: 'priority' | 'pic' | 'within' | 'subcontract', v: string) => { filter.setExtra(s => ({ ...s, [k]: v })); list.set({}); };
   /** A package in the summary opens the register for that package, like Risks & Concerns; anything else filters as usual. */
@@ -129,8 +129,8 @@ export default function Issues() {
         <FilterChips chips={filter.chips.filter(([k]) => k === 'within' || k === 'pic')} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No issue matches. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No issue matches. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="issues" />
           </>
         )}
       </div>

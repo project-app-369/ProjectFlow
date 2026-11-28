@@ -1,16 +1,17 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CONCERN_AREAS, CONCERN_STATUSES, CONCERN_TYPES, downloadCsv, request, SEVERITIES, type Concern, type ConcernSummary, type Page } from '../api';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { AiTools } from '../AiTools';
 import { fmtDate, type Tone } from '../format';
 import { Icon } from '../icons';
-import { SortBy, useListState, usePrefetchNext } from '../Register';
+import { SortBy, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { InsightsView, useInsights } from '../Insights';
-import { Badge, Btn, ErrorBox, PageHead, Pager } from '../ui';
+import { Badge, Btn, ErrorBox, PageHead } from '../ui';
 import { ConcernDrawer } from './ConcernDrawer';
 import { useDeepLink } from '../deepLink';
 
@@ -31,9 +32,8 @@ export default function Concerns() {
   const base = `/projects/${project.id}/procurement/concerns`;
 
   const summary = useQuery({ queryKey: ['concern-summary', project.id], queryFn: () => request<ConcernSummary>(`${base}/summary`) });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, type: filters.type, severity: filters.severity, area: filters.area, owner: filters.owner, within: filters.within, packageCode: pkg, active: filters.activeOnly && !list.state.status ? 'true' : undefined });
-  const page = useQuery({ queryKey: ['concerns', project.id, query], queryFn: () => request<Page<Concern>>(`${base}${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['concerns', project.id, q], q => request<Page<Concern>>(`${base}${q}`));
+  const query = list.query({ type: filters.type, severity: filters.severity, area: filters.area, owner: filters.owner, within: filters.within, packageCode: pkg, active: filters.activeOnly && !list.state.status ? 'true' : undefined });
+  const page = useInfiniteList({ key: ['concerns', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<Page<Concern>>(`${base}${q}`) });
   const editing: Concern | 'new' | null = editingId === 'new' ? 'new' : ((page.data?.items ?? []).find(r => r.id === editingId) ?? null);
 
   const columns = useMemo<ColumnDef<Concern>[]>(() => [
@@ -92,9 +92,9 @@ export default function Concerns() {
         </div>
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort}
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort}
               empty={page.data && !page.data.total && !s?.total ? 'No risks or concerns recorded yet.' : 'No record matches. Change the search or filters.'} />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <LoadMore source={page.lazy} noun="concerns" />
           </>
         )}
       </div>

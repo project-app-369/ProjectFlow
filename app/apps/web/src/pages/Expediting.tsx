@@ -1,16 +1,17 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { apiMode, downloadCsv, request, type ExpeditingPackage, type ExpeditingSummary, type Insights, type Page } from '../api';
 import { RecordDrawer, suggest } from '../crud';
 import { expeditingFields } from './procFields';
 import { DataTable } from '../DataTable';
+import { LoadMore, useInfiniteList } from '../lazyList';
 import { fmtDate, initials, signed } from '../format';
 import { Icon } from '../icons';
-import { Toolbar, useListState, usePrefetchNext } from '../Register';
+import { Toolbar, useListState } from '../Register';
 import { useAccess, useApp, useToast } from '../state';
 import { FilterChips, InsightsView, usePick } from '../Insights';
-import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Pager, Stat } from '../ui';
+import { ActualPlanBar, Badge, Btn, ErrorBox, Modal, PageHead, Stat } from '../ui';
 import { useDeepLink } from '../deepLink';
 
 const PAGE_SIZE = 50;
@@ -83,9 +84,8 @@ export default function Expediting() {
   const sheets = apiMode === 'sheets';
   const insights = useQuery({ queryKey: ['insights', 'expediting', project.id], enabled: sheets, queryFn: () => request<Insights>(`${base}/insights`) });
   const filter = usePick(list, { within: '' });
-  const query = list.query({ page: list.state.page, pageSize: PAGE_SIZE, within: filter.extra.within });
-  const page = useQuery({ queryKey: ['expediting-packages', project.id, query], queryFn: () => request<Page<ExpeditingPackage>>(`${base}/packages${query}`), placeholderData: keepPreviousData });
-  usePrefetchNext(list.state.page, page.data?.total, PAGE_SIZE, query, q => ['expediting-packages', project.id, q], q => request<Page<ExpeditingPackage>>(`${base}/packages${q}`));
+  const query = list.query({ within: filter.extra.within });
+  const page = useInfiniteList({ key: ['expediting-packages', project.id], query, pageSize: PAGE_SIZE, fetch: q => request<Page<ExpeditingPackage>>(`${base}/packages${q}`) });
   const selected: ExpeditingPackage | null = (page.data?.items ?? []).find(r => r.code === selectedId) ?? null;
 
   const columns = useMemo<ColumnDef<ExpeditingPackage>[]>(() => [
@@ -130,8 +130,8 @@ export default function Expediting() {
         <FilterChips chips={filter.chips} onClear={filter.reset} />
         {page.error ? <ErrorBox error={page.error} /> : (
           <>
-            <DataTable columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
-            <Pager page={list.state.page} pageSize={PAGE_SIZE} total={page.data?.total ?? 0} onPage={p => list.set({ page: p })} />
+            <DataTable revealFrom={page.revealFrom} columns={columns} data={page.data?.items ?? []} loading={page.isPending} state={list.state} onSort={list.toggleSort} empty="No packages match. Change the search or filters." />
+            <LoadMore source={page.lazy} noun="packages" />
           </>
         )}
       </div>
