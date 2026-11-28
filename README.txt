@@ -12,7 +12,7 @@ paths, so it works in a sub-folder and needs no server rewrite rule.
   .htaccess / _headers       MIME types (.wasm, .glb), compression and cache rules for Apache / Netlify / Cloudflare Pages
 
 API:  https://dulzdonvhjkvqmthsezh.supabase.co/functions/v1/project-flow-api-v3
-Data: Supabase. The original Google Sheet remains a backup.
+Data: Supabase.
 
 Needs outbound HTTPS to: the API above, cdn.jsdelivr / developer.api.autodesk.com (the Autodesk Viewer script of the 3D page; the page
 credits it as powered by Autodesk), and fonts if the host serves none. Serve the site over HTTPS.
@@ -23,4 +23,4 @@ is the API's (sign-in is required once SESSION_SECRET is set on the Edge Functio
 The 3D page needs the Edge Function with the Facility Layout routes (apps/api-v2: pnpm deploy:edge-v3); an older function answers
 "No route" and the page shows an error in place of the equipment list.
 
-Built 2026-11-26 with: pnpm --filter @projectflow/web build:static
+Built 2026-11-28 with: pnpm --filter @projectflow/web build:static
